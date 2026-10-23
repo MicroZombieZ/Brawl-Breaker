@@ -116,6 +116,19 @@ public class LobbyCheck {
             waitFor(() -> guest.snapshot.player(host.id).facing > 1.3, "attack facing synchronizes after turning");
             LobbyNetwork.State turned = guest.snapshot.player(host.id);
             near(turned.facing, turned.yaw, "Snapshot hitbox facing matches visible player facing");
+            synchronized(server.world) {
+                LobbyWorld.Player a=server.world.players.get(host.id);
+                a.combat.cancelAttack();a.combat.cooldowns[2]=0;a.combat.multiplier=1;a.combat.streakTime=0;
+                position(a,0,0);a.y=a.body.lift=3;
+                position(server.world.players.get(guest.id),6,6);
+                CombatSystem.Dummy elevated=server.world.arena.dummies.get(1);
+                elevated.x=0;elevated.z=-2;elevated.lift=3;elevated.verticalSpeed=0;elevated.health=100;
+            }
+            host.action(0,"SHOCKWAVE");
+            waitFor(()->guest.snapshot.player(host.id).waveTime>0 && guest.snapshot.player(host.id).waveY>1,
+                    "airborne shockwave height synchronizes");
+            waitFor(()->guest.snapshot.dummies.get(1).health==90 && host.snapshot.dummies.get(1).health==90,
+                    "airborne 3D hit damage synchronizes");
             try (LobbyNetwork.Client late = new LobbyNetwork.Client("127.0.0.1",server.port(),"Late join", "")) {
                 waitFor(() -> late.snapshot != null && late.snapshot.started && late.snapshot.players.size() == 3,
                         "join in progress");

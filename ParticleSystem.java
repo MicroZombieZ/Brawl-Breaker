@@ -80,22 +80,25 @@ final class ParticleSystem {
             case GRAB:
                 burst(x,y+.65,z,GOLD,12,2,Shape.SPARK,event.facing); break;
             case SLAM:
-                burst(x,.06,z,DUST,22,3,Shape.DUST,0);
-                burst(x,.1,z,new Color(137,149,156),12,3.5,Shape.CUBE,0);
-                ring(x,.04,z,GOLD,1.3,.35,0); break;
+                burst(x,y+.06,z,DUST,22,3,Shape.DUST,0);
+                burst(x,y+.1,z,new Color(137,149,156),12,3.5,Shape.CUBE,0);
+                ring(x,y+.04,z,GOLD,1.3,.35,0); break;
             case HIT:
                 boolean heavy=event.variant==CombatSystem.Move.HAYMAKER.ordinal();
                 burst(x,y,z,GOLD,heavy?27:12,heavy?5:3,Shape.SPARK,event.facing);
                 burst(x,y,z,new Color(255,234,176),heavy?12:5,heavy?3:1.8,Shape.SHARD,event.facing);
-                if(heavy) { burst(x,.08,z,DUST,18,3,Shape.DUST,0); ring(x,.05,z,GOLD,1,.25,0); }
+                if(heavy) {
+                    double impactY=Math.max(0,y-.6);
+                    burst(x,impactY+.08,z,DUST,18,3,Shape.DUST,0);ring(x,impactY+.05,z,GOLD,1,.25,0);
+                }
                 break;
             case SHOCKWAVE:
                 for(int i=0;i<24;i++) {
                     double angle=i*Math.PI*2/24;
-                    burst(x+Math.cos(angle)*1.6,.05,z+Math.sin(angle)*1.6,DUST,2,2,Shape.DUST,0);
+                    burst(x+Math.cos(angle)*1.6,y+.05,z+Math.sin(angle)*1.6,DUST,2,2,Shape.DUST,0);
                 }
-                burst(x,.1,z,new Color(128,152,164),20,5,Shape.CUBE,0);
-                ring(x,.04,z,DUST,CombatSystem.OUTER_RADIUS,.65,0); break;
+                burst(x,y+.1,z,new Color(128,152,164),20,5,Shape.CUBE,0);
+                ring(x,y+.04,z,DUST,CombatSystem.OUTER_RADIUS,.65,0); break;
             case DEFEAT:
                 burst(x,y+.5,z,event.variant==0?new Color(220,122,103):BLUE,30,4,Shape.CUBE,0);
                 burst(x,y+.5,z,AIR,12,2,Shape.SHARD,0); break;

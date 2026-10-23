@@ -6,7 +6,7 @@ import java.util.concurrent.*;
 /** Bounded binary TCP protocol. No Java object deserialization or external dependencies. */
 final class LobbyNetwork {
     static final int DEFAULT_PORT = 24560;
-    private static final String VERSION = "CameraUpdate-LAN-3";
+    private static final String VERSION = "CameraUpdate-LAN-4";
     private static final int HELLO = 1, WELCOME = 2, SNAPSHOT = 3, INPUT = 4, ACTION = 5, ERROR = 6;
     private static final int MAX_FRAME = 262144;
     interface Write { void write(DataOutputStream out) throws IOException; }
@@ -37,7 +37,7 @@ final class LobbyNetwork {
         boolean host, exhausted;
         String name, className;
         double x, y, z, yaw, stamina, health, multiplier, streak, recovery, attackTime, speed, respawn;
-        double slowTime, slowAmount, flash, waveTime, waveX, waveZ, facing, knockX, knockZ;
+        double slowTime, slowAmount, flash, waveTime, waveX, waveY, waveZ, facing, knockX, knockZ;
         int active;
         final double[] cooldowns = new double[4];
     }
@@ -58,7 +58,7 @@ final class LobbyNetwork {
                     out.writeInt(p.id); out.writeBoolean(p.host); out.writeUTF(p.name); out.writeUTF(p.className);
                     for (double v : new double[]{p.x,p.y,p.z,p.cubeYaw,p.stamina,c.health,c.multiplier,c.streakTime,
                             c.endLag,c.attackTime,c.speed,p.respawnTime,p.body.slowTime,p.body.slowAmount,p.body.flash,
-                            c.waveTime,c.waveX,c.waveZ,c.facing,p.body.vx,p.body.vz}) out.writeDouble(v);
+                            c.waveTime,c.waveX,c.waveZ,c.facing,p.body.vx,p.body.vz,c.waveY}) out.writeDouble(v);
                     out.writeBoolean(p.exhausted); out.writeInt(c.active == null ? -1 : c.active.ordinal());
                     for (double v : c.cooldowns) out.writeDouble(v);
                 }
@@ -87,6 +87,7 @@ final class LobbyNetwork {
             p.slowAmount=in.readDouble(); p.flash=in.readDouble(); p.waveTime=in.readDouble(); p.waveX=in.readDouble(); p.waveZ=in.readDouble();
             p.facing=in.readDouble();
             p.knockX=in.readDouble(); p.knockZ=in.readDouble();
+            p.waveY=in.readDouble();
             p.exhausted=in.readBoolean(); p.active=in.readInt();
             if (p.active < -1 || p.active >= 4) throw new IOException("Invalid ability.");
             for (int j = 0; j < 4; j++) p.cooldowns[j] = in.readDouble();

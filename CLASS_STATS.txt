@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-10-20
+Last updated: 2026-10-23
 ================================
 
 This file describes the current game and the remaining class designs.
@@ -39,7 +39,12 @@ including during attack startup and active abilities. Displayed hitboxes use
 the same direction as actual hit detection in solo and LAN play.
 Walking, sprinting, jumping, and ground pounding work during abilities/recovery.
 Gauntlet abilities do not directly spend stamina; sprinting still spends stamina.
-Special abilities must START on the ground. Punch can start in the air.
+All Gauntlet attacks can start on the ground or in the air.
+Forward attacks use full upright boxes attached to player position and facing.
+Their vertical bounds run from 0.5 units below the player's feet to 1.5 above.
+Collision tests box overlap with actual enemy bodies, including rotated corners:
+players are 1 x 1 x 1 units; training dummies are 1 x 1.5 x 1 units.
+Attack damage/grab timings remain unchanged; boxes do not deal repeated damage.
 Only one attack can be active at a time. Recovery prevents another attack.
 Cooldowns begin when an attack starts, including attacks that miss.
 In solo play, pausing, the class menu, and the dev console freeze gameplay/timers.
@@ -80,8 +85,8 @@ PUNCH
   Base damage:                 23
   Damage at 1.35x:             31.05
   Cooldown:                    1.7 seconds
-  Reach:                       2 world units, forward cone
-  Targets:                     Nearest living enemy in the cone
+  Hitbox (width/height/depth):  2 / 2 / 2 world units, extending 2 units forward
+  Targets:                     Nearest living enemy overlapping the box
   Hit timing:                  0.12 seconds after starting
   Attack animation duration:   0.36 seconds
   Recovery after animation:    0.08 seconds, hit or miss
@@ -94,17 +99,18 @@ PUMMEL
   Base damage:                 30 total (3 hits of 10)
   Total damage at 1.35x:       40.50 (3 hits of 13.50)
   Cooldown:                    45 seconds
-  Grab reach:                  1.8 world units, forward cone
-  Targets:                     Nearest living enemy in the cone
+  Hitbox (width/height/depth):  1.8 / 2 / 1.8 units, extending 1.8 units forward
+  Targets:                     Nearest living enemy overlapping the box
   Grab attempt timing:         0.20 seconds after starting
   Grabbed target position:     Held 1.1 units in front of the player
   Damage timings:              0.45, 0.70, and 0.95 seconds after starting
   Successful animation:        1.20 seconds, followed by 0.25 seconds recovery
   Miss recovery:               1.10 seconds after the failed grab attempt
-  Grounded activation:         Required
+  Airborne activation:         Allowed
   Effect:                      Grab and lift a target, slam it, then punch it
                                three times. The target follows you as you move
-                               and turn, remaining in front of the player.
+                               and turn, including vertical movement. Released
+                               targets fall from their current height.
 
 SHOCKWAVE
   Input:                       E
@@ -114,13 +120,15 @@ SHOCKWAVE
   Inner radius:                2.5 world units; 70% slow plus damage
   Outer radius:                Up to 5 world units; 40% slow, no damage
   Slow duration:               3 seconds
-  Targets:                     All living enemies within the radius
+  Targets:                     All living enemies within the radius whose bodies
+                               overlap the shared 2-unit vertical attack bounds
   Impact timing:               0.30 seconds after starting
   Attack animation duration:   0.65 seconds
   Recovery after animation:    0.20 seconds
   Ring visual duration:        0.70 seconds after impact
-  Grounded activation:         Required
-  Effect:                      Slam the ground and send out expanding rings
+  Airborne activation:         Allowed
+  Effect:                      Send out expanding rings at the impact height;
+                               horizontal area remains radial, not a forward box
   Training dummies show slow strength/duration but have no walking AI to slow.
   In LAN matches, the slow reduces affected players' walking/sprinting speed.
 
@@ -134,12 +142,14 @@ HAY-MAKER
   Launch duration:             Up to 0.30 seconds
   Launch-only travel distance: Up to 3.6 world units
   Normal movement:             Allowed alongside the launch
-  Hit detection:               Swept path with 0.95-unit center-distance tolerance
+  Hitbox (width/height/depth):  1.9 / 2 / 0.95 units, extending 0.95 units forward
+  Hit detection:               Box swept along the launch path, including target
+                               body dimensions and vertical overlap
   Targets:                     First living enemy caught by the launch
   Knockback starting speed:    8 world units/second, decaying with friction
   Recovery on hit:             0.30 seconds
   Recovery on miss/plane edge: 1.20 seconds
-  Grounded activation:         Required
+  Airborne activation:         Allowed
   Effect:                      Launch forward, strike one target, and push it away
 
 
@@ -245,7 +255,7 @@ Backtick opens the developer console. Useful commands:
   streak reset          Return to the base 1.00x multiplier
   dummy hp 500          Set and refill dummy maximum HP
   dummy reset           Restore four dummies using current dummy HP setting
-  hitboxes on           Show attack ranges and dummy bounds
+  hitboxes on           Show 3D attack boxes, Shockwave bounds, and enemy bodies
   stats on              Show detailed debug stats
   reset                 Restore the player, arena, and dev settings to defaults
 
@@ -305,6 +315,7 @@ Defeat:                       Colored cube fragments and shards
 Respawn:                      Inward sparks over 0.4s, then an outward pulse
 
 Hit bursts occur only on confirmed damaging hits; misses get swing/trail visuals.
+Airborne slams, Shockwaves, and Hay-maker impacts emit at their actual height.
 Particles fade and expire. Debris falls with gravity and bounces on the ground.
 Persistent effects are sparse, and live counts are capped for large fights.
 
@@ -324,4 +335,4 @@ LAN synchronization:          Host sends confirmed, sequenced effect events;
                               every device renders its own particles locally
 Late joins / repeated states: Old bursts are skipped; repeated events are ignored
 Quality in LAN:               Each device controls its own effects quality
-Testing:                      java ParticleCheck; java LobbyCheck
+Testing:                      java ParticleCheck; java LobbyCheck; java HitboxCheck

@@ -554,7 +554,7 @@ public class CubeMovement extends JPanel {
             combat.facing = local.facing;
             combat.active = local.active < 0 ? null : CombatSystem.Move.values()[local.active];
             System.arraycopy(local.cooldowns, 0, combat.cooldowns, 0, 4);
-            combat.waveTime = local.waveTime; combat.waveX = local.waveX; combat.waveZ = local.waveZ;
+            combat.waveTime = local.waveTime; combat.waveX = local.waveX; combat.waveY = local.waveY; combat.waveZ = local.waveZ;
             stamina = local.stamina; exhausted = local.exhausted;
             combat.messageTime = local.health <= 0 || local.slowTime > 0 ? 1 : 0;
             combat.message = local.health <= 0 ? "Respawning in " + (int) Math.ceil(local.respawn) + "s"
@@ -1031,7 +1031,7 @@ public class CubeMovement extends JPanel {
         }
     }
 
-    private void drawWave(Graphics2D g, double time, double waveX, double waveZ) {
+    private void drawWave(Graphics2D g, double time, double waveX, double waveY, double waveZ) {
         if (time > 0) {
             double progress = 1 - time / .7;
             g.setStroke(new BasicStroke(3));
@@ -1040,7 +1040,7 @@ public class CubeMovement extends JPanel {
                 for (int i = 0; i < ring.length; i++) {
                     double angle = i * Math.PI * 2 / ring.length;
                     ring[i] = new double[]{waveX + Math.cos(angle) * radius * progress,
-                            .03, waveZ + Math.sin(angle) * radius * progress};
+                            waveY + .03, waveZ + Math.sin(angle) * radius * progress};
                 }
                 g.setColor(new Color(110, 222, 255, (int) (220 * (1 - progress))));
                 g.draw(polygon(ring));
@@ -1050,9 +1050,9 @@ public class CubeMovement extends JPanel {
     }
 
     private void drawCombatWorld(Graphics2D g) {
-        drawWave(g, combat.waveTime, combat.waveX, combat.waveZ);
+        drawWave(g, combat.waveTime, combat.waveX, combat.waveY, combat.waveZ);
         if (lobbyClient != null && appliedSnapshot != null) for (LobbyNetwork.State player : appliedSnapshot.players)
-            if (player.id != lobbyClient.id) drawWave(g, player.waveTime, player.waveX, player.waveZ);
+            if (player.id != lobbyClient.id) drawWave(g, player.waveTime, player.waveX, player.waveY, player.waveZ);
         java.util.List<RenderFace> scene = new ArrayList<>();
         for (CombatSystem.Dummy dummy : combat.dummies) {
             if (!dummy.alive()) continue;
@@ -1173,45 +1173,49 @@ public class CubeMovement extends JPanel {
         }
     }
 
+    private void drawBoxOutline(Graphics2D g,CombatSystem.Hitbox box,Color color) {
+        g.setColor(color);
+        double[][] vertices=box.vertices();
+        int[][] edges={{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
+        for(int[] edge:edges) {
+            double[] va=vertices[edge[0]],vb=vertices[edge[1]];
+            double[] a=cameraPoint(va[0],va[1],va[2]),b=cameraPoint(vb[0],vb[1],vb[2]);
+            if(a[2]<NEAR && b[2]<NEAR) continue;
+            if(a[2]<NEAR) a=nearIntersection(a,b);
+            else if(b[2]<NEAR) b=nearIntersection(a,b);
+            a=screenPoint(a);b=screenPoint(b);
+            g.draw(new java.awt.geom.Line2D.Double(a[0],a[1],b[0],b[1]));
+        }
+    }
+
     private void drawDebugOverlays(Graphics2D g) {
         if (showHitboxes) {
             double direction = combat.active != null ? combat.facing : cubeYaw;
             g.setStroke(new BasicStroke(2));
             for (double radius : new double[]{CombatSystem.INNER_RADIUS, CombatSystem.OUTER_RADIUS}) {
-                double[][] ring = new double[80][3];
-                for (int i = 0; i < ring.length; i++) {
-                    double angle = i * Math.PI * 2 / ring.length;
-                    ring[i] = new double[]{x + Math.cos(angle) * radius, .04, z + Math.sin(angle) * radius};
-                }
                 g.setColor(new Color(100, 215, 255, 180));
-                g.draw(polygon(ring));
-            }
-            for (double radius : new double[]{1.8, 2}) {
-                double[][] cone = new double[34][3];
-                cone[0] = new double[]{x, y + .1, z};
-                double halfAngle = Math.acos(.65);
-                for (int i = 1; i < cone.length; i++) {
-                    double angle = direction - halfAngle + 2 * halfAngle * (i - 1) / (cone.length - 2);
-                    cone[i] = new double[]{x - Math.sin(angle) * radius, y + .1, z - Math.cos(angle) * radius};
+                for(double height:new double[]{y+.5-CombatSystem.ATTACK_HEIGHT/2,y+.5+CombatSystem.ATTACK_HEIGHT/2}) {
+                    double[][] ring = new double[80][3];
+                    for (int i = 0; i < ring.length; i++) {
+                        double angle = i * Math.PI * 2 / ring.length;
+                        ring[i] = new double[]{x + Math.cos(angle) * radius,height,z + Math.sin(angle) * radius};
+                    }
+                    g.draw(polygon(ring));
                 }
-                g.setColor(radius == 2 ? new Color(255, 220, 100) : new Color(243, 145, 110));
-                g.draw(polygon(cone));
             }
-            double dx = -Math.sin(direction), dz = -Math.cos(direction);
-            g.setColor(new Color(197, 159, 251));
-            g.draw(polygon(new double[][]{{x - dz * .95, .05, z + dx * .95},
-                    {x + dx * 3.6 - dz * .95, .05, z + dz * 3.6 + dx * .95},
-                    {x + dx * 3.6 + dz * .95, .05, z + dz * 3.6 - dx * .95},
-                    {x + dz * .95, .05, z - dx * .95}}));
-            java.util.List<RenderFace> boxes = new ArrayList<>();
-            for (CombatSystem.Dummy dummy : combat.dummies) if (dummy.alive())
-                addBox(boxes, dummy.x, dummy.lift, dummy.z, 1, 1.5, 1, 0, Color.GREEN);
-            g.setColor(new Color(136, 245, 154, 150));
-            for (RenderFace face : boxes) g.draw(polygon(face.vertices));
+            drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUNCH,x,y,z,direction),new Color(255,220,100));
+            drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUMMEL,x,y,z,direction),new Color(243,145,110));
+            drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));
+            Color hurtColor=new Color(136,245,154,150);
+            for(CombatSystem.Dummy dummy:combat.dummies) if(dummy.alive())
+                drawBoxOutline(g,new CombatSystem.Hitbox(dummy.x,dummy.lift+dummy.height()/2,dummy.z,1,dummy.height(),1,dummy.yaw),hurtColor);
+            if(lobbyClient!=null && appliedSnapshot!=null) for(LobbyNetwork.State player:appliedSnapshot.players)
+                if(player.id!=lobbyClient.id && player.health>0)
+                    drawBoxOutline(g,new CombatSystem.Hitbox(player.x,player.y+.5,player.z,1,1,1,player.yaw),hurtColor);
             g.setStroke(new BasicStroke(1));
             g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
             g.setColor(Color.WHITE);
-            g.drawString("Ranges: yellow Punch | orange Pummel | blue Shockwave | purple Hay-maker", 22, 106);
+            g.drawString("3D hitboxes: yellow Punch | orange Pummel | blue Shockwave | purple Hay-maker | green hurtboxes",22,106);
         }
         if (showStats) {
             int sx = Math.max(22, getWidth() - 322);

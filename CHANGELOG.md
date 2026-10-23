@@ -4,6 +4,15 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Replace forward melee cones with full 3D boxes that follow movement, height,
+  and turning, with collision against enemy body dimensions.
+- Allow every Gauntlet ability in the air while preserving damage and timings.
+- Carry Pummel targets vertically and release them to fall from their current
+  height; keep Shockwave's radial area with vertical collision bounds.
+- Render debug hitboxes and airborne impact effects at their actual height.
+- Synchronize airborne Shockwaves over LAN (protocol 4; update every device).
+- Add collision and airborne combat checks, including shared LAN behavior.
+
 ## 0.1.0 - 2026-10-23
 
 Initial Git checkpoint of the existing game, including:

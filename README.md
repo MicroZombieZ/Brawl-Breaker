@@ -57,7 +57,11 @@ Four stationary training dummies have 100 HP, take damage and knockback, and res
 | E | Shockwave | 10 in the inner ring | 25 seconds |
 | F | Hay-maker | 45 plus knockback | 50 seconds |
 
-Directional attack hitboxes follow the player's current body facing as it turns toward the camera direction, including during startup and active abilities. Punch reaches 2 units and Pummel reaches 1.8 units, in a forward cone. Specials require you to be on the ground. Pummel grabs one target, lifts and slams it, then punches three times; the grabbed target stays in front as you move and turn. Shockwave slows targets within 2.5 units by 70%, and targets within 5 units by 40%, for 3 seconds. Hay-maker launches up to 3.6 units over 0.3 seconds and steers with your turning, while allowing normal movement alongside the launch. You can walk, sprint, jump, and ground pound during abilities and recovery. Recovery prevents starting another attack; missed Pummel and Hay-maker attempts have 1.1 and 1.2 seconds of recovery respectively. LAN snapshots synchronize attack facing so the hitbox overlay uses the same direction as the host's hit detection.
+Directional attacks use full 3D boxes that follow the player's position, height, and current body facing, including as it turns toward the camera. Punch uses a 2-wide, 2-high, 2-deep box; Pummel uses a 1.8-wide, 2-high, 1.8-deep box. Each extends forward from the player's center, with vertical bounds from 0.5 units below the feet to 1.5 units above. They collide with the actual enemy body, including its height and rotation. Punch still checks once at 0.12 seconds, and Pummel attempts its grab at 0.20 seconds.
+
+All abilities work in the air. Pummel carries its target as you move and turn in all three dimensions, then releases it at its current height to fall naturally. Shockwave keeps its surrounding area: targets within 2.5 units receive damage and a 70% slow; targets within 5 units receive a 40% slow for 3 seconds. Targets must also overlap the 2-unit vertical attack bounds. Its rings and particles appear at the impact height.
+
+Hay-maker sweeps a 1.9-wide, 2-high, 0.95-deep box along its launch, traveling up to 3.6 units over 0.3 seconds and steering with your turning. Normal movement works alongside the launch. You can walk, sprint, jump, and ground pound during abilities and recovery. Attack durations, damage, and cooldowns are unchanged. Recovery prevents starting another attack; missed Pummel and Hay-maker attempts have 1.1 and 1.2 seconds of recovery respectively. Solo and LAN use the same collision logic; LAN snapshots synchronize attack facing and Shockwave height. Copy the updated folder to every device before connecting.
 
 Kill-Streak increases damage for subsequent attacks by 0.05x per damaging hit, from 1x up to 1.35x (seven hits to reach the cap). Each damaging hit also refreshes a 6.5-second timer. Individual Pummel hits and each damaged Shockwave target grant their own stacks; damage is calculated using the multiplier at the start of the attack. After 6.5 seconds without a hit, the multiplier returns to 1x. Death and leaving Gauntlet also clear the streak. Pausing and the class menu freeze combat timers. Switching classes cannot bypass attack recovery or cooldowns.
 
@@ -126,7 +130,7 @@ Press backtick (the key above Tab) to open the console. Solo gameplay pauses and
 | `dummy reset` | Restore the original four dummies using the current dummy max HP |
 | `dummy clear` | Remove all dummies and release an active grab |
 | `dummy hp <1..100000>` | Set max HP for existing and future dummies; refill existing dummies immediately |
-| `hitboxes on/off` | Show melee cones, Shockwave circles, Hay-maker range, and dummy bounds |
+| `hitboxes on/off` | Show 3D melee boxes, Shockwave vertical bounds, and player/dummy hurtboxes |
 | `stats on/off` | Toggle detailed position, velocity, speed/time settings, dev flags, and combat state |
 | `particles off/low/medium/high` | Set local particle quality and its live-particle limit |
 | `particles clear` | Clear local particles and visual tracking |
@@ -137,7 +141,7 @@ Cooldown commands do not remove attack animations or recovery. Core HP, stamina,
 
 Examples: `cooldowns off`, `dummy hp 500`, `tp 0 -2`, `speed 1.5`, `timescale 0.5`.
 
-Compile checks with `javac *.java`, then run `java ParticleCheck`, `java LobbyCheck`, `java ConsoleCheck`, `java CombatCheck`, `java MovementCheck`, `java StaminaCheck`, `java CameraCheck`, and `java RotationCheck`.
+Compile checks with `javac *.java`, then run `java HitboxCheck`, `java ParticleCheck`, `java LobbyCheck`, `java ConsoleCheck`, `java CombatCheck`, `java MovementCheck`, `java StaminaCheck`, `java CameraCheck`, and `java RotationCheck`.
 
 ## Versions and restore points
 

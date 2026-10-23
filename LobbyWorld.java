@@ -151,6 +151,7 @@ final class LobbyWorld {
             }
             player.move(dt, held(player));
             player.body.x = player.x; player.body.z = player.z; player.body.lift = player.y;
+            player.body.yaw = player.cubeYaw;
             // Player bodies use the same knockback integration as dummies, once per tick.
             if (player.body.alive()) arena.updateDummy(player.body, dt);
             player.x = player.body.x; player.z = player.body.z;

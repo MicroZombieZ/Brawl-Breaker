@@ -14,13 +14,71 @@ final class CombatSystem {
     static final double BASE_HP = 100, GAUNTLET_HP = 115, STREAK_DURATION = 6.5;
     static final double MAX_MULTIPLIER = 1.35, MULTIPLIER_STEP = .05;
     static final double INNER_RADIUS = 2.5, OUTER_RADIUS = 5;
+    static final double ATTACK_HEIGHT = 2;
+    /** Upright oriented box. SAT tests include target width, depth, and height. */
+    static final class Hitbox {
+        final double x,y,z,width,height,depth,yaw;
+        Hitbox(double x,double y,double z,double width,double height,double depth,double yaw) {
+            this.x=x;this.y=y;this.z=z;this.width=width;this.height=height;this.depth=depth;this.yaw=yaw;
+        }
+        double[][] vertices() {
+            double[][] result={{-.5,-.5,-.5},{.5,-.5,-.5},{.5,-.5,.5},{-.5,-.5,.5},
+                    {-.5,.5,-.5},{.5,.5,-.5},{.5,.5,.5},{-.5,.5,.5}};
+            for(double[] v:result) {
+                double lx=v[0]*width,lz=v[2]*depth;
+                v[0]=x+Math.cos(yaw)*lx+Math.sin(yaw)*lz;
+                v[1]=y+v[1]*height;v[2]=z-Math.sin(yaw)*lx+Math.cos(yaw)*lz;
+            }
+            return result;
+        }
+        boolean verticalOverlap(Dummy target) {
+            return y-height/2<=target.lift+target.height()+1e-9 && y+height/2>=target.lift-1e-9;
+        }
+        boolean overlaps(Dummy target) { return Double.isFinite(sweep(target,0,0,0)); }
+        // Earliest contact while translating this box; no sampling gaps at high dash speeds.
+        double sweep(Dummy target,double dx,double dy,double dz) {
+            double[][] axes={{Math.cos(yaw),-Math.sin(yaw)},{Math.sin(yaw),Math.cos(yaw)},
+                    {Math.cos(target.yaw),-Math.sin(target.yaw)},{Math.sin(target.yaw),Math.cos(target.yaw)}};
+            double enter=0,exit=1;
+            for(int i=0;i<5;i++) {
+                double distance,velocity,radius;
+                if(i==4) {
+                    distance=target.lift+target.height()/2-y;velocity=dy;
+                    radius=(height+target.height())/2;
+                } else {
+                    double ax=axes[i][0],az=axes[i][1];
+                    distance=(target.x-x)*ax+(target.z-z)*az;velocity=dx*ax+dz*az;
+                    radius=width/2*Math.abs(ax*Math.cos(yaw)-az*Math.sin(yaw))
+                            +depth/2*Math.abs(ax*Math.sin(yaw)+az*Math.cos(yaw))
+                            +.5*Math.abs(ax*Math.cos(target.yaw)-az*Math.sin(target.yaw))
+                            +.5*Math.abs(ax*Math.sin(target.yaw)+az*Math.cos(target.yaw));
+                }
+                if(Math.abs(velocity)<1e-12) {
+                    if(Math.abs(distance)>radius+1e-9) return Double.POSITIVE_INFINITY;
+                } else {
+                    double a=(distance-radius)/velocity,b=(distance+radius)/velocity;
+                    enter=Math.max(enter,Math.min(a,b));exit=Math.min(exit,Math.max(a,b));
+                    if(enter>exit+1e-9) return Double.POSITIVE_INFINITY;
+                }
+            }
+            return enter;
+        }
+    }
+    static Hitbox hitbox(Move move,double x,double y,double z,double facing) {
+        if(move==Move.SHOCKWAVE) return new Hitbox(x,y+.5,z,OUTER_RADIUS*2,ATTACK_HEIGHT,OUTER_RADIUS*2,0);
+        double reach=move==Move.PUNCH?2:move==Move.PUMMEL?1.8:.95;
+        double width=move==Move.HAYMAKER?1.9:reach;
+        return new Hitbox(x-Math.sin(facing)*reach/2,y+.5,z-Math.cos(facing)*reach/2,
+                width,ATTACK_HEIGHT,reach,facing);
+    }
     static final class Dummy {
         final double spawnX, spawnZ;
         double x, z, health = 100, maxHealth = 100, vx, vz, slowTime, slowAmount, flash, damageTime, lastDamage;
-        double respawnTime, lift;
+        double respawnTime, lift, verticalSpeed, yaw;
         boolean playerBody;
         Dummy(double x, double z) { this.x = spawnX = x; this.z = spawnZ = z; }
         boolean alive() { return health > 0; }
+        double height() { return playerBody?1:1.5; }
     }
 
     final List<Dummy> dummies = new ArrayList<>();
@@ -34,7 +92,7 @@ final class CombatSystem {
     double playerX, playerY, playerZ, speed;
     Move active;
     double attackTime, endLag, facing, attackMultiplier;
-    double waveTime, waveX, waveZ;
+    double waveTime, waveX, waveY, waveZ;
     String message = "Equip Gauntlet with R to start training";
     double messageTime = 5;
     private Dummy grabbed;
@@ -82,7 +140,7 @@ final class CombatSystem {
         equipped = godMode = false;
         cooldownsEnabled = true;
         health = BASE_HP; multiplier = 1; streakTime = 0;
-        attackTime = waveTime = playerX = playerY = playerZ = speed = 0;
+        attackTime = waveTime = waveY = playerX = playerY = playerZ = speed = 0;
         java.util.Arrays.fill(cooldowns, 0);
         dummyMaxHealth = 100;
         resetDummies();
@@ -106,10 +164,6 @@ final class CombatSystem {
 
     boolean attack(Move move, double x, double y, double z, double yaw) {
         if (!equipped || locked() || (cooldownsEnabled && cooldowns[move.ordinal()] > 0) || health <= 0) return false;
-        if (move != Move.PUNCH && y > .05) {
-            tell("Land before using " + move.label.substring(3));
-            return false;
-        }
         active = move;
         attackTime = 0;
         facing = yaw;
@@ -144,7 +198,7 @@ final class CombatSystem {
             case PUNCH:
                 if (!resolved && attackTime >= .12) {
                     resolved = true;
-                    Dummy target = inFront(2.0);
+                    Dummy target = inFront();
                     if (target != null) hit(target, 23, 1.5);
                     else tell("Punch missed");
                 }
@@ -153,7 +207,7 @@ final class CombatSystem {
             case PUMMEL:
                 if (!resolved && attackTime >= .2) {
                     resolved = true;
-                    grabbed = inFront(1.8);
+                    grabbed = inFront();
                     if (grabbed == null) { tell("Pummel missed - recovering"); finish(1.1); break; }
                     grabbed.vx = grabbed.vz = 0;
                     effect(GameEffect.Kind.GRAB, grabbed.x, grabbed.lift, grabbed.z, 1, 0);
@@ -161,10 +215,11 @@ final class CombatSystem {
                 if (grabbed != null) {
                     grabbed.x = bound(playerX - Math.sin(facing) * 1.1);
                     grabbed.z = bound(playerZ - Math.cos(facing) * 1.1);
-                    grabbed.lift = attackTime < .4 ? .5 * Math.sin((attackTime - .2) / .2 * Math.PI) : 0;
+                    grabbed.lift = playerY + (attackTime < .4 ? .5 * Math.sin((attackTime - .2) / .2 * Math.PI) : 0);
+                    grabbed.verticalSpeed = 0;
                     while (pummelHits < 3 && attackTime >= .45 + pummelHits * .25) {
                         if (grabbed.alive()) {
-                            if (pummelHits == 0) effect(GameEffect.Kind.SLAM, grabbed.x, 0, grabbed.z, 1, 0);
+                            if (pummelHits == 0) effect(GameEffect.Kind.SLAM, grabbed.x, grabbed.lift, grabbed.z, 1, 0);
                             hit(grabbed, 10, 0);
                         }
                         pummelHits++;
@@ -175,12 +230,13 @@ final class CombatSystem {
             case SHOCKWAVE:
                 if (!resolved && attackTime >= .3) {
                     resolved = true;
-                    waveTime = .7; waveX = playerX; waveZ = playerZ;
-                    effect(GameEffect.Kind.SHOCKWAVE, playerX, 0, playerZ, 1, 0);
+                    waveTime = .7; waveX = playerX; waveY = playerY; waveZ = playerZ;
+                    effect(GameEffect.Kind.SHOCKWAVE, playerX, playerY, playerZ, 1, 0);
                     int affected = 0;
                     for (Dummy dummy : dummies) {
                         double distance = Math.hypot(dummy.x - playerX, dummy.z - playerZ);
-                        if (!dummy.alive() || distance > OUTER_RADIUS) continue;
+                        if (!dummy.alive() || distance > OUTER_RADIUS
+                                || !hitbox(Move.SHOCKWAVE,playerX,playerY,playerZ,facing).verticalOverlap(dummy)) continue;
                         affected++;
                         dummy.slowTime = 3;
                         dummy.slowAmount = distance <= INNER_RADIUS ? .7 : .4;
@@ -219,7 +275,7 @@ final class CombatSystem {
             if (dummy.respawnTime <= 0) {
                 dummy.health = dummy.maxHealth;
                 dummy.x = dummy.spawnX; dummy.z = dummy.spawnZ;
-                dummy.vx = dummy.vz = dummy.slowTime = dummy.slowAmount = dummy.lift = 0;
+                dummy.vx = dummy.vz = dummy.slowTime = dummy.slowAmount = dummy.lift = dummy.verticalSpeed = 0;
                 effect(GameEffect.Kind.RESPAWN, dummy.x, 0, dummy.z, 1, 0);
             }
             return;
@@ -229,17 +285,22 @@ final class CombatSystem {
         dummy.x = bound(dummy.x + dummy.vx * displacement);
         dummy.z = bound(dummy.z + dummy.vz * displacement);
         dummy.vx *= decay; dummy.vz *= decay;
+        if(!dummy.playerBody && dummy.lift>0) {
+            dummy.lift+=dummy.verticalSpeed*dt-9*dt*dt;
+            dummy.verticalSpeed-=18*dt;
+            if(dummy.lift<=0) dummy.lift=dummy.verticalSpeed=0;
+        }
     }
 
-    private Dummy inFront(double reach) {
+    private Dummy inFront() {
         Dummy nearest = null;
-        double best = reach;
+        double best = Double.POSITIVE_INFINITY;
+        Hitbox box=hitbox(active,playerX,playerY,playerZ,facing);
         for (Dummy dummy : dummies) {
-            if (!dummy.alive() || Math.abs(playerY - dummy.lift) > 1.3) continue;
+            if (!dummy.alive() || !box.overlaps(dummy)) continue;
             double dx = dummy.x - playerX, dz = dummy.z - playerZ;
-            double distance = Math.hypot(dx, dz);
-            double forward = -Math.sin(facing) * dx - Math.cos(facing) * dz;
-            if (distance <= best && (distance < .35 || forward >= distance * .65)) {
+            double distance = dx*dx+dz*dz+(dummy.lift-playerY)*(dummy.lift-playerY);
+            if (distance < best) {
                 nearest = dummy; best = distance;
             }
         }
@@ -249,14 +310,11 @@ final class CombatSystem {
     private Dummy sweptTarget(double ax, double az, double bx, double bz) {
         Dummy nearest = null;
         double best = Double.POSITIVE_INFINITY;
-        double dx = bx - ax, dz = bz - az, lengthSq = dx * dx + dz * dz;
+        Hitbox box=hitbox(Move.HAYMAKER,ax,playerY,az,facing);
         for (Dummy dummy : dummies) {
             if (!dummy.alive()) continue;
-            double forward = -Math.sin(facing) * (dummy.x - ax) - Math.cos(facing) * (dummy.z - az);
-            if (forward < -.1) continue;
-            double t = lengthSq == 0 ? 0 : Math.max(0, Math.min(1,
-                    ((dummy.x - ax) * dx + (dummy.z - az) * dz) / lengthSq));
-            if (Math.hypot(dummy.x - ax - t * dx, dummy.z - az - t * dz) <= .95 && t < best) {
+            double t=box.sweep(dummy,bx-ax,0,bz-az);
+            if (Double.isFinite(t) && t < best) {
                 nearest = dummy; best = t;
             }
         }
@@ -280,7 +338,7 @@ final class CombatSystem {
     }
 
     private void finish(double recovery) {
-        if (grabbed != null) grabbed.lift = 0;
+        if (grabbed != null) grabbed.verticalSpeed = 0;
         grabbed = null;
         active = null;
         endLag = recovery;
