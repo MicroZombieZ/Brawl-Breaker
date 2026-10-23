@@ -1,0 +1,22 @@
+# Rebuilt by javac / Run.bat
+*.class
+/build/
+/out/
+/target/
+/dist/
+/.gradle/
+
+# Local IDE settings, temporary files, and OS metadata
+/.idea/
+*.iml
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
+/.aws/
