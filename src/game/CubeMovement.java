@@ -4,7 +4,7 @@ import java.awt.geom.Path2D;
 import java.util.*;
 import javax.swing.*;
 
-/** A dependency-free 3D movement demo. Run with: java CubeMovement.java */
+/** A dependency-free 3D movement demo. Launch with Run.bat from the project root. */
 public class CubeMovement extends JPanel {
     private static final double EDGE = 10, SPEED = 4;
     private static final double SPRINT_SPEED = 7, GRAVITY = 18, JUMP_SPEED = 7;

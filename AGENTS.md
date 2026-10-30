@@ -1,6 +1,6 @@
 # Class reference maintenance
 
-- Keep `CLASS_STATS.txt` updated in the same change whenever class stats,
+- Keep `docs/CLASS_STATS.txt` updated in the same change whenever class stats,
   abilities, passives, controls, damage formulas, cooldowns, ranges, timings,
   movement rules, effects, or related testing commands change.
 - Update its last-updated date when its contents change.
@@ -8,10 +8,11 @@
   implemented classes, selectable placeholders, and planned designs. Mark
   undecided values as TBD rather than inventing them.
 - Keep relevant README descriptions consistent with the class reference.
-- `CLASS_STATS.txt` is documentation, not a runtime configuration file.
-- Movement and stamina are simulated in both `CubeMovement.java` (solo) and
-  `LobbyWorld.java` (LAN host). Keep shared gameplay values consistent when
-  changing them, and check both paths. Ability logic is shared in `CombatSystem.java`.
+- `docs/CLASS_STATS.txt` is documentation, not a runtime configuration file.
+- Movement and stamina are simulated in both `src/game/CubeMovement.java` (solo)
+  and `src/network/LobbyWorld.java` (LAN host). Keep shared gameplay values
+  consistent when changing them, and check both paths. Ability logic is shared
+  in `src/game/CombatSystem.java`.
 
 # Version control
 

@@ -8,8 +8,9 @@ PLACEHOLDER = selectable name with shared base stats and no class abilities.
 PLANNED = design information only; not selectable or implemented yet.
 TBD = not decided; do not treat as a working game value.
 
-Implemented values come from CombatSystem.java, CubeMovement.java,
-LobbyWorld.java, and ParticleSystem.java.
+Implemented values come from src/game/CombatSystem.java,
+src/game/CubeMovement.java, src/network/LobbyWorld.java, and
+src/particles/ParticleSystem.java.
 Planned Shield and Medic details come from the supplied Class Details document.
 This is a reference, not a configuration file: editing it does not change gameplay.
 Values below assume default settings, without developer-console overrides.
@@ -335,13 +336,19 @@ LAN synchronization:          Host sends confirmed, sequenced effect events;
                               every device renders its own particles locally
 Late joins / repeated states: Old bursts are skipped; repeated events are ignored
 Quality in LAN:               Each device controls its own effects quality
-Testing:                      java ParticleCheck; java LobbyCheck; java HitboxCheck
-                              java ParticleEditorCheck
+Testing:                      scripts\Check.bat (all ten checks)
+                              Sources live in tests; compile separately with
+                              scripts\Build.bat tests, then run, for example:
+                              java -cp "build/test-classes;build/classes" HitboxCheck
 
 
 PARTICLE STUDIO -- IMPLEMENTED
 =============================
-Launch:                       ParticleEditor.bat, or java ParticleEditor
+Launch (project root):        ParticleEditor.bat, or scripts\Build.bat followed by
+                              java -cp build/classes ParticleEditor
+Editor source:                tools/particle-editor/ParticleEditor.java
+Shared particle code:         src/particles
+Saved designs/assignments:    particle-effects (default Open/Save location)
 Purpose:                      Separate desktop cosmetic effect editor; shared
                               ParticleSystem physics, no gameplay/stat changes
 Presets:                      Sparkle, Dust Explosion, Burst, Cone, Ring, Fountain
@@ -386,4 +393,5 @@ Game quality:                 Existing OFF/LOW/MEDIUM/HIGH caps/density still ap
 LAN:                          Cosmetic local assets; copy folder to every device,
                               no automatic asset transfer or protocol change
 Invalid assigned files:       Log warning and use built-in effect for that event
-Testing:                      java ParticleEditorCheck
+Testing:                      scripts\Check.bat, or scripts\Build.bat tests then
+                              java -cp "build/test-classes;build/classes" ParticleEditorCheck

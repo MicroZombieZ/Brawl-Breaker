@@ -4,6 +4,11 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Organize game, networking, UI, particle code, editor tools, tests, and docs
+  into folders; keep the two application launchers at the project root.
+- Add shared build/check scripts, keep generated files under build, and start
+  particle file dialogs in particle-effects for new designs.
+
 - Add Particle Studio, a standalone desktop effect editor with image imports,
   six emission presets, fourteen sliders, and an orbitable 3D preview.
 - Save settings and transparent sprites in portable .pfx files; assign effects

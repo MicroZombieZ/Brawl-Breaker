@@ -1,3 +1,13 @@
+Project organization (2026-10-30):
+- Game code: src/game; networking: src/network; shared UI: src/ui.
+- Particle runtime: src/particles; editor: tools/particle-editor.
+- Checks: tests; documentation: docs; saved effects: particle-effects.
+- Run.bat and ParticleEditor.bat remain at the project root.
+- scripts\Build.bat compiles application classes into build/classes.
+- scripts\Check.bat compiles checks into build/test-classes and runs all ten.
+- Earlier notes below use the old flat source layout and compile commands.
+
+Previous HUD handoff:
 Brief description:
 I updated the in-game HUD in CubeMovement.java. The current interface has separate health and stamina bars, hides the old instructional and passive panels, and uses F11 for selected debug information.
 

@@ -132,7 +132,7 @@ public class ParticleEditor extends JPanel {
         preview.repaint();
     }
     private JFileChooser chooser() {
-        JFileChooser chooser=new JFileChooser(currentFile==null?Paths.get(".").toFile():currentFile.toAbsolutePath().getParent().toFile());
+        JFileChooser chooser=new JFileChooser(currentFile==null?Paths.get("particle-effects").toFile():currentFile.toAbsolutePath().getParent().toFile());
         chooser.setFileFilter(new FileNameExtensionFilter("Particle effect (*.pfx)","pfx"));return chooser;
     }
     private boolean discard() {

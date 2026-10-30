@@ -2,11 +2,34 @@
 
 A minimal Java 3D demo using Swing and perspective projection. No dependencies.
 
-See [CLASS_STATS.txt](CLASS_STATS.txt) for class stats, ability details, passives,
+See [CLASS_STATS.txt](docs/CLASS_STATS.txt) for class stats, ability details, passives,
 and planned class designs. Keep it updated alongside gameplay changes.
 
-Double-click `Run.bat`, or run `javac *.java` and then `java CubeMovement` in this folder.
+Double-click `Run.bat` to build and launch the game. For terminal use, run
+`scripts\Build.bat`, then `java -cp build/classes CubeMovement` from this folder.
 Requires JDK 11 or newer (JDK 24 is installed on this computer).
+
+## Project folders
+
+| Folder | Contents |
+| --- | --- |
+| `src/game` | Game window, movement, camera, and combat |
+| `src/network` | LAN simulation and connections |
+| `src/ui` | Developer console and lobby interface |
+| `src/particles` | Shared particle simulation, effect files, sprites, and events |
+| `tools/particle-editor` | Particle Studio application source |
+| `particle-effects` | Saved particle designs and game event assignments |
+| `tests` | Automated checks |
+| `docs` | Class stats, development handoff, and Google Doc update notes |
+| `scripts` | Shared build and check commands |
+| `build` | Generated classes and compiler lists; ignored by Git |
+
+Keep the whole project together when copying it to another device. The game
+and editor launchers stay at the top level and use the correct working folder,
+including when launched from elsewhere. Build outputs stay out of the source
+folders. Java classes retain their existing names and default package.
+
+## Controls and movement
 
 - WASD or arrow keys move the cube along the plane.
 - Hold Shift while moving to sprint (7 units per second).
@@ -91,8 +114,9 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
-Double-click **ParticleEditor.bat** to open the separate desktop editor, or compile
-with `javac *.java` and run `java ParticleEditor`. It uses the game's particle
+Double-click **ParticleEditor.bat** to open the separate desktop editor, or run
+`scripts\Build.bat` and then `java -cp build/classes ParticleEditor` from the
+project root. It uses the game's particle
 simulation and requires JDK 11 or newer.
 
 1. Choose **Sparkle**, **Dust Explosion**, **Burst**, **Cone**, **Ring**, or
@@ -113,7 +137,8 @@ simulation and requires JDK 11 or newer.
    to inspect the effect. The preview emits one unit above the floor. It uses
    HIGH quality with an 800-particle cap; game quality settings still apply.
 4. **Save** creates one portable `.pfx` file containing settings and the uploaded
-   image. **Open effect** restores it for further editing. Changing presets
+   image. File dialogs start in `particle-effects` for a new design. **Open
+   effect** restores it for further editing. Changing presets
    resets parameters while retaining the imported image; **Remove image**
    returns to built-in shapes. Unsaved edits prompt you before closing, opening,
    or creating another effect.
@@ -183,7 +208,10 @@ Cooldown commands do not remove attack animations or recovery. Core HP, stamina,
 
 Examples: `cooldowns off`, `dummy hp 500`, `tp 0 -2`, `speed 1.5`, `timescale 0.5`.
 
-Compile checks with `javac *.java`, then run `java ParticleEditorCheck`, `java HitboxCheck`, `java ParticleCheck`, `java LobbyCheck`, `java ConsoleCheck`, `java CombatCheck`, `java MovementCheck`, `java StaminaCheck`, `java CameraCheck`, and `java RotationCheck`.
+Run `scripts\Check.bat` from the project root to build and run all ten checks.
+To run one check, first use `scripts\Build.bat tests`, then, for example,
+`java -cp "build/test-classes;build/classes" ParticleEditorCheck`. All check
+sources live in `tests`.
 
 ## Versions and restore points
 
