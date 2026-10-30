@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-10-23
+Last updated: 2026-10-30
 ================================
 
 This file describes the current game and the remaining class designs.
@@ -336,3 +336,54 @@ LAN synchronization:          Host sends confirmed, sequenced effect events;
 Late joins / repeated states: Old bursts are skipped; repeated events are ignored
 Quality in LAN:               Each device controls its own effects quality
 Testing:                      java ParticleCheck; java LobbyCheck; java HitboxCheck
+                              java ParticleEditorCheck
+
+
+PARTICLE STUDIO -- IMPLEMENTED
+=============================
+Launch:                       ParticleEditor.bat, or java ParticleEditor
+Purpose:                      Separate desktop cosmetic effect editor; shared
+                              ParticleSystem physics, no gameplay/stat changes
+Presets:                      Sparkle, Dust Explosion, Burst, Cone, Ring, Fountain
+Built-in shapes:              Dust, Cube, Shard, Spark, Ring
+Uploaded images:              PNG, JPEG, GIF first frame; at most 2048 x 2048,
+                              under 16 MB; colors/aspect/transparency preserved
+Portable effect file:         .pfx archive containing settings and optional PNG
+Preview:                      Orbit/zoom, burst/restart, loop, pause; emitter Y=1
+Preview quality:              HIGH; 800 live particles maximum
+
+Editor slider limits (world units and seconds):
+  Aggressiveness:             0.10-3.00x; scales count and speed (sqrt of factor)
+  Particles per burst:        1-400 before aggressiveness and quality density
+  Repeat interval:            0.10-5.00 seconds (editor playback only)
+  Speed:                      0-20 units/second before aggression/variation
+  Spawn range:                0-5 units emitter radius, horizontal disk
+  Cone spread:                0-180 degrees half-angle around selected direction
+  Heading:                    -180 to 180 degrees relative to event facing
+  Elevation:                  -90 to 90 degrees
+  Gravity:                    -10 to 20 units/second squared
+  Size:                       0.02-1.00 units; image half-height, cube side length,
+                              other shapes use existing ParticleSystem sizing
+  Lifetime:                   0.10-5.00 seconds before randomized variation
+  Growth:                     -1.00 to 2.00 units/second; size clamps to 0.005
+  Spin:                       0-20 radians/second, randomized signed rotation
+  Opacity:                    0-1, multiplied by lifetime fade and sparkle twinkle
+
+Speed varies by 0.6-1.2x; size and lifetime vary by 0.75-1.25x per particle.
+Sparkle adds up to 0.35 seconds emission delay and a flickering fade.
+Ring and Dust Explosion use radial horizontal directions, not a directional cone.
+Elevation controls their lift; Dust spread controls extra upward scatter (capped
+at 90 degrees). Changes affect new particles; Restart clears and emits again.
+
+Game assignments:             particle-effects/<EVENT>.pfx; loaded on startup
+Supported events:             TAKEOFF, DOUBLE_JUMP, LAND, GROUND_POUND, SWING,
+                              GRAB, SLAM, HIT, SHOCKWAVE, DEFEAT, RESPAWN
+Assignment scope:             Replaces that event's particles for all classes/moves;
+                              HIT covers all damaging attack impacts
+Unaffected visuals:           Continuous trails/status emissions, separate rings
+Restore default:              Deletes selected assignment; restart game afterward
+Game quality:                 Existing OFF/LOW/MEDIUM/HIGH caps/density still apply
+LAN:                          Cosmetic local assets; copy folder to every device,
+                              no automatic asset transfer or protocol change
+Invalid assigned files:       Log warning and use built-in effect for that event
+Testing:                      java ParticleEditorCheck

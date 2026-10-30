@@ -82,6 +82,7 @@ public class CubeMovement extends JPanel {
     private long previous = System.nanoTime();
 
     public CubeMovement() {
+        particles.loadEffects(java.nio.file.Paths.get("particle-effects"));
         setPreferredSize(new Dimension(1000, 700));
         setBackground(new Color(24, 29, 39));
         setFocusable(true);
@@ -959,6 +960,7 @@ public class CubeMovement extends JPanel {
     }
 
     private static final class RenderFace {
+        java.awt.image.BufferedImage image;
         final double[][] vertices;
         final Color color;
         final boolean effect, soft;
@@ -974,11 +976,20 @@ public class CubeMovement extends JPanel {
                 -Math.cos(yaw)*Math.sin(actualCameraPitch)};
         for(ParticleSystem.Particle p:particles.particles) {
             if(p.delay>0 || p.life<=0) continue;
-            double fade=Math.max(0,Math.min(1,p.life/p.duration));
-            int alpha=(int)((p.shape==ParticleSystem.Shape.DUST?90:220)*fade);
+            double fade=ParticleSystem.alpha(p);
+            int alpha=(int)((p.image==null&&p.shape==ParticleSystem.Shape.DUST?90:220)*fade);
             if(alpha<2) continue;
             Color color=new Color(p.color.getRed(),p.color.getGreen(),p.color.getBlue(),alpha);
-            if(p.shape==ParticleSystem.Shape.CUBE) {
+            if(p.image!=null) {
+                double[][] vertices=new double[4][3];
+                double aspect=(double)p.image.getWidth()/p.image.getHeight();
+                for(int i=0;i<4;i++) {
+                    double lx=(i==0||i==3?-1:1)*p.size*aspect,ly=(i<2?1:-1)*p.size;
+                    double rx=lx*Math.cos(p.angle)-ly*Math.sin(p.angle),uy=lx*Math.sin(p.angle)+ly*Math.cos(p.angle);
+                    vertices[i]=new double[]{p.x+right[0]*rx+up[0]*uy,p.y+up[1]*uy,p.z+right[2]*rx+up[2]*uy};
+                }
+                RenderFace face=new RenderFace(vertices,color,true,false);face.image=p.image;scene.add(face);
+            } else if(p.shape==ParticleSystem.Shape.CUBE) {
                 addBox(scene,p.x,p.y,p.z,p.size,p.size,p.size,p.angle,color);
             } else if(p.shape==ParticleSystem.Shape.RING) {
                 double inner=Math.max(0,p.size-.055),outer=p.size+.055;
@@ -1096,6 +1107,15 @@ public class CubeMovement extends JPanel {
             return -total / face.vertices.length;
         }));
         for (RenderFace face : scene) {
+            if(face.image!=null) {
+                double[][] points=new double[4][];boolean visible=true;
+                for(int i=0;i<4;i++) {
+                    double[] point=cameraPoint(face.vertices[i][0],face.vertices[i][1],face.vertices[i][2]);
+                    if(point[2]<NEAR) { visible=false;break; }points[i]=screenPoint(point);
+                }
+                if(visible) ParticleSprites.draw(g,face.image,points,face.color.getAlpha()/255f);
+                continue;
+            }
             Path2D path = polygon(face.vertices);
             g.setColor(face.color);
             if(face.soft) {

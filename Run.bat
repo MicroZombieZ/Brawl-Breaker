@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-javac CubeMovement.java CombatSystem.java DevConsole.java LobbyWorld.java LobbyNetwork.java LobbyPanel.java GameEffect.java ParticleSystem.java
+javac CubeMovement.java CombatSystem.java DevConsole.java LobbyWorld.java LobbyNetwork.java LobbyPanel.java GameEffect.java ParticleSystem.java ParticleEffect.java ParticleSprites.java
 if errorlevel 1 (
     echo Compilation failed. Make sure JDK 11 or newer is installed.
     pause

@@ -13,6 +13,8 @@ final class ParticleSystem {
     static final Color DUST = new Color(165, 156, 137), GOLD = new Color(255, 198, 91),
             BLUE = new Color(121, 217, 255), AIR = new Color(204, 237, 245);
     static final class Particle {
+        java.awt.image.BufferedImage image;
+        double opacity=1, twinkle;
         Shape shape;
         Color color;
         double x, y, z, vx, vy, vz, gravity, size, growth, life, duration, angle, spin, delay;
@@ -26,6 +28,53 @@ final class ParticleSystem {
     private final Map<Integer, Track> tracks = new HashMap<>();
     private final Random random = new Random(47821);
     private Quality quality = Quality.MEDIUM;
+    final Map<GameEffect.Kind,ParticleEffect> customEffects = new EnumMap<>(GameEffect.Kind.class);
+
+    void loadEffects(java.nio.file.Path directory) {
+        customEffects.clear();
+        for(GameEffect.Kind kind:GameEffect.Kind.values()) {
+            java.nio.file.Path path=directory.resolve(kind.name()+".pfx");
+            if(!java.nio.file.Files.exists(path)) continue;
+            try { customEffects.put(kind,ParticleEffect.load(path)); }
+            catch(java.io.IOException ex) { System.err.println("Skipping "+path+": "+ex.getMessage()); }
+        }
+    }
+
+    void emit(ParticleEffect e,double x,double y,double z,double facing) {
+        if(quality==Quality.OFF) return;
+        int total=(int)Math.ceil(e.count*e.aggression*quality.density);
+        double heading=facing+Math.toRadians(e.heading),elevation=Math.toRadians(e.elevation);
+        double fx=-Math.sin(heading)*Math.cos(elevation),fy=Math.sin(elevation),fz=-Math.cos(heading)*Math.cos(elevation);
+        // Orthonormal basis around the selected direction; sample a solid-angle cone.
+        double rx=Math.cos(heading),rz=-Math.sin(heading);
+        double ux=-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy;
+        for(int i=0;i<total;i++) {
+            double angle=between(0,Math.PI*2),rad=e.range*Math.sqrt(random.nextDouble());
+            double px=x+Math.cos(angle)*rad,pz=z+Math.sin(angle)*rad;
+            double dx,dy,dz;
+            if(e.pattern==ParticleEffect.Pattern.RING || e.pattern==ParticleEffect.Pattern.DUST_EXPLOSION) {
+                dx=Math.cos(angle)*Math.cos(elevation);dz=Math.sin(angle)*Math.cos(elevation);dy=Math.sin(elevation);
+                if(e.pattern==ParticleEffect.Pattern.DUST_EXPLOSION) dy=between(0,Math.sin(Math.toRadians(Math.min(90,e.spread))));
+            } else {
+                double cos=between(Math.cos(Math.toRadians(e.spread)),1),sin=Math.sqrt(1-cos*cos);
+                double a=between(0,Math.PI*2);
+                dx=fx*cos+(rx*Math.cos(a)+ux*Math.sin(a))*sin;
+                dy=fy*cos+uy*Math.sin(a)*sin;
+                dz=fz*cos+(rz*Math.cos(a)+uz*Math.sin(a))*sin;
+            }
+            double velocity=e.speed*Math.sqrt(e.aggression)*between(.6,1.2);
+            Particle p=add(e.shape,e.color,px,Math.max(.03,y),pz,e.size*between(.75,1.25),e.lifetime*between(.75,1.25));
+            p.vx=dx*velocity;p.vy=dy*velocity;p.vz=dz*velocity;
+            p.gravity=e.gravity;p.growth=e.growth;p.spin=between(-e.spin,e.spin);
+            p.image=e.image;p.opacity=e.opacity;
+            if(e.pattern==ParticleEffect.Pattern.SPARKLE) { p.delay=between(0,.35);p.twinkle=between(12,24); }
+        }
+    }
+
+    static double alpha(Particle p) {
+        double fade=Math.max(0,Math.min(1,p.life/p.duration));
+        return fade*p.opacity*(p.twinkle==0?1:.25+.75*Math.pow(Math.sin(p.life*p.twinkle),2));
+    }
 
     Quality quality() { return quality; }
     void quality(Quality value) {
@@ -61,6 +110,8 @@ final class ParticleSystem {
     }
     void emit(GameEffect event) {
         if(quality==Quality.OFF) return;
+        ParticleEffect custom=customEffects.get(event.kind);
+        if(custom!=null) { emit(custom,event.x,event.y,event.z,event.facing);return; }
         double x=event.x,y=event.y,z=event.z;
         switch(event.kind) {
             case TAKEOFF:

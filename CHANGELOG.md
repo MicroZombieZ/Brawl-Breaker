@@ -4,6 +4,14 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Particle Studio, a standalone desktop effect editor with image imports,
+  six emission presets, fourteen sliders, and an orbitable 3D preview.
+- Save settings and transparent sprites in portable .pfx files; assign effects
+  to game events or restore defaults without changing gameplay values.
+- Load local event assignments at game startup, respecting particle quality
+  settings, with depth-sorted image particles in the game renderer.
+- Add portable asset, emission, editor UI, and game sprite rendering checks.
+
 - Replace forward melee cones with full 3D boxes that follow movement, height,
   and turning, with collision against enemy body dimensions.
 - Allow every Gauntlet ability in the air while preserving damage and timings.

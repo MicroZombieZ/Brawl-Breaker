@@ -89,6 +89,48 @@ Open **Esc > Particles** to choose **OFF**, **LOW** (160 particles), **MEDIUM** 
 
 Solo particle motion freezes with pause and follows `timescale`. LAN particles continue while your controls are paused, matching the ongoing shared match. Confirmed gameplay events carry sequence IDs so repeated snapshots do not replay bursts; joining a match does not replay its old effects. Each device chooses its own quality. Copy the updated game folder to every device because the network snapshot format now includes particle events.
 
+## Particle Studio
+
+Double-click **ParticleEditor.bat** to open the separate desktop editor, or compile
+with `javac *.java` and run `java ParticleEditor`. It uses the game's particle
+simulation and requires JDK 11 or newer.
+
+1. Choose **Sparkle**, **Dust Explosion**, **Burst**, **Cone**, **Ring**, or
+   **Fountain**. Choose a built-in shape or **Import image**. Transparent PNGs
+   preserve transparency; JPEGs and the first frame of GIFs also work. Images
+   must be at most 2048 x 2048 pixels and under 16 MB. Imported images keep their
+   own colors and aspect ratio; the Color button affects built-in shapes.
+2. Adjust the sliders. Aggressiveness scales particle count and speed; count
+   sets particles per burst; repeat interval controls looping. Speed, spawn
+   range (emitter radius), cone spread (half-angle), heading, elevation, gravity,
+   size, lifetime, growth, spin, and opacity control the effect. Heading is
+   relative to the gameplay event's facing. Ring and Dust Explosion emit
+   radially; elevation sets their lift, and Dust's spread adds vertical scatter.
+   Sparkles stagger emission and twinkle. Particle sizes, lifetimes, and speeds
+   have randomized variation. Changes apply to newly emitted particles.
+3. Drag in the preview to orbit; scroll to zoom. The gold line shows emission
+   direction. Use **Emit burst**, **Restart**, **Loop emission**, and **Pause**
+   to inspect the effect. The preview emits one unit above the floor. It uses
+   HIGH quality with an 800-particle cap; game quality settings still apply.
+4. **Save** creates one portable `.pfx` file containing settings and the uploaded
+   image. **Open effect** restores it for further editing. Changing presets
+   resets parameters while retaining the imported image; **Remove image**
+   returns to built-in shapes. Unsaved edits prompt you before closing, opening,
+   or creating another effect.
+5. To use it in the game, select a **Game event** and click **Assign effect**.
+   This writes `particle-effects/<EVENT>.pfx`. Restart the game to load it.
+   **Restore default** removes that event's assignment. Assigning does not save
+   your separate working file. Assigned effects replace that event's particle
+   burst; ongoing trails/status particles and separate Shockwave rings remain.
+
+Available events are TAKEOFF, DOUBLE_JUMP, LAND, GROUND_POUND, SWING, GRAB, SLAM,
+HIT, SHOCKWAVE, DEFEAT, and RESPAWN. HIT applies to all confirmed attack impacts;
+the editor currently assigns by event rather than by class or individual move.
+Copy the `particle-effects` folder with the game to share assignments. In LAN,
+assignments are local cosmetic assets; they are not transferred automatically.
+Damage, collision, cooldowns, and the network format are unchanged. Invalid
+assigned files log a warning and fall back to the built-in effect for that event.
+
 ## LAN lobbies
 
 Up to eight players can share an arena on the same Wi-Fi or wired local network. Everyone needs the same updated game folder and JDK 11 or newer. Each device runs `Run.bat`; no additional libraries or account are required. This uses a direct connection to the host, with no internet matchmaking or automatic lobby discovery.
@@ -141,7 +183,7 @@ Cooldown commands do not remove attack animations or recovery. Core HP, stamina,
 
 Examples: `cooldowns off`, `dummy hp 500`, `tp 0 -2`, `speed 1.5`, `timescale 0.5`.
 
-Compile checks with `javac *.java`, then run `java HitboxCheck`, `java ParticleCheck`, `java LobbyCheck`, `java ConsoleCheck`, `java CombatCheck`, `java MovementCheck`, `java StaminaCheck`, `java CameraCheck`, and `java RotationCheck`.
+Compile checks with `javac *.java`, then run `java ParticleEditorCheck`, `java HitboxCheck`, `java ParticleCheck`, `java LobbyCheck`, `java ConsoleCheck`, `java CombatCheck`, `java MovementCheck`, `java StaminaCheck`, `java CameraCheck`, and `java RotationCheck`.
 
 ## Versions and restore points
 
