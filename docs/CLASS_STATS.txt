@@ -353,6 +353,12 @@ Purpose:                      Separate desktop cosmetic effect editor; shared
                               ParticleSystem physics, no gameplay/stat changes
 Presets:                      Sparkle, Dust Explosion, Burst, Cone, Ring, Fountain
 Built-in shapes:              Dust, Cube, Shard, Spark, Ring
+Color editing:                Edit color opens RGB/HSV controls, #RRGGBB input,
+                              live swatch, and up to 8 session recent/palette colors
+Color preview:                Existing/new built-in particles update live;
+                              Apply keeps changes, Cancel restores original color
+Color persistence:            Stored in .pfx; recent palette lasts one session
+Image color / transparency:   Images keep original colors; Opacity remains separate
 Uploaded images:              PNG, JPEG, GIF first frame; at most 2048 x 2048,
                               under 16 MB; colors/aspect/transparency preserved
 Portable effect file:         .pfx archive containing settings and optional PNG

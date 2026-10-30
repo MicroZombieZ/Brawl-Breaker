@@ -18,6 +18,7 @@ public class ParticleEditorCheck {
         ParticleEffect loaded=ParticleEffect.load(file);
         check(loaded.pattern==e.pattern&&loaded.shape==e.shape,"Preset and shape round trip");
         near(loaded.heading,73,"Direction round trip");near(loaded.opacity,.37,"Opacity round trip");
+        check(loaded.color.equals(e.color),"Edited color round trip");
         check(loaded.image.getWidth()==12&&loaded.image.getHeight()==6,"Image aspect ratio round trip");
         check(loaded.image.getRGB(3,2)==0x7f12abcd&&loaded.image.getRGB(0,0)==0,"Embedded image retains colors and transparency");
         ParticleSystem system=new ParticleSystem();system.loadEffects(directory);
@@ -53,6 +54,22 @@ public class ParticleEditorCheck {
             ParticleEditor.theme();
             ParticleEditor editor=new ParticleEditor();
             try {
+                final Color[] selected={Color.WHITE};
+                ParticleColorEditor colors=new ParticleColorEditor(Color.WHITE,c->selected[0]=c);
+                colors.hex.setText("#12abEF");check(selected[0].equals(new Color(0x12abef)),"Hex input updates live color");
+                colors.hex.setText("not a color");check(selected[0].equals(new Color(0x12abef)),"Invalid hex retains previous color");
+                colors.chooser.setColor(new Color(240,80,30));check(colors.hex.getText().equals("#F0501E"),"RGB chooser synchronizes hex");
+                check(ParticleColorEditor.parse("#12345")==null&&ParticleColorEditor.parse("#GG0000")==null,"Reject malformed hex colors");
+                components(colors,JButton.class).stream().filter(b->"#FFC65B".equals(b.getToolTipText())).findFirst().get().doClick();
+                check(selected[0].equals(new Color(255,198,91)),"Palette swatch changes color");
+                ParticleColorEditor.remember(new Color(24,96,180));
+                ParticleColorEditor reopened=new ParticleColorEditor(selected[0],c->{});
+                check(components(reopened,JButton.class).stream().anyMatch(b->"#1860B4".equals(b.getToolTipText())),"Applied colors available in session history");
+                colors.setSize(720,480);layout(colors);
+                BufferedImage colorImage=new BufferedImage(720,480,BufferedImage.TYPE_INT_ARGB);
+                Graphics2D colorGraphics=colorImage.createGraphics();colors.paint(colorGraphics);colorGraphics.dispose();
+                try{javax.imageio.ImageIO.write(colorImage,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-colors.png").toFile());}
+                catch(java.io.IOException ex){throw new RuntimeException(ex);}
                 editor.setSize(1220,820);layout(editor);
                 check(components(editor,JSlider.class).size()==14,"All fourteen parameter sliders exist");
                 java.util.List<JComboBox> combos=components(editor,JComboBox.class);
@@ -100,6 +117,6 @@ public class ParticleEditorCheck {
         try{files(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
         finally{try(java.util.stream.Stream<Path> files=Files.walk(directory)){
             for(Path path:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(path);}}
-        System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders and editor rendering.");
+        System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders, live color/hex/palette editing and editor rendering.");
     }
 }

@@ -15,6 +15,7 @@ public class ParticleEditor extends JPanel {
     private final JPanel sliders=new Controls();
     private final JLabel status=new JLabel("Create an effect, then save it or assign it to a game event.");
     private final JLabel imageLabel=new JLabel("Built-in shapes; PNG transparency supported");
+    private final JLabel colorSwatch=new JLabel("",SwingConstants.CENTER);
     private final JComboBox<ParticleEffect.Pattern> presets=new JComboBox<>(ParticleEffect.Pattern.values());
     private final JComboBox<ParticleSystem.Shape> shapes=new JComboBox<>(ParticleSystem.Shape.values());
     private final JComboBox<GameEffect.Kind> events=new JComboBox<>(GameEffect.Kind.values());
@@ -77,8 +78,10 @@ public class ParticleEditor extends JPanel {
         JPanel imageButtons=new JPanel(new FlowLayout(FlowLayout.LEFT,4,4));
         button(imageButtons,"Import image",this::importImage);
         button(imageButtons,"Remove image",()->{effect.image=null;dirty=true;refresh();});
-        button(imageButtons,"Color",()->{Color color=JColorChooser.showDialog(this,"Built-in particle color",effect.color);
-            if(color!=null){effect.color=color;dirty=true;} });
+        JPanel colorControls=new JPanel(new FlowLayout(FlowLayout.LEFT,6,0));
+        colorSwatch.setOpaque(true);colorSwatch.setPreferredSize(new Dimension(86,26));
+        colorSwatch.setBorder(BorderFactory.createLineBorder(Color.GRAY));colorControls.add(colorSwatch);
+        button(colorControls,"Edit color",this::editColor);row("Color",colorControls);
         sliders.add(imageButtons);imageLabel.setBorder(BorderFactory.createEmptyBorder(4,10,8,0));sliders.add(imageLabel);
         JLabel hint=new JLabel("<html><div style='width:230px'>Images keep their own colors and aspect ratio.<br>Aggressiveness scales count and launch speed.<br>Range sets the emitter radius. Burst spreads in 3D; Ring / Dust use radial directions and elevation.<br>Changes apply to newly emitted particles.</div></html>");
         hint.setBorder(BorderFactory.createEmptyBorder(8,10,12,8));sliders.add(hint);
@@ -118,9 +121,29 @@ public class ParticleEditor extends JPanel {
     private void refresh() {
         refreshing=true;presets.setSelectedItem(effect.pattern);shapes.setSelectedItem(effect.shape);
         for(Runnable r:refreshers)r.run();
+        refreshColor();
         imageLabel.setText(effect.image==null?"Built-in shapes; PNG transparency supported":
                 "Image: "+effect.image.getWidth()+" x "+effect.image.getHeight()+" (embedded when saved)");
         refreshing=false;
+    }
+    private void refreshColor(){
+        colorSwatch.setText(ParticleColorEditor.format(effect.color));colorSwatch.setBackground(effect.color);
+        colorSwatch.setForeground(effect.color.getRed()*.299+effect.color.getGreen()*.587+effect.color.getBlue()*.114>150?Color.BLACK:Color.WHITE);
+    }
+    private void previewColor(Color color){
+        effect.color=color;refreshColor();
+        for(ParticleSystem.Particle p:system.particles)if(p.image==null)p.color=color;
+        preview.repaint();
+    }
+    private void editColor(){
+        Color original=effect.color;boolean wasDirty=dirty;
+        ParticleColorEditor editor=new ParticleColorEditor(original,this::previewColor);
+        int choice=JOptionPane.showOptionDialog(this,editor,"Particle color editor",JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE,null,new String[]{"Apply","Cancel"},"Apply");
+        if(choice==0){
+            previewColor(editor.chooser.getColor());ParticleColorEditor.remember(effect.color);
+            dirty=wasDirty||!effect.color.equals(original);status.setText("Particle color: "+ParticleColorEditor.format(effect.color)+". Images keep their original colors.");
+        }else{previewColor(original);dirty=wasDirty;}
     }
     private void restart() {system.clear();system.emit(effect,0,1,0,0);elapsed=0;preview.repaint();}
     private void tick() {

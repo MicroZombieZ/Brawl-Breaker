@@ -123,7 +123,12 @@ simulation and requires JDK 11 or newer.
    **Fountain**. Choose a built-in shape or **Import image**. Transparent PNGs
    preserve transparency; JPEGs and the first frame of GIFs also work. Images
    must be at most 2048 x 2048 pixels and under 16 MB. Imported images keep their
-   own colors and aspect ratio; the Color button affects built-in shapes.
+   own colors and aspect ratio; **Edit color** affects built-in shapes.
+   The color editor provides RGB/HSV controls, a live swatch, `#RRGGBB` hex
+   input, and recent/palette colors. Edits preview on existing and newly emitted
+   built-in particles. **Apply** keeps the color; **Cancel** restores it. Recent
+   colors last for the editor session; the chosen color saves in the effect file.
+   Use the separate Opacity slider for transparency.
 2. Adjust the sliders. Aggressiveness scales particle count and speed; count
    sets particles per burst; repeat interval controls looping. Speed, spawn
    range (emitter radius), cone spread (half-angle), heading, elevation, gravity,

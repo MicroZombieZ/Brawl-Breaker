@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add a particle color editor with RGB/HSV controls, hex input, live preview,
+  color swatches, session history, and Apply/Cancel behavior.
+
 - Organize game, networking, UI, particle code, editor tools, tests, and docs
   into folders; keep the two application launchers at the project root.
 - Add shared build/check scripts, keep generated files under build, and start
