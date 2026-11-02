@@ -13,6 +13,7 @@ public class CubeMovement extends JPanel {
     private boolean exhausted;
     private final CombatSystem combat = new CombatSystem();
     private final ParticleSystem particles = new ParticleSystem();
+    private final UISkins uiSkins = new UISkins();
     private final JComboBox<ParticleSystem.Quality> particleQuality = new JComboBox<>(ParticleSystem.Quality.values());
     private long lastParticleEvent;
     private boolean consoleOpen, consoleKeyHeld, resumeAfterConsole, showHitboxes, showStats, showDebugHud;
@@ -83,6 +84,7 @@ public class CubeMovement extends JPanel {
 
     public CubeMovement() {
         particles.loadEffects(java.nio.file.Paths.get("particle-effects"));
+        uiSkins.load(java.nio.file.Paths.get("ui-assets"));
         setPreferredSize(new Dimension(1000, 700));
         setBackground(new Color(24, 29, 39));
         setFocusable(true);
@@ -1176,7 +1178,7 @@ public class CubeMovement extends JPanel {
         int top = getHeight() - 210;
         int columnX = Math.max(325, getWidth() - 255);
         g.setColor(new Color(15, 20, 28, 215));
-        g.fillRoundRect(columnX - 10, top, 240, 142, 12, 12);
+        if(!uiSkins.draw(g,UISkins.Slot.ABILITY_PANEL,columnX-10,top,240,142))g.fillRoundRect(columnX - 10, top, 240, 142, 12, 12);
         int row = top + 25;
         for (CombatSystem.Move move : CombatSystem.Move.values()) {
             double remaining = combat.cooldowns[move.ordinal()];
@@ -1187,9 +1189,11 @@ public class CubeMovement extends JPanel {
             row += 29;
         }
         if (!paused) {
-            g.setColor(new Color(245, 245, 245, 190));
-            g.drawLine(getWidth() / 2 - 5, getHeight() / 2, getWidth() / 2 + 5, getHeight() / 2);
-            g.drawLine(getWidth() / 2, getHeight() / 2 - 5, getWidth() / 2, getHeight() / 2 + 5);
+            if(!uiSkins.draw(g,UISkins.Slot.CROSSHAIR,getWidth()/2-12,getHeight()/2-12,24,24)) {
+                g.setColor(new Color(245, 245, 245, 190));
+                g.drawLine(getWidth() / 2 - 5, getHeight() / 2, getWidth() / 2 + 5, getHeight() / 2);
+                g.drawLine(getWidth() / 2, getHeight() / 2 - 5, getWidth() / 2, getHeight() / 2 + 5);
+            }
         }
     }
 
@@ -1287,6 +1291,7 @@ public class CubeMovement extends JPanel {
         }
         String classLabel = "Class: " + (equippedClass == null ? "None" : equippedClass);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        uiSkins.draw(g,UISkins.Slot.CLASS_BADGE,Math.max(0,getWidth()-262),4,240,38);
         g.drawString(classLabel, Math.max(22, getWidth() - g.getFontMetrics().stringWidth(classLabel) - 22), 30);
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
         int barX = 22, barWidth = 250;
@@ -1314,12 +1319,14 @@ public class CubeMovement extends JPanel {
                 + (status == null ? "" : "  " + status), x, y - 5);
         g.setColor(new Color(12, 17, 24, 235));
         g.fillRoundRect(x, y, width, 18, 8, 8);
-        if (amount > 0) {
+        UISkins.Slot fillSlot=label.equals("HEALTH")?UISkins.Slot.HEALTH_FILL:UISkins.Slot.STAMINA_FILL;
+        UISkins.Slot frameSlot=label.equals("HEALTH")?UISkins.Slot.HEALTH_FRAME:UISkins.Slot.STAMINA_FRAME;
+        if (!uiSkins.fill(g,fillSlot,x,y,width,18,value/Math.max(1,maximum)) && amount > 0) {
             g.setColor(fill);
             g.fillRoundRect(x + 2, y + 2, Math.max(0, amount - 4), 14, 6, 6);
         }
         g.setColor(new Color(180, 194, 208));
-        g.drawRoundRect(x, y, width, 18, 8, 8);
+        if(!uiSkins.draw(g,frameSlot,x,y,width,18))g.drawRoundRect(x, y, width, 18, 8, 8);
     }
 
     public static void main(String[] args) {

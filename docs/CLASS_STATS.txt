@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-10-30
+Last updated: 2026-11-02
 ================================
 
 This file describes the current game and the remaining class designs.
@@ -336,7 +336,7 @@ LAN synchronization:          Host sends confirmed, sequenced effect events;
                               every device renders its own particles locally
 Late joins / repeated states: Old bursts are skipped; repeated events are ignored
 Quality in LAN:               Each device controls its own effects quality
-Testing:                      scripts\Check.bat (all ten checks)
+Testing:                      scripts\Check.bat (all eleven checks)
                               Sources live in tests; compile separately with
                               scripts\Build.bat tests, then run, for example:
                               java -cp "build/test-classes;build/classes" HitboxCheck
@@ -401,3 +401,49 @@ LAN:                          Cosmetic local assets; copy folder to every device
 Invalid assigned files:       Log warning and use built-in effect for that event
 Testing:                      scripts\Check.bat, or scripts\Build.bat tests then
                               java -cp "build/test-classes;build/classes" ParticleEditorCheck
+
+
+UI STUDIO AND HUD ARTWORK -- IMPLEMENTED
+=======================================
+Launch (project root):        UIEditor.bat; or scripts\Build.bat then
+                              java -cp build/classes UIEditor
+Editor source:                tools/ui-editor; runtime loader: src/ui/UISkins.java
+Tools:                       Brush, eraser, rectangle, ellipse, line, text,
+                              eyedropper, Move Layer; Shift makes squares/circles
+Brush/outline/text size:      1-128 pixels; text uses a minimum of 8 pixels
+Paint opacity:               0-100%; independent of layer opacity
+Shape style:                 Filled or outlined; line uses the outline width
+Color:                       Shared advanced RGB/HSV/hex picker and recent colors
+Canvas:                      16-1024 pixels per axis; transparent background
+Zoom:                        25-400%
+Layers:                      1-16; add, duplicate, delete, rename, reorder,
+                              show/hide, opacity (0-100%), move, clear
+Layer order:                 Top of list composites last; hidden layers excluded
+Layer movement:              X/Y offsets clamped to -4096..4096 pixels
+Undo/redo:                   Complete strokes/shapes and layer/image changes;
+                              up to 20 states, older states may be memory-trimmed
+History keys:                Ctrl+Z undo; Ctrl+Y or Ctrl+Shift+Z redo
+Editable project:            .uidraw archive with separate PNG layers/settings;
+                              history is not stored in the project
+Save key:                    Ctrl+S
+Image import:                PNG/JPEG/GIF first frame, max 2048 x 2048 and <16 MB;
+                              new layer fitted/centered without stretching/upscale
+Image export:                PNG composite of visible layers, preserving alpha
+Unsaved work:                New/Open/Close prompt to save layered project
+
+HUD assignment files:        ui-assets/<SLOT>.png; loaded at game startup
+HEALTH_FRAME / STAMINA_FRAME: 250 x 18 overlay; transparent middle recommended
+HEALTH_FILL / STAMINA_FILL:   250 x 18; artwork clips to current resource fraction
+CLASS_BADGE:                 240 x 38 background behind current class label
+ABILITY_PANEL:               240 x 142 background behind live cooldown text
+CROSSHAIR:                   24 x 24, visible during active play
+New canvas for slot:         Uses selected slot display dimensions
+Open assigned artwork:       Imports flattened assigned PNG as a new layer
+Restore default:             Deletes selected PNG assignment; restart afterward
+Resizing:                    Artwork scales to the existing slot rectangle
+Fallback:                    Unassigned/invalid artwork uses existing HUD drawing
+LAN:                         Local cosmetics; copy ui-assets to share, no transfer
+Gameplay impact:             None; labels, values, controls, and HUD positions stay
+                              live; no new buttons or layout logic are authored
+Testing:                     scripts\Check.bat; or scripts\Build.bat tests then
+                              java -cp "build/test-classes;build/classes" UIEditorCheck

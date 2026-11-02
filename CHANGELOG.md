@@ -4,6 +4,12 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add UI Studio with brush/eraser, shape/line/text tools, advanced colors,
+  image import/export, layered projects, and undo/redo.
+- Assign transparent artwork to health/stamina frames and fills, class badge,
+  ability panel, or crosshair; restore defaults without changing live HUD values.
+- Add layered drawing, tool gesture, PNG, and runtime HUD replacement checks.
+
 - Add a particle color editor with RGB/HSV controls, hex input, live preview,
   color swatches, session history, and Apply/Cancel behavior.
 

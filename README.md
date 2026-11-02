@@ -18,14 +18,16 @@ Requires JDK 11 or newer (JDK 24 is installed on this computer).
 | `src/ui` | Developer console and lobby interface |
 | `src/particles` | Shared particle simulation, effect files, sprites, and events |
 | `tools/particle-editor` | Particle Studio application source |
+| `tools/ui-editor` | UI Studio painting and layered drawing application |
 | `particle-effects` | Saved particle designs and game event assignments |
+| `ui-assets` | Layered UI projects, PNG exports, and assigned HUD artwork |
 | `tests` | Automated checks |
 | `docs` | Class stats, development handoff, and Google Doc update notes |
 | `scripts` | Shared build and check commands |
 | `build` | Generated classes and compiler lists; ignored by Git |
 
 Keep the whole project together when copying it to another device. The game
-and editor launchers stay at the top level and use the correct working folder,
+and both editor launchers stay at the top level and use the correct working folder,
 including when launched from elsewhere. Build outputs stay out of the source
 folders. Java classes retain their existing names and default package.
 
@@ -161,6 +163,54 @@ assignments are local cosmetic assets; they are not transferred automatically.
 Damage, collision, cooldowns, and the network format are unchanged. Invalid
 assigned files log a warning and fall back to the built-in effect for that event.
 
+## UI Studio
+
+Double-click **UIEditor.bat** to open the UI painting application. For terminal
+use, build with `scripts\Build.bat`, then run `java -cp build/classes UIEditor`.
+
+- **Drawing:** brush, eraser, rectangle, ellipse, line, text, eyedropper, and
+  Move Layer tools. Drag to paint or draw shapes; hold Shift for squares and
+  circles. Choose filled or outlined shapes, brush/outline width, paint opacity,
+  and zoom (25-400%). The size control also sets text size (minimum 8 pixels).
+- **Color:** Edit color opens the advanced RGB/HSV picker with hex input and
+  recent colors. Paint opacity controls transparency. The checkerboard shows
+  transparent pixels; it is not exported.
+- **Layers:** Add, Copy, Delete, Rename, Up/Down, visibility, and opacity operate
+  on the selected layer. The top list entry draws on top. Move Layer drags its
+  contents; Clear Layer erases its pixels. Hidden layers are protected from
+  drawing. Documents support 1-16 layers and 16-1024 pixels per canvas axis.
+- **History:** Undo/Redo covers complete strokes, shapes, image imports, and
+  layer changes. Use Ctrl+Z, Ctrl+Y, or Ctrl+Shift+Z. History keeps up to 20 states
+  and may trim older states for memory. Undo history is local to the session.
+- **Files:** Save/Open `.uidraw` projects to preserve individual layers, names,
+  positions, visibility, and opacity. Import PNG/JPEG/GIF (first frame) as a new
+  layer, fitted to the canvas without stretching or enlarging. Images must be
+  at most 2048 x 2048 and under 16 MB. Export PNG flattens visible layers with
+  transparency. Ctrl+S saves the project; exporting or assigning does not save
+  the editable project. New/Open/Close offer to save unsaved work.
+
+To replace existing game UI, choose a slot under **Replace Game UI**. **New
+canvas for slot** offers the slot's display size. **Assign artwork** writes
+the visible composition to `ui-assets/<SLOT>.png`. **Open assigned artwork**
+imports that PNG as a new layer for further editing; use the `.uidraw` project
+to recover the original separate layers. **Restore game default** removes the
+assignment. Restart the game after assigning or restoring artwork.
+
+| Slot | Display size | Behavior |
+| --- | --- | --- |
+| `HEALTH_FRAME`, `STAMINA_FRAME` | 250 x 18 | Artwork overlays the bar; keep the middle transparent |
+| `HEALTH_FILL`, `STAMINA_FILL` | 250 x 18 | Full-size artwork clips from left to right to the current resource value |
+| `CLASS_BADGE` | 240 x 38 | Background behind the live class name |
+| `ABILITY_PANEL` | 240 x 142 | Background behind live ability names and cooldowns |
+| `CROSSHAIR` | 24 x 24 | Replaces the center cross during play |
+
+Images scale to each slot. Labels, HP/stamina values, cooldowns, positions,
+controls, and gameplay behavior remain live and unchanged. Artwork changes
+appearance only; it does not create new interactive buttons or move HUD items.
+Unassigned/invalid slots use the existing UI. Copy `ui-assets` with the game to
+share skins; LAN does not transfer artwork automatically. The particle editor
+and its assignments remain separate.
+
 ## LAN lobbies
 
 Up to eight players can share an arena on the same Wi-Fi or wired local network. Everyone needs the same updated game folder and JDK 11 or newer. Each device runs `Run.bat`; no additional libraries or account are required. This uses a direct connection to the host, with no internet matchmaking or automatic lobby discovery.
@@ -213,7 +263,7 @@ Cooldown commands do not remove attack animations or recovery. Core HP, stamina,
 
 Examples: `cooldowns off`, `dummy hp 500`, `tp 0 -2`, `speed 1.5`, `timescale 0.5`.
 
-Run `scripts\Check.bat` from the project root to build and run all ten checks.
+Run `scripts\Check.bat` from the project root to build and run all eleven checks.
 To run one check, first use `scripts\Build.bat tests`, then, for example,
 `java -cp "build/test-classes;build/classes" ParticleEditorCheck`. All check
 sources live in `tests`.
