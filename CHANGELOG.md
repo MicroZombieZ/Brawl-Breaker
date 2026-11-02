@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add a UI Studio fill bucket with connected-region filling, paint opacity,
+  selected-layer boundaries, moved-layer support, and undo/redo.
+
 - Center UI Studio's canvas and add middle-mouse panning, cursor-anchored wheel
   zoom, and a Reset View action to recover artwork moved out of sight.
 

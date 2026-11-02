@@ -8,7 +8,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 /** Layered raster UI authoring and local HUD skin assignment. */
 public class UIEditor extends JPanel {
-    enum Tool { BRUSH, ERASER, RECTANGLE, ELLIPSE, LINE, MOVE_LAYER, TEXT, EYEDROPPER }
+    enum Tool { BRUSH, ERASER, FILL, RECTANGLE, ELLIPSE, LINE, MOVE_LAYER, TEXT, EYEDROPPER }
     UIDrawing drawing=new UIDrawing(512,256);
     private final Canvas canvas=new Canvas();
     private final DefaultListModel<UIDrawing.Layer> layerModel=new DefaultListModel<>();
@@ -135,6 +135,9 @@ public class UIEditor extends JPanel {
                 activeTool=(Tool)tools.getSelectedItem();
                 if(activeTool==Tool.EYEDROPPER){color=new Color(drawing.flatten().getRGB(p.x,p.y),true);color=new Color(color.getRed(),color.getGreen(),color.getBlue());refresh();return;}
                 if(!drawing.active().visible){status.setText("Show the selected layer before drawing.");return;}
+                if(activeTool==Tool.FILL){try{int count=drawing.floodFill(p.x,p.y,color,alpha.getValue()/100f);
+                    if(count>0)changed();status.setText("Filled "+count+" connected pixels on "+drawing.active().name+".");
+                }catch(Exception ex){error(ex);}return;}
                 if(activeTool==Tool.TEXT){String text=JOptionPane.showInputDialog(UIEditor.this,"Text to draw");if(text!=null&&!text.isEmpty())edit(()->{
                     drawing.checkpoint();Graphics2D g=paintGraphics();g.setFont(new Font("SansSerif",Font.BOLD,Math.max(8,(int)brush.getValue())));g.drawString(text,p.x,p.y);g.dispose();});return;}
                 try{drawing.checkpoint();}catch(Exception ex){error(ex);return;}

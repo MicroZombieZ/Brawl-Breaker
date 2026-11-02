@@ -23,6 +23,26 @@ final class UIDrawing {
         this.width=width;this.height=height;layers.add(new Layer("Layer 1",width,height));
     }
     Layer active(){return layers.get(selected);}
+    /** Four-connected, exact-color bucket fill clipped to the visible canvas. */
+    int floodFill(int canvasX,int canvasY,Color color,float opacity) throws IOException {
+        Layer layer=active();int x=canvasX-layer.x,y=canvasY-layer.y;
+        int minX=Math.max(0,-layer.x),minY=Math.max(0,-layer.y);
+        int maxX=Math.min(width,width-layer.x),maxY=Math.min(height,height-layer.y);
+        if(!layer.visible||opacity<=0||x<minX||y<minY||x>=maxX||y>=maxY)return 0;
+        int[] pixels=layer.image.getRGB(0,0,width,height,null,0,width);int seed=y*width+x,target=fillColor(pixels[seed]);
+        BufferedImage sample=new BufferedImage(1,1,BufferedImage.TYPE_INT_ARGB);sample.setRGB(0,0,pixels[seed]);
+        Graphics2D g=sample.createGraphics();g.setComposite(AlphaComposite.SrcOver.derive(opacity));g.setColor(color);g.fillRect(0,0,1,1);g.dispose();
+        int replacement=sample.getRGB(0,0);if(fillColor(replacement)==target)return 0;
+        int[] queue=new int[width*height];int head=0,tail=0;queue[tail++]=seed;pixels[seed]=replacement;
+        while(head<tail){int index=queue[head++],px=index%width,py=index/width;
+            if(px>minX&&fillColor(pixels[index-1])==target){pixels[index-1]=replacement;queue[tail++]=index-1;}
+            if(px+1<maxX&&fillColor(pixels[index+1])==target){pixels[index+1]=replacement;queue[tail++]=index+1;}
+            if(py>minY&&fillColor(pixels[index-width])==target){pixels[index-width]=replacement;queue[tail++]=index-width;}
+            if(py+1<maxY&&fillColor(pixels[index+width])==target){pixels[index+width]=replacement;queue[tail++]=index+width;}
+        }
+        checkpoint();layer.image.setRGB(0,0,width,height,pixels,0,width);return tail;
+    }
+    private static int fillColor(int pixel){return (pixel>>>24)==0?0:pixel;}
     BufferedImage flatten(){
         BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();
         for(Layer layer:layers)if(layer.visible){g.setComposite(AlphaComposite.SrcOver.derive(layer.opacity));g.drawImage(layer.image,layer.x,layer.y,null);}

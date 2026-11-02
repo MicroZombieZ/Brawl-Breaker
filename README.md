@@ -168,7 +168,7 @@ assigned files log a warning and fall back to the built-in effect for that event
 Double-click **UIEditor.bat** to open the UI painting application. For terminal
 use, build with `scripts\Build.bat`, then run `java -cp build/classes UIEditor`.
 
-- **Drawing:** brush, eraser, rectangle, ellipse, line, text, eyedropper, and
+- **Drawing:** brush, eraser, fill bucket, rectangle, ellipse, line, text, eyedropper, and
   Move Layer tools. Drag to paint or draw shapes; hold Shift for squares and
   circles. Choose filled or outlined shapes, brush/outline width, paint opacity,
   and zoom (25-400%). Hold the middle mouse button and drag anywhere in the
@@ -176,6 +176,9 @@ use, build with `scripts\Build.bat`, then run `java -cp build/classes UIEditor`.
   the zoom slider uses the workspace center. **Reset view** fits and centers the
   canvas. New/Open also reset the view. Panning/zooming do not alter artwork or
   undo history. The size control also sets text size (minimum 8 pixels).
+  Select **FILL** and click to fill a connected area of matching color on the
+  selected layer. It respects paint opacity and shape boundaries on that layer;
+  other layers are not used as boundaries. Each fill is one undo step.
 - **Color:** Edit color opens the advanced RGB/HSV picker with hex input and
   recent colors. Paint opacity controls transparency. The checkerboard shows
   transparent pixels; it is not exported.

@@ -408,10 +408,15 @@ UI STUDIO AND HUD ARTWORK -- IMPLEMENTED
 Launch (project root):        UIEditor.bat; or scripts\Build.bat then
                               java -cp build/classes UIEditor
 Editor source:                tools/ui-editor; runtime loader: src/ui/UISkins.java
-Tools:                       Brush, eraser, rectangle, ellipse, line, text,
+Tools:                       Brush, eraser, fill bucket, rectangle, ellipse, line, text,
                               eyedropper, Move Layer; Shift makes squares/circles
 Brush/outline/text size:      1-128 pixels; text uses a minimum of 8 pixels
 Paint opacity:               0-100%; independent of layer opacity
+Fill bucket:                 Click a four-connected exact-color region on the
+                              selected visible layer; honors paint opacity and
+                              layer offsets, clips to canvas, one undo step.
+                              Transparent pixels connect regardless of hidden RGB;
+                              boundaries on other layers are not sampled.
 Shape style:                 Filled or outlined; line uses the outline width
 Color:                       Shared advanced RGB/HSV/hex picker and recent colors
 Canvas:                      16-1024 pixels per axis; transparent background

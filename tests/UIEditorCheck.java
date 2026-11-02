@@ -9,6 +9,17 @@ import javax.swing.*;
 public class UIEditorCheck {
     static void check(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     static void document(Path directory) throws Exception {
+        UIDrawing bucket=new UIDrawing(32,32);Graphics2D border=bucket.active().image.createGraphics();border.setColor(Color.BLACK);border.drawRect(4,4,12,12);border.dispose();
+        check(bucket.floodFill(6,6,Color.RED,1)==121,"Bucket fills enclosed four-connected region");
+        check(bucket.active().image.getRGB(6,6)==Color.RED.getRGB()&&bucket.active().image.getRGB(0,0)==0&&bucket.active().image.getRGB(4,4)==Color.BLACK.getRGB(),"Bucket respects boundaries");
+        bucket.undo();check(bucket.active().image.getRGB(6,6)==0,"Undo fill");bucket.redo();check(bucket.active().image.getRGB(6,6)==Color.RED.getRGB(),"Redo fill");
+        check(bucket.floodFill(6,6,Color.RED,1)==0,"Same-color fill is a no-op");
+        bucket.addLayer("Separate");check(bucket.floodFill(0,0,Color.BLUE,.5f)==1024,"Fill operates on selected layer alone");
+        check((bucket.active().image.getRGB(0,0)>>>24)==128&&bucket.layers.get(0).image.getRGB(6,6)==Color.RED.getRGB(),"Fill uses paint opacity without touching other layers");
+        bucket.active().x=10;bucket.active().y=3;bucket.active().image=new BufferedImage(32,32,BufferedImage.TYPE_INT_ARGB);
+        check(bucket.floodFill(12,5,Color.GREEN,1)==22*29,"Moved layer fill clips to canvas");
+        check(bucket.active().image.getRGB(2,2)==Color.GREEN.getRGB()&&bucket.active().image.getRGB(25,2)==0,"Moved layer coordinates handled correctly");
+        bucket.active().visible=false;check(bucket.floodFill(12,5,Color.RED,1)==0,"Hidden layer protected from fill");
         UIDrawing d=new UIDrawing(64,32);d.active().name="Base";d.active().image.setRGB(4,5,Color.RED.getRGB());
         d.addLayer("Overlay");d.active().image.setRGB(4,5,Color.BLUE.getRGB());
         check(d.flatten().getRGB(4,5)==Color.BLUE.getRGB(),"Top layer compositing");
@@ -76,6 +87,9 @@ public class UIEditorCheck {
             tools.setSelectedItem(UIEditor.Tool.ERASER);gesture(canvas,30,20,35,20,0);check(editor.drawing.flatten().getRGB(32,20)==0,"Eraser clears alpha");
             button(editor,"Add").doClick();tools.setSelectedItem(UIEditor.Tool.RECTANGLE);gesture(canvas,60,50,100,80,0);
             check(editor.drawing.active().image.getRGB(70,60)!=0,"Rectangle tool");
+            tools.setSelectedItem(UIEditor.Tool.FILL);gesture(canvas,5,5,5,5,0);
+            check(editor.drawing.active().image.getRGB(5,5)!=0,"Fill tool click works after canvas pan/zoom");
+            button(editor,"Undo").doClick();check(editor.drawing.active().image.getRGB(5,5)==0,"Fill gesture is one undo step");
             tools.setSelectedItem(UIEditor.Tool.ELLIPSE);gesture(canvas,120,50,160,80,0);check(editor.drawing.active().image.getRGB(140,65)!=0,"Ellipse tool");
             tools.setSelectedItem(UIEditor.Tool.LINE);gesture(canvas,170,50,210,50,0);check(editor.drawing.active().image.getRGB(190,50)!=0,"Line tool");
             tools.setSelectedItem(UIEditor.Tool.RECTANGLE);gesture(canvas,230,50,240,75,InputEvent.SHIFT_DOWN_MASK);
