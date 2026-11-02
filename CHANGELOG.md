@@ -4,6 +4,13 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Remove the old translucent background behind custom health/stamina artwork;
+  add replaceable backgrounds and artwork layers for all normal HUD text areas.
+- Add HUD Studio for linked artwork uploads, placement, scale, rotation, opacity,
+  text styling/visibility, undo/redo, and saved resolution-relative HUD layouts.
+- Share the live HUD renderer between the game and editor, retaining functional
+  resource fills/cooldowns and allowing built-in artwork to be disabled per piece.
+
 - Add a UI Studio fill bucket with connected-region filling, paint opacity,
   selected-layer boundaries, moved-layer support, and undo/redo.
 

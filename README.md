@@ -19,6 +19,7 @@ Requires JDK 11 or newer (JDK 24 is installed on this computer).
 | `src/particles` | Shared particle simulation, effect files, sprites, and events |
 | `tools/particle-editor` | Particle Studio application source |
 | `tools/ui-editor` | UI Studio painting and layered drawing application |
+| `tools/hud-editor` | HUD Studio placement, scaling, and linked artwork application |
 | `particle-effects` | Saved particle designs and game event assignments |
 | `ui-assets` | Layered UI projects, PNG exports, and assigned HUD artwork |
 | `tests` | Automated checks |
@@ -27,7 +28,7 @@ Requires JDK 11 or newer (JDK 24 is installed on this computer).
 | `build` | Generated classes and compiler lists; ignored by Git |
 
 Keep the whole project together when copying it to another device. The game
-and both editor launchers stay at the top level and use the correct working folder,
+and editor launchers stay at the top level and use the correct working folder,
 including when launched from elsewhere. Build outputs stay out of the source
 folders. Java classes retain their existing names and default package.
 
@@ -207,16 +208,65 @@ assignment. Restart the game after assigning or restoring artwork.
 | --- | --- | --- |
 | `HEALTH_FRAME`, `STAMINA_FRAME` | 250 x 18 | Artwork overlays the bar; keep the middle transparent |
 | `HEALTH_FILL`, `STAMINA_FILL` | 250 x 18 | Full-size artwork clips from left to right to the current resource value |
+| `HEALTH_BACKGROUND`, `STAMINA_BACKGROUND` | 250 x 18 | Optional background behind custom fills/frames |
+| `HEALTH_LABEL`, `STAMINA_LABEL` | 250 x 25 | Artwork behind the live resource label |
 | `CLASS_BADGE` | 240 x 38 | Background behind the live class name |
+| `CLASS_LABEL` | 240 x 38 | Optional artwork for the class text area |
 | `ABILITY_PANEL` | 240 x 142 | Background behind live ability names and cooldowns |
+| `ABILITY_LABELS` | 240 x 142 | Optional artwork for the ability text area |
 | `CROSSHAIR` | 24 x 24 | Replaces the center cross during play |
+| `LAN_STATUS` | 600 x 22 | Artwork for the live LAN status area |
+| `DEBUG_INFO` | 650 x 48 | Artwork for the F11 debug information area |
 
-Images scale to each slot. Labels, HP/stamina values, cooldowns, positions,
-controls, and gameplay behavior remain live and unchanged. Artwork changes
-appearance only; it does not create new interactive buttons or move HUD items.
-Unassigned/invalid slots use the existing UI. Copy `ui-assets` with the game to
-share skins; LAN does not transfer artwork automatically. The particle editor
-and its assignments remain separate.
+Images scale to each slot. HP/stamina values and cooldowns remain live; use
+HUD Studio below to position pieces or hide/style their text. A bar with custom
+frame or fill artwork no longer has the old translucent background behind it.
+Add an explicit background image if wanted. Unassigned/invalid slots use the
+existing UI unless built-in artwork is disabled for that piece. Copy `ui-assets`
+with the game to share skins; LAN does not transfer artwork automatically.
+
+## HUD Studio
+
+Double-click **HUDEditor.bat**, or build with `scripts\Build.bat` and run
+`java -cp build/classes HUDEditor`. This is the placement editor; UI Studio
+remains the painting/layering editor. They share the same `ui-assets` artwork.
+
+1. Select a linked piece: **HEALTH**, **STAMINA**, **CLASS**, **ABILITIES**,
+   **CROSSHAIR**, **LAN**, or **DEBUG**. Its outline appears in the preview.
+2. Choose an **Artwork layer**, then **Upload image** to replace it with a
+   PNG/JPEG/GIF (first frame). The image limit is 2048 x 2048 pixels / 16 MB;
+   transparent PNGs work best. For health, the frame, fill, background, and label
+   are separate images but stay linked as one moving HUD piece. Removing an
+   image is staged until Save & Apply.
+3. Drag a piece in the preview or edit its X/Y values. Adjust width/height scale
+   (0.1-5x), optionally locked together, rotation (-180 to 180 degrees), and
+   opacity. Rotation is around the scaled piece's center. Bar fills still clip
+   to the live resource value before being scaled and rotated.
+4. Choose whether to show the piece, show live text, or use built-in artwork for
+   empty slots. Disable built-in artwork to remove default backgrounds, fills,
+   borders, panels, and crosshair strokes for that piece. Text has separate
+   color and size controls; hide live text if your artwork already contains it.
+5. **Save & Apply** writes `ui-assets/hud-layout.properties` and only changed
+   artwork files. Restart the game to load them. Existing PNG assignments from
+   UI Studio continue to work. Saving clears the editor's undo/redo history.
+
+The preview uses the same HUD renderer as the game. Health/stamina sliders and
+LAN/debug toggles let you inspect live states without changing gameplay. The
+game still uses its real values, LAN status, and F11 debug toggle. Middle-drag
+pans the preview; scrolling zooms it around the cursor. These preview controls
+do not change the actual HUD scale. **Reset view** recovers the preview;
+**Reset piece placement** restores that piece's default position/style while
+keeping uploaded images.
+
+Undo/redo supports up to 40 placement/style/image edits, including whole drags
+(Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z). Ctrl+S saves and applies. **Export layout** saves
+a placement/style backup; **Open layout** loads one with the current artwork.
+Copy its PNG files as well when sharing. **Reload from game** reads the current
+on-disk layout and images. Closing, opening, or reloading prompts for unsaved
+changes. HUD positions use a 1000 x 700 reference frame and adapt to window
+dimensions; scale remains relative to each piece's normal size. HUD Studio edits
+the player HUD; pause/class/lobby menus and world-space NPC labels stay in their
+existing interfaces. Gameplay values and network messages are unchanged.
 
 ## LAN lobbies
 
@@ -270,7 +320,7 @@ Cooldown commands do not remove attack animations or recovery. Core HP, stamina,
 
 Examples: `cooldowns off`, `dummy hp 500`, `tp 0 -2`, `speed 1.5`, `timescale 0.5`.
 
-Run `scripts\Check.bat` from the project root to build and run all eleven checks.
+Run `scripts\Check.bat` from the project root to build and run all twelve checks.
 To run one check, first use `scripts\Build.bat tests`, then, for example,
 `java -cp "build/test-classes;build/classes" ParticleEditorCheck`. All check
 sources live in `tests`.

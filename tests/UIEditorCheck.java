@@ -101,9 +101,13 @@ public class UIEditorCheck {
                 CubeMovement game=new CubeMovement();java.lang.reflect.Field field=CubeMovement.class.getDeclaredField("uiSkins");field.setAccessible(true);
                 UISkins skins=(UISkins)field.get(game);skins.images.clear();BufferedImage fill=new BufferedImage(100,18,BufferedImage.TYPE_INT_ARGB);
                 Graphics2D paint=fill.createGraphics();paint.setColor(Color.GREEN);paint.fillRect(0,0,100,18);paint.dispose();skins.images.put(UISkins.Slot.HEALTH_FILL,fill);
-                java.lang.reflect.Method resource=CubeMovement.class.getDeclaredMethod("drawResourceBar",Graphics2D.class,String.class,double.class,double.class,int.class,int.class,int.class,Color.class,String.class);resource.setAccessible(true);
-                BufferedImage hud=new BufferedImage(150,60,BufferedImage.TYPE_INT_ARGB);paint=hud.createGraphics();resource.invoke(game,paint,"HEALTH",40.0,100.0,10,20,100,Color.RED,null);paint.dispose();
-                check(hud.getRGB(49,25)==Color.GREEN.getRGB()&&hud.getRGB(50,25)!=Color.GREEN.getRGB(),"Game HUD actually uses custom clipped fill");
+                java.lang.reflect.Field combatField=CubeMovement.class.getDeclaredField("combat");combatField.setAccessible(true);((CombatSystem)combatField.get(game)).health=40;
+                HUDLayout hudLayout=new HUDLayout();for(HUDLayout.Placement p:hudLayout.placements.values())p.visible=false;
+                HUDLayout.Placement p=hudLayout.get(HUDLayout.Piece.HEALTH);p.visible=true;p.positioned=true;p.x=10;p.y=20;
+                java.lang.reflect.Field layoutField=CubeMovement.class.getDeclaredField("hudLayout");layoutField.setAccessible(true);layoutField.set(game,hudLayout);game.setSize(1000,700);
+                java.lang.reflect.Method resource=CubeMovement.class.getDeclaredMethod("drawCombatHud",Graphics2D.class);resource.setAccessible(true);
+                BufferedImage hud=new BufferedImage(300,60,BufferedImage.TYPE_INT_ARGB);paint=hud.createGraphics();resource.invoke(game,paint);paint.dispose();
+                check(hud.getRGB(109,25)==Color.GREEN.getRGB()&&hud.getRGB(110,25)!=Color.GREEN.getRGB(),"Game HUD actually uses transformed custom clipped fill");
             }catch(ReflectiveOperationException ex){throw new RuntimeException(ex);}
             BufferedImage screenshot=new BufferedImage(1250,820,BufferedImage.TYPE_INT_ARGB);Graphics2D g=screenshot.createGraphics();editor.paint(g);g.dispose();
             try{javax.imageio.ImageIO.write(screenshot,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-ui-editor.png").toFile());}

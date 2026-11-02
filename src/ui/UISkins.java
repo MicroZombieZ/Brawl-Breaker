@@ -8,9 +8,18 @@ import java.util.*;
 final class UISkins {
     enum Slot {
         HEALTH_FRAME(250,18), HEALTH_FILL(250,18), STAMINA_FRAME(250,18), STAMINA_FILL(250,18),
-        CLASS_BADGE(240,38), ABILITY_PANEL(240,142), CROSSHAIR(24,24);
+        CLASS_BADGE(240,38), ABILITY_PANEL(240,142), CROSSHAIR(24,24),
+        HEALTH_BACKGROUND(250,18),STAMINA_BACKGROUND(250,18),HEALTH_LABEL(250,25),STAMINA_LABEL(250,25),
+        CLASS_LABEL(240,38),ABILITY_LABELS(240,142),LAN_STATUS(600,22),DEBUG_INFO(650,48);
         final int width,height;
         Slot(int width,int height){this.width=width;this.height=height;}
+        HUDLayout.Piece piece(){
+            if(name().startsWith("HEALTH"))return HUDLayout.Piece.HEALTH;
+            if(name().startsWith("STAMINA"))return HUDLayout.Piece.STAMINA;
+            if(name().startsWith("CLASS"))return HUDLayout.Piece.CLASS;
+            if(name().startsWith("ABILITY"))return HUDLayout.Piece.ABILITIES;
+            if(this==LAN_STATUS)return HUDLayout.Piece.LAN;if(this==DEBUG_INFO)return HUDLayout.Piece.DEBUG;return HUDLayout.Piece.CROSSHAIR;
+        }
     }
     final Map<Slot,BufferedImage> images=new EnumMap<>(Slot.class);
     void load(Path directory){

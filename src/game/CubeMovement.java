@@ -14,6 +14,7 @@ public class CubeMovement extends JPanel {
     private final CombatSystem combat = new CombatSystem();
     private final ParticleSystem particles = new ParticleSystem();
     private final UISkins uiSkins = new UISkins();
+    private HUDLayout hudLayout;
     private final JComboBox<ParticleSystem.Quality> particleQuality = new JComboBox<>(ParticleSystem.Quality.values());
     private long lastParticleEvent;
     private boolean consoleOpen, consoleKeyHeld, resumeAfterConsole, showHitboxes, showStats, showDebugHud;
@@ -85,6 +86,7 @@ public class CubeMovement extends JPanel {
     public CubeMovement() {
         particles.loadEffects(java.nio.file.Paths.get("particle-effects"));
         uiSkins.load(java.nio.file.Paths.get("ui-assets"));
+        hudLayout=HUDLayout.load(java.nio.file.Paths.get("ui-assets","hud-layout.properties"));
         setPreferredSize(new Dimension(1000, 700));
         setBackground(new Color(24, 29, 39));
         setFocusable(true);
@@ -1175,26 +1177,14 @@ public class CubeMovement extends JPanel {
     }
 
     private void drawCombatHud(Graphics2D g) {
-        int top = getHeight() - 210;
-        int columnX = Math.max(325, getWidth() - 255);
-        g.setColor(new Color(15, 20, 28, 215));
-        if(!uiSkins.draw(g,UISkins.Slot.ABILITY_PANEL,columnX-10,top,240,142))g.fillRoundRect(columnX - 10, top, 240, 142, 12, 12);
-        int row = top + 25;
-        for (CombatSystem.Move move : CombatSystem.Move.values()) {
-            double remaining = combat.cooldowns[move.ordinal()];
-            g.setColor(!combat.equipped ? new Color(140, 149, 160) : remaining > 0
-                    ? new Color(244, 193, 108) : new Color(125, 231, 182));
-            g.drawString(move.label + (!combat.equipped ? "  --" : remaining > 0
-                    ? String.format(Locale.ROOT, "  %.1fs", remaining) : "  Ready"), columnX, row);
-            row += 29;
-        }
-        if (!paused) {
-            if(!uiSkins.draw(g,UISkins.Slot.CROSSHAIR,getWidth()/2-12,getHeight()/2-12,24,24)) {
-                g.setColor(new Color(245, 245, 245, 190));
-                g.drawLine(getWidth() / 2 - 5, getHeight() / 2, getWidth() / 2 + 5, getHeight() / 2);
-                g.drawLine(getWidth() / 2, getHeight() / 2 - 5, getWidth() / 2, getHeight() / 2 + 5);
-            }
-        }
+        HUDRenderer.Data data=new HUDRenderer.Data();
+        data.health=combat.health;data.maxHealth=combat.maxHealth();data.stamina=stamina;data.exhausted=exhausted;
+        data.equipped=combat.equipped;data.className=equippedClass==null?"None":equippedClass;data.playing=!paused;
+        data.speed=combat.speed;data.maxSpeed=SPRINT_SPEED*speedMultiplier+(combat.active==CombatSystem.Move.HAYMAKER?12:0);
+        data.multiplier=combat.multiplier;data.streak=combat.streakTime;data.debug=showDebugHud;
+        data.lan=lobbyClient!=null&&appliedSnapshot!=null;if(data.lan)data.players=appliedSnapshot.players.size();
+        System.arraycopy(combat.cooldowns,0,data.cooldowns,0,4);
+        new HUDRenderer(uiSkins,hudLayout).draw(g,getWidth(),getHeight(),data);
     }
 
     private void drawBoxOutline(Graphics2D g,CombatSystem.Hitbox box,Color color) {
@@ -1277,56 +1267,12 @@ public class CubeMovement extends JPanel {
         }
         drawCombatWorld(g);
         drawDebugOverlays(g);
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
-        g.setColor(new Color(230,236,242));
-        if (showDebugHud) {
-            g.drawString(String.format(Locale.ROOT, "Speed %.1f u/s  |  Max %.1f  |  Defense 0%%", combat.speed,
-                    SPRINT_SPEED * speedMultiplier + (combat.active == CombatSystem.Move.HAYMAKER ? 12 : 0)), 22, 78);
-            g.drawString(String.format(Locale.ROOT, "Damage modifier %.2fx%s", combat.multiplier,
-                    combat.streakTime > 0 ? String.format(Locale.ROOT, "  (%.1fs)", combat.streakTime) : ""), 22, 102);
-        }
-        if (lobbyClient != null && appliedSnapshot != null) {
-            g.setColor(new Color(160, 230, 192));
-            g.drawString("LAN match: " + appliedSnapshot.players.size() + "/8 players  |  F2: roster / leave", 22, 126);
-        }
-        String classLabel = "Class: " + (equippedClass == null ? "None" : equippedClass);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        uiSkins.draw(g,UISkins.Slot.CLASS_BADGE,Math.max(0,getWidth()-262),4,240,38);
-        g.drawString(classLabel, Math.max(22, getWidth() - g.getFontMetrics().stringWidth(classLabel) - 22), 30);
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
-        int barX = 22, barWidth = 250;
-        int healthBarY = getHeight() - 102;
-        int staminaBarY = getHeight() - 47;
-        drawResourceBar(g, "HEALTH", combat.health, combat.maxHealth(), barX, healthBarY,
-                barWidth, new Color(226, 87, 91), combat.health <= 0 ? "DEFEATED" : null);
-        drawResourceBar(g, "STAMINA", stamina, MAX_STAMINA, barX, staminaBarY,
-                barWidth, exhausted ? new Color(245, 158, 66) : new Color(87, 213, 151),
-                exhausted ? "RECOVERING" : null);
         drawCombatHud(g);
         if (paused) {
             g.setColor(new Color(0, 0, 0, 155));
             g.fillRect(0, 0, getWidth(), getHeight());
         }
         g.dispose();
-    }
-
-    private void drawResourceBar(Graphics2D g, String label, double value, double maximum, int x, int y,
-            int width, Color fill, String status) {
-        int amount = (int) Math.round(Math.max(0, Math.min(1, value / Math.max(1, maximum))) * width);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        g.setColor(new Color(230, 236, 242));
-        g.drawString(label + "  " + (int) Math.ceil(Math.max(0, value)) + " / " + (int) maximum
-                + (status == null ? "" : "  " + status), x, y - 5);
-        g.setColor(new Color(12, 17, 24, 235));
-        g.fillRoundRect(x, y, width, 18, 8, 8);
-        UISkins.Slot fillSlot=label.equals("HEALTH")?UISkins.Slot.HEALTH_FILL:UISkins.Slot.STAMINA_FILL;
-        UISkins.Slot frameSlot=label.equals("HEALTH")?UISkins.Slot.HEALTH_FRAME:UISkins.Slot.STAMINA_FRAME;
-        if (!uiSkins.fill(g,fillSlot,x,y,width,18,value/Math.max(1,maximum)) && amount > 0) {
-            g.setColor(fill);
-            g.fillRoundRect(x + 2, y + 2, Math.max(0, amount - 4), 14, 6, 6);
-        }
-        g.setColor(new Color(180, 194, 208));
-        if(!uiSkins.draw(g,frameSlot,x,y,width,18))g.drawRoundRect(x, y, width, 18, 8, 8);
     }
 
     public static void main(String[] args) {

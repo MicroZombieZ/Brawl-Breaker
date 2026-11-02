@@ -336,7 +336,7 @@ LAN synchronization:          Host sends confirmed, sequenced effect events;
                               every device renders its own particles locally
 Late joins / repeated states: Old bursts are skipped; repeated events are ignored
 Quality in LAN:               Each device controls its own effects quality
-Testing:                      scripts\Check.bat (all eleven checks)
+Testing:                      scripts\Check.bat (all twelve checks)
                               Sources live in tests; compile separately with
                               scripts\Build.bat tests, then run, for example:
                               java -cp "build/test-classes;build/classes" HitboxCheck
@@ -442,10 +442,16 @@ Image export:                PNG composite of visible layers, preserving alpha
 Unsaved work:                New/Open/Close prompt to save layered project
 
 HUD assignment files:        ui-assets/<SLOT>.png; loaded at game startup
+HEALTH_BACKGROUND /          250 x 18 optional background artwork; old translucent
+  STAMINA_BACKGROUND:         background is skipped when a custom frame/fill exists
 HEALTH_FRAME / STAMINA_FRAME: 250 x 18 overlay; transparent middle recommended
 HEALTH_FILL / STAMINA_FILL:   250 x 18; artwork clips to current resource fraction
 CLASS_BADGE:                 240 x 38 background behind current class label
 ABILITY_PANEL:               240 x 142 background behind live cooldown text
+HEALTH_LABEL/STAMINA_LABEL:   250 x 25 artwork for live resource label area
+CLASS_LABEL:                 240 x 38 artwork for live class text area
+ABILITY_LABELS:              240 x 142 artwork for ability text area
+LAN_STATUS / DEBUG_INFO:     600 x 22 / 650 x 48 artwork for live status/debug areas
 CROSSHAIR:                   24 x 24, visible during active play
 New canvas for slot:         Uses selected slot display dimensions
 Open assigned artwork:       Imports flattened assigned PNG as a new layer
@@ -453,7 +459,47 @@ Restore default:             Deletes selected PNG assignment; restart afterward
 Resizing:                    Artwork scales to the existing slot rectangle
 Fallback:                    Unassigned/invalid artwork uses existing HUD drawing
 LAN:                         Local cosmetics; copy ui-assets to share, no transfer
-Gameplay impact:             None; labels, values, controls, and HUD positions stay
-                              live; no new buttons or layout logic are authored
+Gameplay impact:             None; live values unchanged. HUD Studio controls
+                              placement/style/visibility; no gameplay buttons added.
 Testing:                     scripts\Check.bat; or scripts\Build.bat tests then
                               java -cp "build/test-classes;build/classes" UIEditorCheck
+
+
+HUD STUDIO -- IMPLEMENTED
+========================
+Launch:                      HUDEditor.bat; or scripts\Build.bat then
+                              java -cp build/classes HUDEditor
+Editor source:               tools/hud-editor/HUDEditor.java
+Shared renderer/layout:      src/ui/HUDRenderer.java; src/ui/HUDLayout.java
+Linked pieces:               HEALTH, STAMINA, CLASS, ABILITIES, CROSSHAIR, LAN, DEBUG
+Grouped resource art:        Frame, fill, background and label move/scale/rotate
+                              together; fill remains linked to real HP/stamina
+Image uploads:               Same limits as UI Studio; replace selected art layer
+Layout file:                 ui-assets/hud-layout.properties, loaded at startup
+Position reference:          1000 x 700; custom X/Y positions scale with game window
+X / Y limits:                -2000..3000 / -1400..2100 reference pixels
+Width / height scale:        0.1-5x normal size, optionally locked together
+Rotation:                    -180..180 degrees around scaled piece center
+Opacity:                     0-1 for the whole piece
+Live text:                   Independent visibility, color override/default,
+                              font scale 0.5-3x; updates from real game values
+Piece visibility:            Hides all artwork/text in that linked group
+Built-in artwork toggle:     Disables default missing-slot backgrounds, fills,
+                              borders, panels and crosshair strokes; uploaded art
+                              and the independent live-text toggle still apply
+Default transparency rule:   Custom bar frame/fill skips old built-in background
+Reset piece:                 Default placement/style, keeping assigned artwork
+Preview:                     Shared game HUD renderer; test health/stamina %, LAN
+                              status and debug visibility without changing game
+Preview navigation:          Middle-drag pan; cursor-anchored wheel zoom; Reset view
+Undo/redo:                   Up to 40 edits; complete drags; Ctrl+Z/Y/Shift+Z
+Save & Apply / Ctrl+S:        Writes layout and changed PNG assignments only;
+                              restart game afterward; clears editor undo history
+Export/Open layout:          Placement/style backup; artwork shared separately
+Reload from game:            Reads current on-disk layout/images
+Unsaved changes:             Save/Discard/Cancel on close, open, reload
+LAN:                         Local cosmetics; copy layout and PNGs to other devices
+Outside editor scope:        Menus, world-space labels, developer overlays
+Gameplay values:             Unchanged in solo and LAN; no protocol changes
+Testing:                     scripts\Check.bat; or scripts\Build.bat tests then
+                              java -cp "build/test-classes;build/classes" HUDCheck
