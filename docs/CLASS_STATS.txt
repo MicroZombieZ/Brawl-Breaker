@@ -416,6 +416,11 @@ Shape style:                 Filled or outlined; line uses the outline width
 Color:                       Shared advanced RGB/HSV/hex picker and recent colors
 Canvas:                      16-1024 pixels per axis; transparent background
 Zoom:                        25-400%
+Canvas navigation:           Middle mouse drag pans the view; wheel up/down
+                              zooms in/out anchored at the cursor. Zoom slider
+                              anchors at workspace center. Reset view fits and
+                              centers; New/Open reset view. View changes do not
+                              modify artwork, layer positions, or undo history.
 Layers:                      1-16; add, duplicate, delete, rename, reorder,
                               show/hide, opacity (0-100%), move, clear
 Layer order:                 Top of list composites last; hidden layers excluded

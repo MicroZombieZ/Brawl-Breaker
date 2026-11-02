@@ -42,11 +42,13 @@ public class UIEditor extends JPanel {
         left.add(filled);left.add(new JLabel("Paint opacity"));left.add(alpha);
         button(left,"Edit color",this::editColor);colorLabel.setOpaque(true);left.add(colorLabel);
         left.add(Box.createVerticalStrut(12));left.add(new JLabel("Zoom 25-400%"));left.add(zoom);
+        button(left,"Reset view",()->canvas.resetView());
         JPanel history=new JPanel(new FlowLayout(FlowLayout.LEFT,3,0));history.add(undo);history.add(redo);left.add(history);
         undo.addActionListener(e->history(false));redo.addActionListener(e->history(true));
-        JLabel hint=new JLabel("<html><div style='width:115px'>Drag to paint or draw a shape.<br><br>Hold Shift for squares and circles.<br><br>Move Layer drags the selected layer.<br><br>Text places a label at the click point.<br><br>Ctrl+Z: undo<br>Ctrl+Y / Ctrl+Shift+Z: redo<br>Ctrl+S: save</div></html>");left.add(hint);left.add(Box.createVerticalGlue());
+        JLabel hint=new JLabel("<html><div style='width:115px'>Middle-drag: pan<br>Scroll: zoom at cursor<br><br>Drag to paint or draw a shape.<br><br>Hold Shift for squares and circles.<br><br>Move Layer drags the selected layer.<br><br>Ctrl+Z: undo<br>Ctrl+Y / Ctrl+Shift+Z: redo<br>Ctrl+S: save</div></html>");left.add(hint);left.add(Box.createVerticalGlue());
         for(Component c:left.getComponents())if(c instanceof JComponent){((JComponent)c).setAlignmentX(LEFT_ALIGNMENT);((JComponent)c).setMaximumSize(new Dimension(185,c.getPreferredSize().height+6));}
         JScrollPane view=new JScrollPane(canvas);view.getViewport().setBackground(new Color(16,22,30));
+        view.setWheelScrollingEnabled(false);
         JPanel right=new Sidebar();right.setLayout(new BoxLayout(right,BoxLayout.Y_AXIS));
         right.add(new JLabel("LAYERS (top is drawn last)"));layerList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         layerList.setBackground(new Color(24,32,43));layerList.setForeground(new Color(223,233,243));
@@ -79,7 +81,7 @@ public class UIEditor extends JPanel {
         JScrollPane inspector=new JScrollPane(right);inspector.setPreferredSize(new Dimension(280,650));inspector.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);inspector.getVerticalScrollBar().setUnitIncrement(18);
         JSplitPane split=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,view,inspector);split.setResizeWeight(1);split.setBorder(null);
         JPanel workspace=new JPanel(new BorderLayout(8,0));workspace.add(left,BorderLayout.WEST);workspace.add(split,BorderLayout.CENTER);add(workspace,BorderLayout.CENTER);add(status,BorderLayout.SOUTH);
-        zoom.addChangeListener(e->{canvas.revalidate();canvas.repaint();});
+        zoom.addChangeListener(e->canvas.updateZoom());
         bind("control Z","undo",()->history(false));bind("control Y","redo",()->history(true));bind("control shift Z","redo2",()->history(true));bind("control S","save",()->save(false));
         refresh();
     }
@@ -104,13 +106,13 @@ public class UIEditor extends JPanel {
         color=result==0?picker.chooser.getColor():original;if(result==0)ParticleColorEditor.remember(color);refresh();}
     private boolean discard(){if(!dirty)return true;int choice=JOptionPane.showConfirmDialog(this,"Save your layered drawing before continuing?","Unsaved drawing",JOptionPane.YES_NO_CANCEL_OPTION);
         return choice==JOptionPane.NO_OPTION||choice==JOptionPane.YES_OPTION&&save(false);}
-    private void newCanvas(int w,int h){if(discard()){drawing=new UIDrawing(w,h);dirty=false;currentFile=null;refresh();status.setText(w+" x "+h+" transparent canvas");}}
+    private void newCanvas(int w,int h){if(discard()){drawing=new UIDrawing(w,h);dirty=false;currentFile=null;refresh();canvas.resetView();status.setText(w+" x "+h+" transparent canvas");}}
     private void newDrawing(){JSpinner w=new JSpinner(new SpinnerNumberModel(512,16,1024,1)),h=new JSpinner(new SpinnerNumberModel(256,16,1024,1));JPanel panel=new JPanel(new GridLayout(2,2,8,8));
         panel.add(new JLabel("Width"));panel.add(w);panel.add(new JLabel("Height"));panel.add(h);
         if(JOptionPane.showConfirmDialog(this,panel,"New canvas (16-1024 pixels)",JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION)newCanvas((int)w.getValue(),(int)h.getValue());}
     private JFileChooser chooser(String title,String extension){JFileChooser c=new JFileChooser("ui-assets");c.setDialogTitle(title);c.setFileFilter(new FileNameExtensionFilter(title,""+extension));return c;}
     private void open(){if(!discard())return;JFileChooser c=chooser("Layered drawing (*.uidraw)","uidraw");if(c.showOpenDialog(this)!=JFileChooser.APPROVE_OPTION)return;
-        try{UIDrawing loaded=UIDrawing.load(c.getSelectedFile().toPath());drawing=loaded;currentFile=c.getSelectedFile().toPath();dirty=false;refresh();status.setText("Opened "+currentFile.getFileName());}catch(Exception ex){error(ex);}}
+        try{UIDrawing loaded=UIDrawing.load(c.getSelectedFile().toPath());drawing=loaded;currentFile=c.getSelectedFile().toPath();dirty=false;refresh();canvas.resetView();status.setText("Opened "+currentFile.getFileName());}catch(Exception ex){error(ex);}}
     private boolean save(boolean saveAs){Path path=currentFile;if(saveAs||path==null){path=savePath("Layered drawing (*.uidraw)","uidraw");if(path==null)return false;}
         try{drawing.save(path);currentFile=path;dirty=false;status.setText("Saved layers to "+path.getFileName());return true;}catch(Exception ex){error(ex);return false;}}
     private Path savePath(String title,String extension){JFileChooser c=chooser(title,extension);if(c.showSaveDialog(this)!=JFileChooser.APPROVE_OPTION)return null;
@@ -122,10 +124,13 @@ public class UIEditor extends JPanel {
     private Path assignment(){return Paths.get("ui-assets",slots.getSelectedItem()+".png");}
     private void error(Exception ex){JOptionPane.showMessageDialog(this,ex.getMessage(),"UI Studio",JOptionPane.ERROR_MESSAGE);}
 
-    private final class Canvas extends JComponent {
+    private final class Canvas extends JComponent implements Scrollable {
         Point start,last,end;int originalX,originalY;boolean square;Tool activeTool;
+        Point panStart,zoomAnchor;double panX,panY,panOriginalX,panOriginalY,viewScale=1;
         Canvas(){setFocusable(true);MouseAdapter mouse=new MouseAdapter(){
-            public void mousePressed(MouseEvent e){if(!SwingUtilities.isLeftMouseButton(e))return;requestFocusInWindow();Point p=point(e);
+            public void mousePressed(MouseEvent e){
+                if(SwingUtilities.isMiddleMouseButton(e)&&start==null){panStart=e.getPoint();panOriginalX=panX;panOriginalY=panY;setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));return;}
+                if(panStart!=null||!SwingUtilities.isLeftMouseButton(e))return;requestFocusInWindow();Point p=point(e);
                 if(p.x<0||p.y<0||p.x>=drawing.width||p.y>=drawing.height)return;
                 activeTool=(Tool)tools.getSelectedItem();
                 if(activeTool==Tool.EYEDROPPER){color=new Color(drawing.flatten().getRGB(p.x,p.y),true);color=new Color(color.getRed(),color.getGreen(),color.getBlue());refresh();return;}
@@ -135,17 +140,37 @@ public class UIEditor extends JPanel {
                 try{drawing.checkpoint();}catch(Exception ex){error(ex);return;}
                 start=last=end=p;square=e.isShiftDown();originalX=drawing.active().x;originalY=drawing.active().y;
                 if(activeTool==Tool.BRUSH||activeTool==Tool.ERASER)stroke(p,p);repaint();}
-            public void mouseDragged(MouseEvent e){if(start==null)return;end=point(e);square=e.isShiftDown();
+            public void mouseDragged(MouseEvent e){if(panStart!=null){panX=panOriginalX+e.getX()-panStart.x;panY=panOriginalY+e.getY()-panStart.y;repaint();return;}
+                if(start==null)return;end=point(e);square=e.isShiftDown();
                 if(activeTool==Tool.BRUSH||activeTool==Tool.ERASER)stroke(last,end);
                 if(activeTool==Tool.MOVE_LAYER){drawing.active().x=Math.max(-4096,Math.min(4096,originalX+end.x-start.x));drawing.active().y=Math.max(-4096,Math.min(4096,originalY+end.y-start.y));}
                 last=end;repaint();}
-            public void mouseReleased(MouseEvent e){if(start==null)return;
+            public void mouseReleased(MouseEvent e){if(SwingUtilities.isMiddleMouseButton(e)){panStart=null;setCursor(Cursor.getDefaultCursor());return;}
+                if(!SwingUtilities.isLeftMouseButton(e)||start==null)return;
                 if(activeTool==Tool.RECTANGLE||activeTool==Tool.ELLIPSE||activeTool==Tool.LINE){Graphics2D g=paintGraphics();shape(g,shape());g.dispose();}
                 start=last=end=null;changed();}
-        };addMouseListener(mouse);addMouseMotionListener(mouse);}
-        double scale(){return zoom.getValue()/100.0;}
-        Point point(MouseEvent e){return new Point((int)Math.floor(e.getX()/scale()),(int)Math.floor(e.getY()/scale()));}
-        @Override public Dimension getPreferredSize(){return new Dimension((int)Math.ceil(drawing.width*scale()),(int)Math.ceil(drawing.height*scale()));}
+            public void mouseWheelMoved(MouseWheelEvent e){e.consume();if(start!=null||panStart!=null)return;
+                zoomAnchor=e.getPoint();try{zoom.setValue((int)Math.round(Math.max(zoom.getMinimum(),Math.min(zoom.getMaximum(),zoom.getValue()*Math.pow(1.12,-e.getPreciseWheelRotation())))));}
+                finally{zoomAnchor=null;}}
+        };addMouseListener(mouse);addMouseMotionListener(mouse);addMouseWheelListener(mouse);}
+        double scale(){return viewScale;}
+        double originX(){return (getWidth()-drawing.width*scale())/2+panX;}
+        double originY(){return (getHeight()-drawing.height*scale())/2+panY;}
+        Point2D.Double imagePoint(double x,double y){return new Point2D.Double((x-originX())/scale(),(y-originY())/scale());}
+        Point point(MouseEvent e){Point2D.Double p=imagePoint(e.getX(),e.getY());return new Point((int)Math.floor(p.x),(int)Math.floor(p.y));}
+        void updateZoom(){Point anchor=zoomAnchor==null?new Point(getWidth()/2,getHeight()/2):zoomAnchor;
+            Point2D.Double before=imagePoint(anchor.x,anchor.y);viewScale=zoom.getValue()/100.0;
+            panX=anchor.x-getWidth()/2.0-(before.x-drawing.width/2.0)*scale();
+            panY=anchor.y-getHeight()/2.0-(before.y-drawing.height/2.0)*scale();repaint();}
+        void resetView(){if(start!=null||panStart!=null)return;
+            int fit=(int)Math.floor(85*Math.min((double)Math.max(1,getWidth())/drawing.width,(double)Math.max(1,getHeight())/drawing.height));
+            zoom.setValue(Math.max(zoom.getMinimum(),Math.min(zoom.getMaximum(),fit)));panX=panY=0;repaint();}
+        @Override public Dimension getPreferredSize(){return new Dimension(700,600);}
+        public Dimension getPreferredScrollableViewportSize(){return getPreferredSize();}
+        public int getScrollableUnitIncrement(Rectangle r,int orientation,int direction){return 20;}
+        public int getScrollableBlockIncrement(Rectangle r,int orientation,int direction){return 100;}
+        public boolean getScrollableTracksViewportWidth(){return true;}
+        public boolean getScrollableTracksViewportHeight(){return true;}
         Graphics2D paintGraphics(){Graphics2D g=drawing.active().image.createGraphics();g.translate(-drawing.active().x,-drawing.active().y);setup(g);return g;}
         void setup(Graphics2D g){g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
             g.setColor(color);g.setComposite(AlphaComposite.SrcOver.derive(alpha.getValue()/100f));
@@ -157,7 +182,8 @@ public class UIEditor extends JPanel {
             double x=Math.min(start.x,start.x+dx),y=Math.min(start.y,start.y+dy),w=Math.abs(dx),h=Math.abs(dy);
             return activeTool==Tool.ELLIPSE?new Ellipse2D.Double(x,y,w,h):new Rectangle2D.Double(x,y,w,h);}
         void shape(Graphics2D g,Shape s){if(activeTool!=Tool.LINE&&filled.isSelected())g.fill(s);else g.draw(s);}
-        @Override protected void paintComponent(Graphics graphics){Graphics2D g=(Graphics2D)graphics.create();g.scale(scale(),scale());
+        @Override protected void paintComponent(Graphics graphics){Graphics2D g=(Graphics2D)graphics.create();
+            g.setColor(new Color(16,22,30));g.fillRect(0,0,getWidth(),getHeight());g.translate(originX(),originY());g.scale(scale(),scale());
             g.clipRect(0,0,drawing.width,drawing.height);for(int y=0;y<drawing.height;y+=12)for(int x=0;x<drawing.width;x+=12){g.setColor((x/12+y/12)%2==0?new Color(80,87,96):new Color(57,64,74));g.fillRect(x,y,12,12);}
             g.drawImage(drawing.flatten(),0,0,null);
             if(start!=null&&(activeTool==Tool.RECTANGLE||activeTool==Tool.ELLIPSE||activeTool==Tool.LINE)){setup(g);shape(g,shape());}g.dispose();}

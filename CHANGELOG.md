@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Center UI Studio's canvas and add middle-mouse panning, cursor-anchored wheel
+  zoom, and a Reset View action to recover artwork moved out of sight.
+
 - Add UI Studio with brush/eraser, shape/line/text tools, advanced colors,
   image import/export, layered projects, and undo/redo.
 - Assign transparent artwork to health/stamina frames and fills, class badge,

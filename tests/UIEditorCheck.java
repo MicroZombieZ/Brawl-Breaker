@@ -42,14 +42,33 @@ public class UIEditorCheck {
     }
     static JButton button(Container root,String text){return ParticleEditorCheck.components(root,JButton.class).stream().filter(b->text.equals(b.getText())).findFirst().orElseThrow(()->new AssertionError("Missing "+text));}
     static void gesture(JComponent canvas,int x,int y,int ex,int ey,int modifiers){
+        Point a=viewPoint(canvas,x,y),b=viewPoint(canvas,ex,ey);x=a.x;y=a.y;ex=b.x;ey=b.y;
         canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_PRESSED,0,modifiers,x,y,1,false,MouseEvent.BUTTON1));
         canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_DRAGGED,0,modifiers,ex,ey,0,false,MouseEvent.NOBUTTON));
         canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_RELEASED,0,modifiers,ex,ey,1,false,MouseEvent.BUTTON1));
     }
+    static double property(JComponent canvas,String name){try{java.lang.reflect.Method method=canvas.getClass().getDeclaredMethod(name);method.setAccessible(true);return (double)method.invoke(canvas);}
+        catch(ReflectiveOperationException ex){throw new RuntimeException(ex);}}
+    static Point viewPoint(JComponent canvas,double x,double y){double scale=property(canvas,"scale");return new Point((int)Math.round(property(canvas,"originX")+x*scale),(int)Math.round(property(canvas,"originY")+y*scale));}
+    static void wheel(JComponent canvas,int x,int y,int rotation){canvas.dispatchEvent(new MouseWheelEvent(canvas,MouseEvent.MOUSE_WHEEL,0,0,x,y,0,false,MouseWheelEvent.WHEEL_UNIT_SCROLL,3,rotation));}
     static void ui() throws Exception {
         SwingUtilities.invokeAndWait(()->{
             ParticleEditor.theme();UIEditor editor=new UIEditor();editor.setSize(1250,820);ParticleEditorCheck.layout(editor);
             JComponent canvas=ParticleEditorCheck.components(editor,JComponent.class).stream().filter(c->c.getClass().getName().equals("UIEditor$Canvas")).findFirst().get();
+            double ox=property(canvas,"originX"),oy=property(canvas,"originY");
+            check(ox>=0&&oy>=0,"Canvas starts centered in visible workspace");
+            canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_PRESSED,0,InputEvent.BUTTON2_DOWN_MASK,100,100,1,false,MouseEvent.BUTTON2));
+            canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_DRAGGED,0,InputEvent.BUTTON2_DOWN_MASK,180,145,0,false,MouseEvent.NOBUTTON));
+            canvas.dispatchEvent(new MouseEvent(canvas,MouseEvent.MOUSE_RELEASED,0,0,180,145,1,false,MouseEvent.BUTTON2));
+            check(Math.abs(property(canvas,"originX")-ox-80)<1e-8&&Math.abs(property(canvas,"originY")-oy-45)<1e-8,"Middle drag pans view by pointer movement");
+            check(!editor.drawing.canUndo()&&editor.drawing.active().x==0&&editor.drawing.active().y==0,"Panning does not edit artwork or history");
+            double scale=property(canvas,"scale"),ix=(240-property(canvas,"originX"))/scale,iy=(190-property(canvas,"originY"))/scale;
+            wheel(canvas,240,190,-1);check(property(canvas,"scale")>scale,"Wheel up zooms in");
+            check(Math.abs((240-property(canvas,"originX"))/property(canvas,"scale")-ix)<1e-8&&Math.abs((190-property(canvas,"originY"))/property(canvas,"scale")-iy)<1e-8,"Wheel zoom preserves image point under cursor");
+            wheel(canvas,240,190,1);check(property(canvas,"scale")<1.12,"Wheel down zooms out");
+            wheel(canvas,240,190,-100);check(property(canvas,"scale")==4,"Maximum zoom bound");
+            wheel(canvas,240,190,100);check(property(canvas,"scale")==.25,"Minimum zoom bound");
+            button(editor,"Reset view").doClick();check(property(canvas,"originX")>=0&&property(canvas,"originY")>=0,"Reset view fits and centers canvas");
             JComboBox tools=ParticleEditorCheck.components(editor,JComboBox.class).get(0);
             gesture(canvas,20,20,50,20,0);check(editor.drawing.flatten().getRGB(30,20)!=0,"Brush paints selected layer");
             button(editor,"Undo").doClick();check(editor.drawing.flatten().getRGB(30,20)==0,"Undo one stroke");

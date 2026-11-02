@@ -171,7 +171,11 @@ use, build with `scripts\Build.bat`, then run `java -cp build/classes UIEditor`.
 - **Drawing:** brush, eraser, rectangle, ellipse, line, text, eyedropper, and
   Move Layer tools. Drag to paint or draw shapes; hold Shift for squares and
   circles. Choose filled or outlined shapes, brush/outline width, paint opacity,
-  and zoom (25-400%). The size control also sets text size (minimum 8 pixels).
+  and zoom (25-400%). Hold the middle mouse button and drag anywhere in the
+  workspace to pan the canvas. Scroll up/down to zoom in/out around the cursor;
+  the zoom slider uses the workspace center. **Reset view** fits and centers the
+  canvas. New/Open also reset the view. Panning/zooming do not alter artwork or
+  undo history. The size control also sets text size (minimum 8 pixels).
 - **Color:** Edit color opens the advanced RGB/HSV picker with hex input and
   recent colors. Paint opacity controls transparency. The checkerboard shows
   transparent pixels; it is not exported.
