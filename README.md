@@ -15,6 +15,8 @@ setup for your name, host IP, and port; the host starts the match once everyone
 has joined. Back returns to the opening menu before connecting. Practice enters
 the existing default test arena directly. Escape pauses during play; F2 opens
 the existing LAN lobby controls.
+The pause menu's **Main Menu** button leaves the session and unloads the map
+(hosting players also close their lobby). **Quit** is on the opening menu.
 
 Startup and waiting rooms use an opaque, soft blue background, with no arena
 rendering. Practice and LAN match entry fade out for 0.3 seconds, load the map

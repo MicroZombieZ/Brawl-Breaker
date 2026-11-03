@@ -3,6 +3,8 @@ Last updated: 2026-11-03
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
+Quit: Opening menu only. Pause menu Main Menu leaves the session, closes any
+      owned LAN server, resets player state and unloads the map.
 Host/Join: Open existing LAN setup (name, IP for joining, port); host starts match.
 Practice: Enter the default test arena offline, with reset gameplay state.
 Map storage: src/server-storage/MapStorage.java holds the practice template;

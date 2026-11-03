@@ -41,6 +41,15 @@ public class MovementCheck {
                 entryTick.invoke(demo,.4);
                 check(!field("enteringMatch").getBoolean(demo),"Fade completes");
                 check(!entry.isVisible()&&!field("openingMenuOpen").getBoolean(demo)&&field("lobbyClient").get(demo)==null,"Practice enters offline arena");
+                JPanel pauseMenu=(JPanel)field("menu").get(demo);
+                boolean mainMenuFound=false;
+                for(java.awt.Component c:pauseMenu.getComponents())if(c instanceof JButton){
+                    JButton button=(JButton)c;check(!button.getText().equals("Quit"),"Pause menu no longer quits");
+                    if(button.getText().equals("Main Menu")){button.doClick();mainMenuFound=true;}
+                }
+                check(mainMenuFound&&entry.isVisible()&&!field("mapLoaded").getBoolean(demo),"Main Menu unloads practice and shows entry screen");
+                check(entry.quit.isEnabled(),"Quit is available on main menu");
+                entry.practice.doClick();entryTick.invoke(demo,.7);
                 Field paused = field("paused"), z = field("z"), x = field("x");
                 Field y = field("y"), velocity = field("verticalSpeed");
                 Method move = CubeMovement.class.getDeclaredMethod("move", double.class);

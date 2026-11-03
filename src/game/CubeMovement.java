@@ -29,7 +29,7 @@ public class CubeMovement extends JPanel {
     private boolean openingMenuOpen;
     private boolean mapLoaded=true, enteringMatch, enteringLan;
     private double entryTime;
-    private final OpeningMenu openingMenu=new OpeningMenu(() -> openingLobby(true), () -> openingLobby(false), this::startPractice);
+    private final OpeningMenu openingMenu=new OpeningMenu(() -> openingLobby(true), () -> openingLobby(false), this::startPractice, this::quitGame);
     private int connectionGeneration;
     private final LobbyPanel lobby = new LobbyPanel(() -> connectLobby(true), () -> connectLobby(false),
             () -> { if (lobbyClient != null) lobbyClient.action(4, ""); },
@@ -103,7 +103,7 @@ public class CubeMovement extends JPanel {
         JLabel title = new JLabel("Paused");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
         JButton resume = new JButton("Resume");
-        JButton quit = new JButton("Quit");
+        JButton mainMenu = new JButton("Main Menu");
         JButton lan = new JButton("LAN Lobby");
         JPanel effectsSetting = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         effectsSetting.setOpaque(false); effectsSetting.add(new JLabel("Particles"));
@@ -112,11 +112,8 @@ public class CubeMovement extends JPanel {
         effectsSetting.add(particleQuality);
         lan.addActionListener(e -> openLobby());
         resume.addActionListener(e -> setPaused(false));
-        quit.addActionListener(e -> {
-            Window window = SwingUtilities.getWindowAncestor(this);
-            if (window != null) window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING));
-        });
-        for (JComponent item : new JComponent[]{title, menuMessage, resume, lan, effectsSetting, quit}) {
+        mainMenu.addActionListener(e -> returnToMainMenu());
+        for (JComponent item : new JComponent[]{title, menuMessage, resume, lan, effectsSetting, mainMenu}) {
             item.setAlignmentX(Component.CENTER_ALIGNMENT);
             menu.add(item);
             menu.add(Box.createVerticalStrut(12));
@@ -472,6 +469,23 @@ public class CubeMovement extends JPanel {
         openingMenuOpen=true;
         setPaused(true);
         doLayout();
+    }
+
+    private void quitGame() {
+        Window window=SwingUtilities.getWindowAncestor(this);
+        if(window!=null)window.dispatchEvent(new WindowEvent(window,WindowEvent.WINDOW_CLOSING));
+    }
+
+    private void returnToMainMenu() {
+        connectionGeneration++;
+        if(lobbyClient!=null)lobbyClient.close();
+        if(lobbyServer!=null)lobbyServer.close();
+        lobbyClient=null;lobbyServer=null;appliedSnapshot=null;connecting=false;
+        lobbyOpen=consoleOpen=classMenuOpen=false;
+        lobby.setVisible(false);console.setVisible(false);classMenu.setVisible(false);
+        executeCommand("reset");
+        lobby.session(false,false,false);lobby.roster.setText("No lobby connected.");
+        showOpeningMenu();
     }
 
     private void openingLobby(boolean host) {

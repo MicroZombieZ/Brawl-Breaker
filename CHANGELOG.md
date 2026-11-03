@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Replace pause-menu Quit with Main Menu, leaving the session and unloading its
+  map; add Quit to the opening menu.
+
 - Hide the arena behind an opaque menu background until match entry; fade through
   black while loading Practice or LAN player/map state, and unload on disconnect.
 - Store the shared practice map template separately in src/server-storage;
