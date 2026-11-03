@@ -4,11 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
-- Add a Health Fill damage ghost: hold lost health for 0.3 seconds, then catch up
-  with exponentially increasing speed, using the same custom artwork/transforms
-  at reduced opacity. Starting speed is reduced to one third of the previous
-  pace and capped at 3.2x that starting speed. Spread acceleration over 3 seconds
-  so the speed increase stays visible (about 3.91 seconds to catch up).
+- Add a Health Fill damage ghost using the same custom artwork/transforms at
+  reduced opacity: hold for 0.15 seconds, then sweep at exponentially increasing
+  speed with a 0.5-second ramp and 3.2x speed cap. A faster starting speed keeps
+  the complete effect to about 0.70 seconds after the latest damage.
 - Preview the health ghost with HUD Studio's health slider; stamina is unaffected.
 
 - Add independent HUD artwork-layer transforms, visibility, opacity and styling,

@@ -14,30 +14,30 @@ public class HUDCheck {
     static HUDLayout onlyHealth(){HUDLayout layout=new HUDLayout();for(HUDLayout.Placement p:layout.placements.values())p.visible=false;layout.get(HUDLayout.Piece.HEALTH).visible=true;return layout;}
     static void ghost(){
         HealthFillGhost trail=new HealthFillGhost();trail.reset(100,100);trail.update(0,50,100);
-        trail.update(.3,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for 0.3 seconds");
+        trail.update(.15,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for 0.15 seconds");
         trail.update(.00001,50,100);double initialSpeed=(1-trail.fraction())/.5/.00001;
-        double oldStartSpeed=3/(.45*Math.expm1(3));
-        check(Math.abs(initialSpeed-oldStartSpeed/3)<.00001,"Starting speed is one third of the previous speed");
+        check(Math.abs(initialSpeed-.9)<.00002,"Starting speed is a responsive 90 percent of the gap per second");
         trail.update(.05,50,100);double first=trail.fraction();
         trail.update(.05,50,100);double second=trail.fraction();
         check(first<1&&second<first&&(first-second)>(1-first),"Ghost accelerates over time");
-        trail.reset(100,100);trail.update(0,50,100);trail.update(.3,50,100);
+        trail.reset(100,100);trail.update(0,50,100);trail.update(.15,50,100);
         double previousStep=0;
-        for(int i=0;i<6;i++){
-            double before=trail.fraction();trail.update(.5,50,100);double step=before-trail.fraction();
-            check(step>previousStep*1.2,"Speed visibly grows through every half-second of the three-second ramp");
+        for(int i=0;i<5;i++){
+            double before=trail.fraction();trail.update(.1,50,100);double step=before-trail.fraction();
+            check(step>previousStep*1.2,"Speed visibly grows through every tenth-second of the ramp");
             previousStep=step;
         }
         double capped=trail.fraction();
-        trail.update(.1,50,100);double capStep=capped-trail.fraction();
-        check(Math.abs(capStep/.5/.1-oldStartSpeed/3*3.2)<1e-9,"Speed caps at 3.2 times starting speed");
-        capped=trail.fraction();trail.update(.1,50,100);
+        trail.update(.01,50,100);double capStep=capped-trail.fraction();
+        check(Math.abs(capStep/.5/.01-.9*3.2)<1e-9,"Speed caps at 3.2 times starting speed");
+        capped=trail.fraction();trail.update(.01,50,100);
         check(Math.abs(capped-trail.fraction()-capStep)<1e-9,"Speed stays capped after acceleration");
-        trail.update(3,50,100);check(trail.fraction()==.5,"Ghost reaches current HP without overshoot");
+        check(trail.fraction()>.5,"Ghost remains visible through most of the sweep");
+        trail.update(.04,50,100);check(trail.fraction()==.5,"Ghost finishes within 0.71 seconds including hold without overshoot");
         trail.reset(100,100);trail.update(0,50,100);trail.update(.5,50,100);double interrupted=trail.fraction();
         trail.update(0,25,100);trail.update(0,25,100);check(trail.fraction()==interrupted,"More damage preserves current ghost and paused time does not advance");
-        trail.update(.3,25,100);check(trail.fraction()==interrupted,"Further damage restarts full hold");
-        trail.update(4,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
+        trail.update(.15,25,100);check(trail.fraction()==interrupted,"Further damage restarts full hold");
+        trail.update(.56,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
         trail.update(0,10,100);trail.update(0,60,100);check(trail.fraction()==.6,"Healing clears damage ghost");
         trail.update(0,60,200);check(trail.fraction()==.3,"Class/max HP change resets ghost");
         trail.reset(0,100);trail.update(0,100,100);check(trail.fraction()==1,"Respawn starts clean");
