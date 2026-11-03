@@ -498,11 +498,12 @@ Built-in artwork toggle:     Disables default missing-slot backgrounds, fills,
                               borders, panels and crosshair strokes; uploaded art
                               and the independent live-text toggle still apply
 Default transparency rule:   Custom bar frame/fill skips old built-in background
-Health Fill damage ghost:    Lost-health segment remains for 2 seconds after a
-                              decrease, then linearly catches up over 0.75 seconds
+Health Fill damage ghost:    Lost-health segment remains for 0.3 seconds after a
+                              decrease, then catches up over 0.45 seconds with
+                              exponentially increasing speed (ease-in exponent 3)
 Ghost opacity:               40% of the fill's combined piece/layer opacity;
                               uses same image/transparency, or built-in red fill
-Further damage:              Keeps current ghost endpoint, restarts 2-second hold
+Further damage:              Keeps current ghost endpoint, restarts 0.3-second hold
 Ghost resets:                Healing, respawn, max-HP changes, arena reset, first
                               LAN snapshot. Solo pauses/timescale apply; LAN menus
                               do not pause it. Cosmetic only; stamina has no ghost.

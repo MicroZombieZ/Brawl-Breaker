@@ -260,8 +260,8 @@ remains the painting/layering editor. They share the same `ui-assets` artwork.
 
 The preview uses the same HUD renderer as the game. Health/stamina sliders and
 LAN/debug toggles let you inspect live states without changing gameplay.
-Health Fill leaves a 40%-opacity ghost of lost health for 2 seconds after damage,
-then catches up over 0.75 seconds. More damage restarts the hold; healing,
+Health Fill leaves a 40%-opacity ghost of lost health for 0.3 seconds after damage,
+then accelerates exponentially to current HP over 0.45 seconds. More damage restarts the hold; healing,
 respawning, maximum-HP changes, and arena reset clear the trail. The ghost follows
 the fill's custom artwork, transparency, visibility, and layer/piece transforms.
 It applies only to Health Fill. Lower the preview health slider to inspect it.

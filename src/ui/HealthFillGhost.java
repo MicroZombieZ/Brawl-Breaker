@@ -1,6 +1,6 @@
 /** Cosmetic delayed health fill, independent of repaint frequency and gameplay damage. */
 final class HealthFillGhost {
-    static final double HOLD_SECONDS=2, CATCH_SECONDS=.75, OPACITY=.4;
+    static final double HOLD_SECONDS=.3, CATCH_SECONDS=.45, OPACITY=.4;
     private double previousHealth,previousMaximum,ghost,hold,elapsed,catchFrom;
     private boolean initialized;
     void reset(double health,double maximum){
@@ -17,7 +17,12 @@ final class HealthFillGhost {
         }
         if(!Double.isFinite(dt)||dt<=0)return;
         double waiting=Math.min(hold,dt);hold-=waiting;dt-=waiting;
-        if(hold==0&&dt>0){elapsed=Math.min(CATCH_SECONDS,elapsed+dt);ghost=catchFrom+(current-catchFrom)*(elapsed/CATCH_SECONDS);}
+        if(hold==0&&dt>0){
+            elapsed=Math.min(CATCH_SECONDS,elapsed+dt);
+            // Normalized exponential ease-in: increasing speed, with an exact endpoint.
+            double progress=Math.expm1(3*elapsed/CATCH_SECONDS)/Math.expm1(3);
+            ghost=elapsed==CATCH_SECONDS?current:catchFrom+(current-catchFrom)*progress;
+        }
         ghost=Math.max(current,ghost);
     }
     double fraction(){return initialized?ghost:Double.NaN;}

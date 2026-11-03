@@ -14,16 +14,20 @@ public class HUDCheck {
     static HUDLayout onlyHealth(){HUDLayout layout=new HUDLayout();for(HUDLayout.Placement p:layout.placements.values())p.visible=false;layout.get(HUDLayout.Piece.HEALTH).visible=true;return layout;}
     static void ghost(){
         HealthFillGhost trail=new HealthFillGhost();trail.reset(100,100);trail.update(0,50,100);
-        trail.update(2,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for two seconds");
-        trail.update(.375,50,100);check(Math.abs(trail.fraction()-.75)<1e-9,"Ghost catches up smoothly");
-        trail.update(0,25,100);trail.update(0,25,100);check(Math.abs(trail.fraction()-.75)<1e-9,"More damage preserves current ghost and paused time does not advance");
-        trail.update(2,25,100);check(Math.abs(trail.fraction()-.75)<1e-9,"Further damage restarts full hold");
-        trail.update(.75,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
+        trail.update(.3,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for 0.3 seconds");
+        trail.update(.15,50,100);double first=trail.fraction();
+        trail.update(.15,50,100);double second=trail.fraction();
+        check(first<1&&second<first&&(first-second)>2*(1-first),"Ghost starts moving early and accelerates exponentially");
+        trail.update(.15,50,100);check(Math.abs(trail.fraction()-.5)<1e-9,"Ghost finishes catch-up within 0.45 seconds");
+        trail.reset(100,100);trail.update(0,50,100);trail.update(.5,50,100);double interrupted=trail.fraction();
+        trail.update(0,25,100);trail.update(0,25,100);check(trail.fraction()==interrupted,"More damage preserves current ghost and paused time does not advance");
+        trail.update(.3,25,100);check(trail.fraction()==interrupted,"Further damage restarts full hold");
+        trail.update(.45,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
         trail.update(0,10,100);trail.update(0,60,100);check(trail.fraction()==.6,"Healing clears damage ghost");
         trail.update(0,60,200);check(trail.fraction()==.3,"Class/max HP change resets ghost");
         trail.reset(0,100);trail.update(0,100,100);check(trail.fraction()==1,"Respawn starts clean");
         HealthFillGhost fine=new HealthFillGhost(),coarse=new HealthFillGhost();fine.reset(100,100);coarse.reset(100,100);fine.update(0,20,100);coarse.update(0,20,100);
-        for(int i=0;i<240;i++)fine.update(.01,20,100);coarse.update(2.4,20,100);check(Math.abs(fine.fraction()-coarse.fraction())<1e-8,"Ghost timing independent of update frequency");
+        for(int i=0;i<55;i++)fine.update(.01,20,100);coarse.update(.55,20,100);check(Math.abs(fine.fraction()-coarse.fraction())<1e-8,"Ghost timing independent of update frequency during catch-up");
         HUDLayout layout=onlyHealth();HUDLayout.Placement p=layout.get(HUDLayout.Piece.HEALTH);p.text=false;p.defaults=false;p.positioned=true;p.x=100;p.y=200;p.rotation=20;
         HUDLayout.Placement child=layout.get(UISkins.Slot.HEALTH_FILL);child.x=10;child.scaleX=.8;child.rotation=15;
         UISkins skins=new UISkins();BufferedImage texture=solid(Color.GREEN,250,18);texture.setRGB(190,9,0);skins.images.put(UISkins.Slot.HEALTH_FILL,texture);
