@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add a Health Fill damage ghost: hold lost health for 2 seconds, then catch up
+  over 0.75 seconds, using the same custom artwork/transforms at reduced opacity.
+- Preview the health ghost with HUD Studio's health slider; stamina is unaffected.
+
 - Add independent HUD artwork-layer transforms, visibility, opacity and styling,
   alongside whole-piece selection; preserve live fills, parent-relative dragging,
   undo/redo and existing HUD layouts.

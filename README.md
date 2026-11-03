@@ -259,8 +259,15 @@ remains the painting/layering editor. They share the same `ui-assets` artwork.
    UI Studio continue to work. Saving clears the editor's undo/redo history.
 
 The preview uses the same HUD renderer as the game. Health/stamina sliders and
-LAN/debug toggles let you inspect live states without changing gameplay. The
-game still uses its real values, LAN status, and F11 debug toggle. Middle-drag
+LAN/debug toggles let you inspect live states without changing gameplay.
+Health Fill leaves a 40%-opacity ghost of lost health for 2 seconds after damage,
+then catches up over 0.75 seconds. More damage restarts the hold; healing,
+respawning, maximum-HP changes, and arena reset clear the trail. The ghost follows
+the fill's custom artwork, transparency, visibility, and layer/piece transforms.
+It applies only to Health Fill. Lower the preview health slider to inspect it.
+In solo play the animation pauses with gameplay and follows timescale; in LAN
+it continues while local menus are open.
+The game still uses its real values, LAN status, and F11 debug toggle. Middle-drag
 pans the preview; scrolling zooms it around the cursor. These preview controls
 do not change the actual HUD scale. **Reset view** recovers the preview;
 **Reset selection** restores the selected piece or layer's default position/style

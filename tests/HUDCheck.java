@@ -12,6 +12,34 @@ public class HUDCheck {
     static BufferedImage solid(Color color,int w,int h){BufferedImage image=new BufferedImage(w,h,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();g.setColor(color);g.fillRect(0,0,w,h);g.dispose();return image;}
     static BufferedImage render(HUDRenderer renderer,HUDRenderer.Data data){BufferedImage image=new BufferedImage(1000,700,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();renderer.draw(g,1000,700,data);g.dispose();return image;}
     static HUDLayout onlyHealth(){HUDLayout layout=new HUDLayout();for(HUDLayout.Placement p:layout.placements.values())p.visible=false;layout.get(HUDLayout.Piece.HEALTH).visible=true;return layout;}
+    static void ghost(){
+        HealthFillGhost trail=new HealthFillGhost();trail.reset(100,100);trail.update(0,50,100);
+        trail.update(2,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for two seconds");
+        trail.update(.375,50,100);check(Math.abs(trail.fraction()-.75)<1e-9,"Ghost catches up smoothly");
+        trail.update(0,25,100);trail.update(0,25,100);check(Math.abs(trail.fraction()-.75)<1e-9,"More damage preserves current ghost and paused time does not advance");
+        trail.update(2,25,100);check(Math.abs(trail.fraction()-.75)<1e-9,"Further damage restarts full hold");
+        trail.update(.75,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
+        trail.update(0,10,100);trail.update(0,60,100);check(trail.fraction()==.6,"Healing clears damage ghost");
+        trail.update(0,60,200);check(trail.fraction()==.3,"Class/max HP change resets ghost");
+        trail.reset(0,100);trail.update(0,100,100);check(trail.fraction()==1,"Respawn starts clean");
+        HealthFillGhost fine=new HealthFillGhost(),coarse=new HealthFillGhost();fine.reset(100,100);coarse.reset(100,100);fine.update(0,20,100);coarse.update(0,20,100);
+        for(int i=0;i<240;i++)fine.update(.01,20,100);coarse.update(2.4,20,100);check(Math.abs(fine.fraction()-coarse.fraction())<1e-8,"Ghost timing independent of update frequency");
+        HUDLayout layout=onlyHealth();HUDLayout.Placement p=layout.get(HUDLayout.Piece.HEALTH);p.text=false;p.defaults=false;p.positioned=true;p.x=100;p.y=200;p.rotation=20;
+        HUDLayout.Placement child=layout.get(UISkins.Slot.HEALTH_FILL);child.x=10;child.scaleX=.8;child.rotation=15;
+        UISkins skins=new UISkins();BufferedImage texture=solid(Color.GREEN,250,18);texture.setRGB(190,9,0);skins.images.put(UISkins.Slot.HEALTH_FILL,texture);
+        HUDRenderer.Data data=new HUDRenderer.Data();data.maxHealth=100;data.health=50;data.healthGhost=1;
+        BufferedImage image=render(new HUDRenderer(skins,layout),data);AffineTransform transform=layout.transform(UISkins.Slot.HEALTH_FILL,1000,700);
+        Point2D live=transform.transform(new Point2D.Double(50,9),null),ghost=transform.transform(new Point2D.Double(170,9),null);
+        check((image.getRGB((int)live.getX(),(int)live.getY())>>>24)==255,"Live fill keeps full opacity");
+        check(Math.abs((image.getRGB((int)ghost.getX(),(int)ghost.getY())>>>24)-102)<=1,"Ghost uses custom fill and both HUD transforms at 40% opacity");
+        p.rotation=0;child.rotation=0;child.scaleX=1;image=render(new HUDRenderer(skins,layout),data);
+        check(image.getRGB(300,209)==0,"Transparent areas in custom fill remain transparent in ghost");
+        child.visible=false;image=render(new HUDRenderer(skins,layout),data);check(image.getRGB(280,209)==0,"Hiding health fill hides its ghost");
+        HUDLayout stamina=new HUDLayout();for(HUDLayout.Placement place:stamina.placements.values())place.visible=false;
+        stamina.get(HUDLayout.Piece.STAMINA).visible=true;data.stamina=50;
+        BufferedImage with=render(new HUDRenderer(skins,stamina),data);data.healthGhost=Double.NaN;BufferedImage without=render(new HUDRenderer(skins,stamina),data);
+        check(Arrays.equals(with.getRGB(0,0,1000,700,null,0,1000),without.getRGB(0,0,1000,700,null,0,1000)),"Stamina has no ghost effect");
+    }
     static void layoutAndRender(Path dir) throws Exception {
         HUDLayout layout=onlyHealth();HUDLayout.Placement p=layout.get(HUDLayout.Piece.HEALTH);p.positioned=true;p.x=120;p.y=170;p.scaleX=1.4;p.scaleY=2;p.rotation=37;p.opacity=.65;p.fontScale=1.2;p.text=false;p.defaults=false;p.color=Color.CYAN;
         Path path=dir.resolve("hud-layout.properties");layout.save(path);HUDLayout loaded=HUDLayout.load(path);HUDLayout.Placement q=loaded.get(HUDLayout.Piece.HEALTH);
@@ -88,7 +116,7 @@ public class HUDCheck {
         BufferedImage screenshot=new BufferedImage(1300,860,BufferedImage.TYPE_INT_ARGB);Graphics2D g=screenshot.createGraphics();editor.paint(g);g.dispose();
         try{javax.imageio.ImageIO.write(screenshot,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-hud-editor.png").toFile());}catch(Exception ex){throw new RuntimeException(ex);}
     });}
-    public static void main(String[] args){try{Path dir=Files.createTempDirectory("hud-check-");try{layoutAndRender(dir);ui();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}
+    public static void main(String[] args){try{Path dir=Files.createTempDirectory("hud-check-");try{ghost();layoutAndRender(dir);ui();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}
         System.out.println("Passed: HUD/layer persistence and legacy layouts, transforms, opacity, independent frame/fill edits, live clipping, whole/layer selection, parent-aware dragging, undo/redo, slot linkage and editor rendering.");System.exit(0);
     }catch(Throwable ex){ex.printStackTrace();System.exit(1);}}
 }

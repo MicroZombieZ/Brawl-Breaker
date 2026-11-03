@@ -15,6 +15,7 @@ public class CubeMovement extends JPanel {
     private final ParticleSystem particles = new ParticleSystem();
     private final UISkins uiSkins = new UISkins();
     private HUDLayout hudLayout;
+    private final HealthFillGhost healthFillGhost=new HealthFillGhost();
     private final JComboBox<ParticleSystem.Quality> particleQuality = new JComboBox<>(ParticleSystem.Quality.values());
     private long lastParticleEvent;
     private boolean consoleOpen, consoleKeyHeld, resumeAfterConsole, showHitboxes, showStats, showDebugHud;
@@ -87,6 +88,7 @@ public class CubeMovement extends JPanel {
         particles.loadEffects(java.nio.file.Paths.get("particle-effects"));
         uiSkins.load(java.nio.file.Paths.get("ui-assets"));
         hudLayout=HUDLayout.load(java.nio.file.Paths.get("ui-assets","hud-layout.properties"));
+        healthFillGhost.reset(combat.health,combat.maxHealth());
         setPreferredSize(new Dimension(1000, 700));
         setBackground(new Color(24, 29, 39));
         setFocusable(true);
@@ -223,6 +225,7 @@ public class CubeMovement extends JPanel {
                 if (lobbyClient == null) advanceSimulation(dt);
             }
             updateParticles(dt);
+            healthFillGhost.update(lobbyClient!=null?dt:paused?0:dt*timeScale,combat.health,combat.maxHealth());
             repaint();
         }).start();
     }
@@ -555,6 +558,7 @@ public class CubeMovement extends JPanel {
             combat.equipped = local.className.equals("Gauntlet");
             equippedClass = local.className.isEmpty() ? null : local.className;
             combat.health = local.health; combat.multiplier = local.multiplier; combat.streakTime = local.streak;
+            if(first)healthFillGhost.reset(combat.health,combat.maxHealth());
             combat.endLag = local.recovery; combat.attackTime = local.attackTime; combat.speed = local.speed;
             combat.facing = local.facing;
             combat.active = local.active < 0 ? null : CombatSystem.Move.values()[local.active];
@@ -764,6 +768,7 @@ public class CubeMovement extends JPanel {
                 case "reset":
                     arguments(words, 1, "reset");
                     combat.reset(); x = y = z = verticalSpeed = yaw = cubeYaw = 0;
+                    healthFillGhost.reset(combat.health,combat.maxHealth());
                     particles.clear(); particleQuality.setSelectedItem(ParticleSystem.Quality.MEDIUM); lastParticleEvent=0;
                     jumpsUsed = 0; groundPounding = exhausted = false; stamina = MAX_STAMINA;
                     speedMultiplier = timeScale = 1; showHitboxes = showStats = false;
@@ -1179,6 +1184,7 @@ public class CubeMovement extends JPanel {
     private void drawCombatHud(Graphics2D g) {
         HUDRenderer.Data data=new HUDRenderer.Data();
         data.health=combat.health;data.maxHealth=combat.maxHealth();data.stamina=stamina;data.exhausted=exhausted;
+        data.healthGhost=healthFillGhost.fraction();
         data.equipped=combat.equipped;data.className=equippedClass==null?"None":equippedClass;data.playing=!paused;
         data.speed=combat.speed;data.maxSpeed=SPRINT_SPEED*speedMultiplier+(combat.active==CombatSystem.Move.HAYMAKER?12:0);
         data.multiplier=combat.multiplier;data.streak=combat.streakTime;data.debug=showDebugHud;

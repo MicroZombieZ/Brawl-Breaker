@@ -26,6 +26,10 @@ public class HUDEditor extends JPanel {
             defaults=new JCheckBox("Built-in art for empty slots",true),locked=new JCheckBox("Lock width/height scale",true),
             showDebug=new JCheckBox("Preview debug HUD"),showLan=new JCheckBox("Preview LAN status",true);
     private final JSlider health=new JSlider(0,100,75),stamina=new JSlider(0,100,60);
+    private final HealthFillGhost healthFillGhost=new HealthFillGhost();
+    private long previewPrevious;
+    private final javax.swing.Timer ghostTimer=new javax.swing.Timer(16,e->{long now=System.nanoTime();double dt=(now-previewPrevious)/1e9;previewPrevious=now;
+        healthFillGhost.update(dt,health.getValue(),100);preview.repaint();});
     private final JLabel status=new JLabel("Select a linked HUD piece; import artwork, drag to move, and adjust scale/rotation. Save & Apply, then restart the game.");
     private final JLabel artwork=new JLabel();
     private final JButton undo=new JButton("Undo"),redo=new JButton("Redo");
@@ -79,10 +83,12 @@ public class HUDEditor extends JPanel {
         opacity.addChangeListener(e->{if(!refreshing)mutate(()->placement().opacity=value(opacity));});font.addChangeListener(e->{if(!refreshing)mutate(()->placement().fontScale=value(font));});
         visible.addActionListener(e->{if(!refreshing)mutate(()->placement().visible=visible.isSelected());});text.addActionListener(e->{if(!refreshing)mutate(()->placement().text=text.isSelected());});
         defaults.addActionListener(e->{if(!refreshing)mutate(()->placement().defaults=defaults.isSelected());});
-        health.addChangeListener(e->preview.repaint());stamina.addChangeListener(e->preview.repaint());showDebug.addActionListener(e->preview.repaint());showLan.addActionListener(e->preview.repaint());
+        health.addChangeListener(e->{healthFillGhost.update(0,health.getValue(),100);preview.repaint();});stamina.addChangeListener(e->preview.repaint());showDebug.addActionListener(e->preview.repaint());showLan.addActionListener(e->preview.repaint());
         bind("control Z","undo",()->travel(false));bind("control Y","redo",()->travel(true));bind("control shift Z","redo2",()->travel(true));bind("control S","save",this::saveApply);
-        refreshSlots();refresh();
+        healthFillGhost.reset(health.getValue(),100);refreshSlots();refresh();
     }
+    @Override public void addNotify(){super.addNotify();previewPrevious=System.nanoTime();ghostTimer.start();}
+    @Override public void removeNotify(){ghostTimer.stop();super.removeNotify();}
     private static JSpinner number(double initial,double min,double max,double step){return new JSpinner(new SpinnerNumberModel(initial,min,max,step));}
     private static double value(JSpinner spinner){return ((Number)spinner.getValue()).doubleValue();}
     private static void button(JPanel panel,String text,Runnable action){JButton b=new JButton(text);b.addActionListener(e->action.run());panel.add(b);}
@@ -158,6 +164,7 @@ public class HUDEditor extends JPanel {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);g.setPaint(new GradientPaint(0,0,new Color(40,61,79),0,700,new Color(23,32,41)));g.fillRect(0,0,1000,700);
             g.setColor(new Color(49,65,78));for(int i=0;i<1000;i+=50)g.drawLine(i,0,i,700);for(int j=0;j<700;j+=50)g.drawLine(0,j,1000,j);
             HUDRenderer.Data data=new HUDRenderer.Data();data.health=health.getValue()/100.0*data.maxHealth;data.stamina=stamina.getValue();data.lan=showLan.isSelected();data.debug=showDebug.isSelected();data.cooldowns[1]=12.5;
+            data.healthGhost=healthFillGhost.fraction();
             new HUDRenderer(skins,layout).draw(g,1000,700,data);
             g.setColor(new Color(104,217,245));g.setStroke(new BasicStroke((float)(1.5/scale())));
             Shape outline=layerScope()?layout.transform(slot(),1000,700).createTransformedShape(new Rectangle2D.Double(0,0,slot().width,slot().height)):layout.transform(piece(),1000,700).createTransformedShape(layout.bounds(piece()));g.draw(outline);
