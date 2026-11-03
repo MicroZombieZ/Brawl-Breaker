@@ -6,7 +6,9 @@ import javax.swing.*;
 
 /** A dependency-free 3D movement demo. Launch with Run.bat from the project root. */
 public class CubeMovement extends JPanel {
-    private static final double EDGE = MapStorage.load(MapStorage.DEFAULT_ID).edge, SPEED = 4;
+    private static final double SPEED = 4;
+    private double EDGE=10;
+    private MapDefinition activeMap=MapStorage.practice();
     private static final double SPRINT_SPEED = 7, GRAVITY = 18, JUMP_SPEED = 7;
     private static final double MAX_STAMINA = 100, STAMINA_DRAIN = 20, STAMINA_RECOVERY = 15;
     private double stamina = MAX_STAMINA;
@@ -510,13 +512,14 @@ public class CubeMovement extends JPanel {
         if(!enteringMatch)return;
         entryTime+=dt;
         if(entryTime>=.3&&!mapLoaded){
-            MapStorage.MapData map=MapStorage.load(MapStorage.DEFAULT_ID);
-            if(!enteringLan){executeCommand("reset");x=map.spawnX(0);z=map.spawnZ(0);}
+            if(!enteringLan){activeMap=MapStorage.choose();combat.map=activeMap;executeCommand("reset");MapDefinition.Spawn spawn=activeMap.spawn(0);x=spawn.x;y=spawn.y;z=spawn.z;}
             else if(appliedSnapshot!=null&&lobbyClient!=null){
+                activeMap=appliedSnapshot.map;combat.map=activeMap;
                 LobbyNetwork.State local=appliedSnapshot.player(lobbyClient.id);
                 if(local==null)return;
                 x=local.x;y=local.y;z=local.z;cubeYaw=local.yaw;
             }else return;
+            EDGE=Math.max(activeMap.width,activeMap.depth)/2;
             mapLoaded=true;menu.setVisible(false);
         }
         if(entryTime>=.7&&mapLoaded){enteringMatch=false;setPaused(true);setPaused(false);}
@@ -618,6 +621,7 @@ public class CubeMovement extends JPanel {
         if (snapshot != appliedSnapshot) {
             boolean startNow = snapshot.started && (first || !appliedSnapshot.started);
             appliedSnapshot = snapshot;
+            if(snapshot.started&&snapshot.map!=null){activeMap=snapshot.map;combat.map=activeMap;EDGE=Math.max(activeMap.width,activeMap.depth)/2;}
             if (first) lastParticleEvent = snapshot.lastEffectId;
             else {
                 for (GameEffect effect : snapshot.effects) if (effect.id > lastParticleEvent) particles.emit(effect);
@@ -862,7 +866,8 @@ public class CubeMovement extends JPanel {
 
     private void move(double dt) {
         if (paused) return;
-        double startX = x, startZ = z;
+        double startX = x, startZ = z, startY=y;
+        MapPhysics.tick(activeMap,dt);
         double turn = Math.IEEEremainder(yaw - cubeYaw, Math.PI * 2);
         cubeYaw = Math.IEEEremainder(cubeYaw + turn * (1 - Math.exp(-TURN_RESPONSE * dt)), Math.PI * 2);
         x = clamp(x);
@@ -907,8 +912,9 @@ public class CubeMovement extends JPanel {
             if (stamina >= 25) exhausted = false;
         }
         combat.update(dt, x, y, z, cubeYaw);
-        x = clamp(combat.playerX);
-        z = clamp(combat.playerZ);
+        double[] position=MapPhysics.move(activeMap,startX,startY,startZ,combat.playerX,y,combat.playerZ,.5*(Math.abs(Math.cos(cubeYaw))+Math.abs(Math.sin(cubeYaw))),1);
+        if(position[1]!=y){if(verticalSpeed<0){jumpsUsed=0;groundPounding=false;}verticalSpeed=0;}
+        x=position[0];y=position[1];z=position[2];combat.playerX=x;combat.playerY=y;combat.playerZ=z;
         combat.speed = dt > 0 ? Math.hypot(x - startX, z - startZ) / dt : 0;
     }
 
@@ -943,6 +949,7 @@ public class CubeMovement extends JPanel {
         for (double[] box : cameraObstacles) {
             fraction = Math.min(fraction, cameraHit(start, offset, box));
         }
+        for(MapDefinition.Part part:activeMap.objects)if(part.collision)fraction=Math.min(fraction,cameraHit(start,offset,part.bounds()));
         // Pull inward before a wall, then restore the desired distance when clear.
         double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
         if (fraction < 1) fraction = Math.max(0, fraction - 0.02 / length);
@@ -1144,6 +1151,7 @@ public class CubeMovement extends JPanel {
         if (lobbyClient != null && appliedSnapshot != null) for (LobbyNetwork.State player : appliedSnapshot.players)
             if (player.id != lobbyClient.id) drawWave(g, player.waveTime, player.waveX, player.waveY, player.waveZ);
         java.util.List<RenderFace> scene = new ArrayList<>();
+        for(MapDefinition.Part part:activeMap.objects){int index=0;for(double[][] face:MapMeshes.faces(part)){Color color=new Color(part.color);double shade=.7+(index++%4)*.08;scene.add(new RenderFace(face,new Color((int)(color.getRed()*shade),(int)(color.getGreen()*shade),(int)(color.getBlue()*shade))));}}
         for (CombatSystem.Dummy dummy : combat.dummies) {
             if (!dummy.alive()) continue;
             Color color = dummy.flash > 0 ? new Color(255, 230, 180)
@@ -1338,13 +1346,12 @@ public class CubeMovement extends JPanel {
         resolveCamera();
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new Color(64, 76, 86));
-        g.fill(polygon(new double[][]{{-EDGE,0,-EDGE},{EDGE,0,-EDGE},
-                {EDGE,0,EDGE},{-EDGE,0,EDGE}}));
+        g.setColor(new Color(activeMap.color));
+        g.fill(polygon(MapMeshes.plane(activeMap)));
         g.setColor(new Color(89, 104, 114));
         for (int i = -(int) EDGE; i <= EDGE; i++) {
-            line(g, i, -EDGE, i, EDGE);
-            line(g, -EDGE, i, EDGE, i);
+            if(Math.abs(i)<=activeMap.width/2){double limit=activeMap.depth/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.width/2),2))):1);line(g,i,-limit,i,limit);}
+            if(Math.abs(i)<=activeMap.depth/2){double limit=activeMap.width/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.depth/2),2))):1);line(g,-limit,i,limit,i);}
         }
         drawCombatWorld(g);
         drawDebugOverlays(g);

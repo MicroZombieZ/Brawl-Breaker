@@ -6,6 +6,9 @@ final class LobbyWorld {
     final Map<Integer, Player> players = new LinkedHashMap<>();
     final CombatSystem arena = new CombatSystem();
     boolean started;
+    MapDefinition map=MapStorage.practice();
+    byte[] mapBytes;
+    java.util.function.Supplier<MapDefinition> mapChoice=MapStorage::choose;
     private int nextId = 1;
     final Deque<GameEffect> effects = new ArrayDeque<>();
     long lastEffectId;
@@ -41,14 +44,13 @@ final class LobbyWorld {
             spawn();
         }
         void spawn() {
-            MapStorage.MapData map=MapStorage.load(MapStorage.DEFAULT_ID);
-            x=map.spawnX(id);z=map.spawnZ(id);
-            y = verticalSpeed = 0;
+            MapDefinition.Spawn spawn=combat.map.spawn(id-1);
+            x=spawn.x;z=spawn.z;y=spawn.y;verticalSpeed=0;
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
             combat.cancelAttack(); combat.health = combat.maxHealth();
             combat.multiplier = 1; combat.streakTime = 0;
-            body.x = x; body.z = z; body.lift = 0;
+            body.x = x; body.z = z; body.lift = y;
             body.health = combat.health; body.maxHealth = combat.maxHealth();
             body.vx = body.vz = body.slowTime = body.slowAmount = 0;
         }
@@ -74,8 +76,8 @@ final class LobbyWorld {
             if (length > 0) {
                 double sprintTime = sprint && !exhausted ? Math.min(dt, stamina / 20) : 0;
                 double speed = (4 + 3 * sprintTime / dt) * (1 - body.slowAmount);
-                x = bound(x + (Math.cos(yaw) * dx + Math.sin(yaw) * dz) / length * speed * dt);
-                z = bound(z + (-Math.sin(yaw) * dx + Math.cos(yaw) * dz) / length * speed * dt);
+                x += (Math.cos(yaw) * dx + Math.sin(yaw) * dz) / length * speed * dt;
+                z += (-Math.sin(yaw) * dx + Math.cos(yaw) * dz) / length * speed * dt;
                 sprinting = sprintTime > 0 && Math.hypot(x - oldX, z - oldZ) > 1e-9;
                 if (sprinting) {
                     stamina = Math.max(0, stamina - 20 * sprintTime);
@@ -94,6 +96,7 @@ final class LobbyWorld {
         if (players.size() >= MAX_PLAYERS) throw new IllegalArgumentException("Lobby is full (8 players).");
         if (host && players.values().stream().anyMatch(p -> p.host)) throw new IllegalArgumentException("Host already connected.");
         Player player = new Player(nextId++, name, host);
+        player.combat.map=map;player.spawn();
         players.put(player.id, player);
         return player;
     }
@@ -116,7 +119,13 @@ final class LobbyWorld {
         Player player = players.get(id);
         if (player == null) return;
         if (action == 4 && player.host) {
-            if(!started){MapStorage.load(MapStorage.DEFAULT_ID).populate(arena);started=true;}
+            if(!started){
+                map=mapChoice.get();
+                try{mapBytes=map.encode();}catch(java.io.IOException error){throw new IllegalStateException(error);}
+                new MapStorage.MapData("session",map).populate(arena);
+                for(Player p:players.values()){p.combat.map=map;p.spawn();}
+                started=true;
+            }
             return;
         }
         if (action == 3) {
@@ -141,6 +150,7 @@ final class LobbyWorld {
 
     synchronized void tick(double dt) {
         if (!started) return;
+        MapPhysics.tick(map,dt);
         effectTime += dt;
         while (!effects.isEmpty() && effects.peekFirst().time < effectTime - 2) effects.removeFirst();
         for (CombatSystem.Dummy dummy : arena.dummies) arena.updateDummy(dummy, dt);
@@ -153,7 +163,12 @@ final class LobbyWorld {
                 }
                 continue;
             }
+            double ox=player.x,oy=player.y,oz=player.z;
             player.move(dt, held(player));
+            double radius=.5*(Math.abs(Math.cos(player.cubeYaw))+Math.abs(Math.sin(player.cubeYaw)));
+            double[] position=MapPhysics.move(map,ox,oy,oz,player.x,player.y,player.z,radius,1);
+            if(position[1]!=player.y){if(player.verticalSpeed<0){player.jumps=0;player.pounding=false;}player.verticalSpeed=0;}
+            player.x=position[0];player.y=position[1];player.z=position[2];
             player.body.x = player.x; player.body.z = player.z; player.body.lift = player.y;
             player.body.yaw = player.cubeYaw;
             // Player bodies use the same knockback integration as dummies, once per tick.
@@ -178,5 +193,4 @@ final class LobbyWorld {
         }
         drainEffects(arena);
     }
-    private static double bound(double value) { double limit=MapStorage.load(MapStorage.DEFAULT_ID).edge-.71;return Math.max(-limit, Math.min(limit, value)); }
 }

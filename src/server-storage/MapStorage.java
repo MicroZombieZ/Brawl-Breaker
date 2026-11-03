@@ -1,23 +1,35 @@
-/** Immutable map templates shared by the local session and LAN host, not live worlds. */
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+/** Templates create independent sessions; saved maps automatically join the pool. */
 final class MapStorage {
     static final String DEFAULT_ID="practice";
+    static final Path DIRECTORY=Paths.get(System.getProperty("camera.maps","server-storage/maps")),ASSETS=Paths.get("server-storage","assets");
     static final class MapData {
         final String id;
-        final double edge=10;
-        private final double[][] targets={{-4,-3},{0,-3},{4,-3},{0,4}};
-        MapData(String id){this.id=id;}
+        final double edge;final MapDefinition definition;
+        MapData(String id){this(id,practice());}
+        MapData(String id,MapDefinition definition){this.id=id;this.definition=definition;edge=Math.max(definition.width,definition.depth)/2;}
         void populate(CombatSystem combat){
-            combat.clearDummies();
-            for(double[] point:targets)combat.dummies.add(new CombatSystem.Dummy(point[0],point[1]));
+            combat.map=definition;combat.clearDummies();
+            for(MapDefinition.Spawn s:definition.targets){CombatSystem.Dummy d=new CombatSystem.Dummy(s.x,s.z);d.lift=d.spawnY=s.y;combat.dummies.add(d);}
             combat.setDummyHealth(combat.dummyMaxHealth);
         }
-        double spawnX(int player){return player==0?0:-6+((player-1)%4)*4;}
-        double spawnZ(int player){return player==0?0:5+((player-1)/4)*2;}
+        double spawnX(int player){return player==0?0:definition.spawn(player-1).x;}
+        double spawnZ(int player){return player==0?0:definition.spawn(player-1).z;}
     }
-    private static final MapData PRACTICE=new MapData(DEFAULT_ID);
+    static MapDefinition practice(){MapDefinition m=new MapDefinition();m.name="Practice";for(int i=0;i<8;i++)m.spawns.add(new MapDefinition.Spawn(-6+(i%4)*4,0,5+(i/4)*2,1));for(double[] p:new double[][]{{-4,-3},{0,-3},{4,-3},{0,4}})m.targets.add(new MapDefinition.Spawn(p[0],0,p[1],1));return m;}
     static MapData load(String id){
         if(!DEFAULT_ID.equals(id))throw new IllegalArgumentException("Unknown map: "+id);
-        return PRACTICE;
+        return new MapData(id);
+    }
+    static MapDefinition choose(){return choose(DIRECTORY,new Random());}
+    static MapDefinition choose(Path directory,Random random){
+        java.util.List<MapDefinition> maps=new ArrayList<>();maps.add(practice());
+        if(Files.isDirectory(directory))try(java.util.stream.Stream<Path> files=Files.list(directory)){
+            files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".map")).sorted().forEach(p->{try{maps.add(MapDefinition.read(p));}catch(IOException e){System.err.println("Skipping map "+p.getFileName()+": "+e.getMessage());}});
+        }catch(IOException e){System.err.println("Cannot list maps: "+e.getMessage());}
+        return maps.get(random.nextInt(maps.size()));
     }
     private MapStorage(){}
 }

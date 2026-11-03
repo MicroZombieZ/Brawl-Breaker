@@ -6,13 +6,36 @@ Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practic
 Quit: Opening menu only. Pause menu Main Menu leaves the session, closes any
       owned LAN server, resets player state and unloads the map.
 Host/Join: Open existing LAN setup (name, IP for joining, port); host starts match.
-Practice: Enter the default test arena offline, with reset gameplay state.
-Map storage: src/server-storage/MapStorage.java holds the practice template;
-             solo and LAN share its bounds, target positions and spawn positions.
+Practice: Enter a randomly selected arena offline, with reset gameplay state.
+Map storage: MapStorage includes built-in practice plus valid .map files in
+             server-storage/maps; saved maps automatically enter the next draw.
+             Solo and LAN use the same geometry, targets, and team spawns.
 Match entry: 0.3s fade to black, load map/player state, 0.4s fade in; input blocked.
              Startup/waiting rooms show an opaque soft blue background, no map.
              LAN host creates arena targets on Start Match; disconnect unloads
-             the client map. Only practice map exists; no map selector yet.
+             the client map. Host transmits selected map and moving objects to
+             all clients and late joiners (LAN protocol 5; update every device).
+Map Studio: MapEditor.bat; right-drag orbit, middle-drag pan, wheel zoom,
+            left-click select, left-drag X/Z, inspector for numeric transforms.
+            New/Open/Built-in Practice, Save/Save As, reusable .asset save/insert,
+            duplicate/delete, object colors, yaw, anchoring, player collision.
+Map limits: 128 objects, 64 team spawns, 64 targets; width/depth 4–200 units;
+            rectangular or elliptical ground. Box, sphere, cylinder, wedge.
+Teams: Everyone uses Team 1 spawn markers, cycling by player ID; teams 2–8
+       can be authored but are not used yet. Friendly fire remains unchanged.
+Collision: Shared swept bounding boxes in solo and LAN; jumping onto platforms
+           is supported. Curved/rotated/wedge shapes use conservative boxes;
+           wedges are not walkable ramps. Camera collides with solid objects.
+Loose physics: Gravity 18 units/s^2; 0.2 bounce coefficient; impact horizontal
+               damping exp(-7*step); max 0.01s substeps. Initial velocity axes
+               -50..50. Anchored objects never simulate; no angular physics,
+               mass, player pushing, or full rigid-body solving.
+Map preview: Test physics simulates a copy; Stop/edit restores authored data.
+Map saves: Self-contained format 1; validates Team 1 spawn and finite ranges;
+           invalid maps skipped. Files saved atomically. Asset copies embedded.
+Testing: MapCheck covers persistence, random selection, bounds/platforms,
+         loose physics, host-to-client map transfer, and Team 1 spawning.
+         Check.bat isolates random selection from user-authored map files.
 Back from unconnected startup lobby: Return to opening menu. Escape does not
 skip startup selection. Existing Escape pause and F2 lobby controls work in play.
 

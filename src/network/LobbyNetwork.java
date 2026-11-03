@@ -6,7 +6,7 @@ import java.util.concurrent.*;
 /** Bounded binary TCP protocol. No Java object deserialization or external dependencies. */
 final class LobbyNetwork {
     static final int DEFAULT_PORT = 24560;
-    private static final String VERSION = "CameraUpdate-LAN-4";
+    private static final String VERSION = "CameraUpdate-LAN-5";
     private static final int HELLO = 1, WELCOME = 2, SNAPSHOT = 3, INPUT = 4, ACTION = 5, ERROR = 6;
     private static final int MAX_FRAME = 262144;
     interface Write { void write(DataOutputStream out) throws IOException; }
@@ -43,6 +43,7 @@ final class LobbyNetwork {
     }
     static final class Snapshot {
         boolean started;
+        MapDefinition map;
         final List<State> players = new ArrayList<>();
         final List<CombatSystem.Dummy> dummies = new ArrayList<>();
         final List<GameEffect> effects = new ArrayList<>();
@@ -52,7 +53,9 @@ final class LobbyNetwork {
     private static byte[] snapshot(LobbyWorld world) throws IOException {
         synchronized (world) {
             return packet(SNAPSHOT, out -> {
-                out.writeBoolean(world.started); out.writeInt(world.players.size());
+                out.writeBoolean(world.started);
+                if(world.started){out.writeInt(world.mapBytes.length);out.write(world.mapBytes);out.writeInt(world.map.objects.size());for(MapDefinition.Part p:world.map.objects){out.writeDouble(p.x);out.writeDouble(p.y);out.writeDouble(p.z);}}
+                out.writeInt(world.players.size());
                 for (LobbyWorld.Player p : world.players.values()) {
                     CombatSystem c = p.combat;
                     out.writeInt(p.id); out.writeBoolean(p.host); out.writeUTF(p.name); out.writeUTF(p.className);
@@ -78,6 +81,7 @@ final class LobbyNetwork {
     }
     private static Snapshot decodeSnapshot(DataInputStream in) throws IOException {
         Snapshot result = new Snapshot(); result.started = in.readBoolean();
+        if(result.started){int length=in.readInt();if(length<1||length>180000)throw new IOException("Invalid map size.");byte[] data=new byte[length];in.readFully(data);result.map=MapDefinition.decode(data);int objects=in.readInt();if(objects!=result.map.objects.size())throw new IOException("Invalid map objects.");for(MapDefinition.Part p:result.map.objects){p.x=in.readDouble();p.y=in.readDouble();p.z=in.readDouble();if(!Double.isFinite(p.x)||!Double.isFinite(p.y)||!Double.isFinite(p.z)||Math.abs(p.x)>300||Math.abs(p.y)>300||Math.abs(p.z)>300)throw new IOException("Invalid object position.");}}
         int count = in.readInt(); if (count < 0 || count > LobbyWorld.MAX_PLAYERS) throw new IOException("Invalid player count.");
         for (int i = 0; i < count; i++) {
             State p = new State(); p.id = in.readInt(); p.host = in.readBoolean(); p.name = in.readUTF(); p.className = in.readUTF();

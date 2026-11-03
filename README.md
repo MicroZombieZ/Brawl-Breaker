@@ -13,7 +13,7 @@ The opening menu offers **Host**, **Join**, **Quick Match** (disabled for now),
 and **Practice** beneath the Cube Movement title. Host and Join open the LAN
 setup for your name, host IP, and port; the host starts the match once everyone
 has joined. Back returns to the opening menu before connecting. Practice enters
-the existing default test arena directly. Escape pauses during play; F2 opens
+a randomly selected arena directly. Escape pauses during play; F2 opens
 the existing LAN lobby controls.
 The pause menu's **Main Menu** button leaves the session and unloads the map
 (hosting players also close their lobby). **Quit** is on the opening menu.
@@ -23,10 +23,49 @@ rendering. Practice and LAN match entry fade out for 0.3 seconds, load the map
 and player state at black, then fade in for 0.4 seconds. Controls stay blocked
 throughout the transition. Leaving/disconnecting returns to lobby setup with
 the map unloaded. Map templates live in `src/server-storage/MapStorage.java`;
-the local session and LAN host use the same `practice` template (bounds, target
-positions, and spawn positions). This is local game data, not cloud storage.
-Only the default map is selectable today; the map ID lookup is the foundation
-for future pre-made maps, not yet a multiplayer map-selection protocol.
+the local session and LAN host randomly choose from the built-in practice arena
+and valid `.map` files in `server-storage/maps`. This is local game data, not
+cloud storage. The host sends the selected map and loose-object positions to
+guests, including late joiners; guests don't need matching custom map files.
+All devices need this updated game build (LAN protocol 5).
+
+## Map Studio
+
+Launch **`MapEditor.bat`**. The 3D viewport supports right-drag to orbit,
+middle-drag to pan, wheel zoom, and left-click to select. Left-drag moves the
+selected object or spawn along X/Z; use the inspector for precise X/Y/Z,
+dimensions, yaw, color, anchoring, player collision, and starting velocities.
+
+- Create boxes, spheres, cylinders, and wedges. Duplicate or delete objects.
+- Select **Map / ground** for the map name, rectangular/elliptical plane,
+  width/depth (4–200 units), and ground color.
+- Add team spawn markers (teams 1–8) and training targets. Green markers are
+  Team 1; purple markers are other teams. Everyone currently spawns on Team 1,
+  cycling through its markers; combat/friendly fire rules are unchanged.
+- **Save asset** stores the selected object's shape, dimensions, color, physics,
+  and collision settings as a reusable `.asset`. **Insert asset** copies it
+  into the map. Assets are embedded in saved maps, so deleting an asset file
+  doesn't break a map that already uses it.
+- **Test physics** previews a separate copy. **Stop** or editing restores the
+  authored layout. Anchored objects remain fixed; loose objects fall with
+  gravity, bounce, settle, and collide with the ground and solid object bounds.
+- **New**, **Built-in Practice**, and **Open map** create/edit entire maps.
+  **Save / Save As** writes to `server-storage/maps`; valid saved maps enter
+  the random pool automatically on the next Practice or host-started match.
+  The built-in practice arena stays available; editing it creates a saved map.
+
+Maps support 128 objects, 64 spawn markers, and 64 targets. Saving validates
+finite coordinates, dimensions, and at least one unobstructed Team 1 spawn.
+Invalid files are skipped by random selection. Save replaces files atomically.
+Unsaved changes prompt before New/Open/closing. The editor saves authored
+positions, never the temporary physics-preview positions.
+
+Collision uses conservative axis-aligned bounding boxes for all shapes,
+including rotated objects, spheres, cylinders, and wedges. Platforms support
+landing and standing; wedges are decorative wedge meshes with box collision,
+not walkable ramps. Loose physics has linear gravity/bounce, without rotation,
+mass, player pushing, or a full rigid-body solver. Solo and LAN host share
+the collision/physics code. Saved map edits take effect in the next match.
 
 ## Project folders
 
@@ -39,6 +78,9 @@ for future pre-made maps, not yet a multiplayer map-selection protocol.
 | `tools/particle-editor` | Particle Studio application source |
 | `tools/ui-editor` | UI Studio painting and layered drawing application |
 | `tools/hud-editor` | HUD Studio placement, scaling, and linked artwork application |
+| `tools/map-editor` | Map Studio 3D authoring application |
+| `src/server-storage` | Map templates, format validation, and random map selection |
+| `server-storage/maps`, `server-storage/assets` | Saved maps and reusable object assets |
 | `particle-effects` | Saved particle designs and game event assignments |
 | `ui-assets` | Layered UI projects, PNG exports, and assigned HUD artwork |
 | `tests` | Automated checks |

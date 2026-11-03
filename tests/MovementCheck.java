@@ -51,6 +51,9 @@ public class MovementCheck {
                 check(entry.quit.isEnabled(),"Quit is available on main menu");
                 entry.practice.doClick();entryTick.invoke(demo,.7);
                 Field paused = field("paused"), z = field("z"), x = field("x");
+                MapDefinition loaded=(MapDefinition)field("activeMap").get(demo);
+                check(x.getDouble(demo)==loaded.spawn(0).x&&z.getDouble(demo)==loaded.spawn(0).z,"Practice uses Team 1 spawn");
+                x.setDouble(demo,0);z.setDouble(demo,0);
                 Field y = field("y"), velocity = field("verticalSpeed");
                 Method move = CubeMovement.class.getDeclaredMethod("move", double.class);
                 move.setAccessible(true);

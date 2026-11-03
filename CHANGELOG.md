@@ -4,6 +4,14 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Map Studio (MapEditor.bat): 3D shape/ground editing, object colors and
+  transforms, anchored/loose physics, collision flags, team spawns, targets,
+  reusable assets, full map saving/loading, and a non-destructive physics preview.
+- Automatically include valid saved maps in random Practice/LAN match selection.
+  LAN protocol 5 transfers host-selected maps and moving scenery to all clients.
+- Share map collision/platforms and loose-object physics between solo and LAN;
+  use Team 1 spawn markers for all players, including late joins and respawns.
+
 - Replace pause-menu Quit with Main Menu, leaving the session and unloading its
   map; add Quit to the opening menu.
 

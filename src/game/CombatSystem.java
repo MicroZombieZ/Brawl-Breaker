@@ -73,6 +73,7 @@ final class CombatSystem {
     }
     static final class Dummy {
         final double spawnX, spawnZ;
+        double spawnY;
         double x, z, health = 100, maxHealth = 100, vx, vz, slowTime, slowAmount, flash, damageTime, lastDamage;
         double respawnTime, lift, verticalSpeed, yaw;
         boolean playerBody;
@@ -82,6 +83,7 @@ final class CombatSystem {
     }
 
     final List<Dummy> dummies = new ArrayList<>();
+    MapDefinition map=MapStorage.practice();
     final List<GameEffect> effects = new ArrayList<>();
     final double[] cooldowns = new double[Move.values().length];
     boolean equipped;
@@ -104,7 +106,7 @@ final class CombatSystem {
     }
 
     void resetDummies() {
-        MapStorage.load(MapStorage.DEFAULT_ID).populate(this);
+        new MapStorage.MapData("session",map).populate(this);
     }
 
     void clearDummies() {
@@ -113,7 +115,8 @@ final class CombatSystem {
     }
 
     void spawnDummy(double x, double z) {
-        Dummy dummy = new Dummy(bound(x), bound(z));
+        double[] location=MapPhysics.boundary(map,x,z,.5);
+        Dummy dummy = new Dummy(location[0],location[1]);
         dummy.health = dummy.maxHealth = dummyMaxHealth;
         dummies.add(dummy);
         effect(GameEffect.Kind.RESPAWN,dummy.x,0,dummy.z,1,0);
@@ -208,8 +211,8 @@ final class CombatSystem {
                     effect(GameEffect.Kind.GRAB, grabbed.x, grabbed.lift, grabbed.z, 1, 0);
                 }
                 if (grabbed != null) {
-                    grabbed.x = bound(playerX - Math.sin(facing) * 1.1);
-                    grabbed.z = bound(playerZ - Math.cos(facing) * 1.1);
+                    double[] hold=MapPhysics.move(map,grabbed.x,grabbed.lift,grabbed.z,playerX-Math.sin(facing)*1.1,grabbed.lift,playerZ-Math.cos(facing)*1.1,.5,grabbed.height());
+                    grabbed.x=hold[0];grabbed.z=hold[2];
                     grabbed.lift = playerY + (attackTime < .4 ? .5 * Math.sin((attackTime - .2) / .2 * Math.PI) : 0);
                     grabbed.verticalSpeed = 0;
                     while (pummelHits < 3 && attackTime >= .45 + pummelHits * .25) {
@@ -243,8 +246,8 @@ final class CombatSystem {
                 break;
             case HAYMAKER:
                 double step = Math.max(0, Math.min(attackTime, .3) - Math.min(before, .3)) * 12;
-                double nextX = bound(playerX - Math.sin(facing) * step);
-                double nextZ = bound(playerZ - Math.cos(facing) * step);
+                double[] next=MapPhysics.move(map,playerX,playerY,playerZ,playerX-Math.sin(facing)*step,playerY,playerZ-Math.cos(facing)*step,.5,1);
+                double nextX=next[0],nextZ=next[2];
                 Dummy target = sweptTarget(playerX, playerZ, nextX, nextZ);
                 boolean wall = Math.abs(nextX - playerX) + Math.abs(nextZ - playerZ) < step * .5;
                 playerX = nextX; playerZ = nextZ;
@@ -270,20 +273,22 @@ final class CombatSystem {
             if (dummy.respawnTime <= 0) {
                 dummy.health = dummy.maxHealth;
                 dummy.x = dummy.spawnX; dummy.z = dummy.spawnZ;
-                dummy.vx = dummy.vz = dummy.slowTime = dummy.slowAmount = dummy.lift = dummy.verticalSpeed = 0;
+                dummy.vx = dummy.vz = dummy.slowTime = dummy.slowAmount = dummy.verticalSpeed = 0;dummy.lift=dummy.spawnY;
                 effect(GameEffect.Kind.RESPAWN, dummy.x, 0, dummy.z, 1, 0);
             }
             return;
         }
         // Exact integration of exponential friction makes pushes independent of frame rate.
         double decay = Math.exp(-5 * dt), displacement = (1 - decay) / 5;
-        dummy.x = bound(dummy.x + dummy.vx * displacement);
-        dummy.z = bound(dummy.z + dummy.vz * displacement);
+        double[] position=MapPhysics.move(map,dummy.x,dummy.lift,dummy.z,dummy.x+dummy.vx*displacement,dummy.lift,dummy.z+dummy.vz*displacement,.5,dummy.height());
+        dummy.x=position[0];dummy.z=position[2];
         dummy.vx *= decay; dummy.vz *= decay;
         if(!dummy.playerBody && dummy.lift>0) {
+            double oldY=dummy.lift;
             dummy.lift+=dummy.verticalSpeed*dt-9*dt*dt;
             dummy.verticalSpeed-=18*dt;
-            if(dummy.lift<=0) dummy.lift=dummy.verticalSpeed=0;
+            double resolved=MapPhysics.move(map,dummy.x,oldY,dummy.z,dummy.x,dummy.lift,dummy.z,.5,dummy.height())[1];
+            if(resolved!=dummy.lift)dummy.verticalSpeed=0;dummy.lift=resolved;
         }
     }
 
@@ -352,7 +357,6 @@ final class CombatSystem {
         }
     }
 
-    private static double bound(double value) { double limit=MapStorage.load(MapStorage.DEFAULT_ID).edge-.5;return Math.max(-limit, Math.min(limit, value)); }
     void effect(GameEffect.Kind kind, double x, double y, double z, double strength, int variant) {
         if (effects.size() >= 128) effects.remove(0);
         effects.add(new GameEffect(kind, x, y, z, facing, strength, variant));
