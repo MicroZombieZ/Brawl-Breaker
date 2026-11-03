@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add an opening menu with the Cube Movement title, Host and Join LAN setup,
+  disabled Quick Match, and direct entry into the test arena through Practice.
+
 - Add a Health Fill damage ghost using the same custom artwork/transforms at
   reduced opacity: hold for 0.15 seconds, then sweep at exponentially increasing
   speed with a 0.5-second ramp and 3.2x speed cap. A faster starting speed keeps

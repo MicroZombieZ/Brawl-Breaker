@@ -22,6 +22,19 @@ public class MovementCheck {
             try {
                 CubeMovement demo = new CubeMovement();
                 demo.setSize(1000, 700);
+                Method opening=CubeMovement.class.getDeclaredMethod("showOpeningMenu");opening.setAccessible(true);opening.invoke(demo);
+                OpeningMenu entry=(OpeningMenu)field("openingMenu").get(demo);
+                check(entry.isVisible()&&!entry.quickMatch.isEnabled(),"Opening menu is visible and Quick Match is disabled");
+                key(demo,KeyEvent.VK_ESCAPE,false,false);key(demo,KeyEvent.VK_ESCAPE,true,false);
+                check(field("paused").getBoolean(demo)&&entry.isVisible(),"Escape does not bypass startup selection");
+                key(demo,KeyEvent.VK_R,false,false);key(demo,KeyEvent.VK_R,true,false);
+                check(!field("classMenuOpen").getBoolean(demo),"Class selector cannot open behind startup menu");
+                LobbyPanel lobby=(LobbyPanel)field("lobby").get(demo);
+                entry.host.doClick();check(lobby.isVisible()&&!entry.isVisible()&&lobby.status.getText().contains("Host Lobby"),"Host opens LAN setup");
+                lobby.back.doClick();check(entry.isVisible()&&!lobby.isVisible(),"Back returns to opening menu");
+                entry.join.doClick();check(lobby.isVisible()&&lobby.status.getText().contains("Join Lobby"),"Join opens address setup");
+                lobby.back.doClick();entry.practice.doClick();
+                check(!entry.isVisible()&&!field("openingMenuOpen").getBoolean(demo)&&field("lobbyClient").get(demo)==null,"Practice enters offline arena");
                 Field paused = field("paused"), z = field("z"), x = field("x");
                 Field y = field("y"), velocity = field("verticalSpeed");
                 Method move = CubeMovement.class.getDeclaredMethod("move", double.class);

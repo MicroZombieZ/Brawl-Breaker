@@ -26,6 +26,8 @@ public class CubeMovement extends JPanel {
     private LobbyNetwork.Client lobbyClient;
     private LobbyNetwork.Snapshot appliedSnapshot;
     private boolean lobbyOpen, connecting;
+    private boolean openingMenuOpen;
+    private final OpeningMenu openingMenu=new OpeningMenu(() -> openingLobby(true), () -> openingLobby(false), this::startPractice);
     private int connectionGeneration;
     private final LobbyPanel lobby = new LobbyPanel(() -> connectLobby(true), () -> connectLobby(false),
             () -> { if (lobbyClient != null) lobbyClient.action(4, ""); },
@@ -121,6 +123,7 @@ public class CubeMovement extends JPanel {
         buildClassMenu();
         add(console, 0);
         add(lobby, 0);
+        add(openingMenu, 0);
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("pressed F2"), "lobby");
         getActionMap().put("lobby", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) { if (!consoleOpen) openLobby(); }
@@ -133,7 +136,7 @@ public class CubeMovement extends JPanel {
                     if (released) consoleKeyHeld = false;
                     else if (!consoleKeyHeld) {
                         consoleKeyHeld = true;
-                        if (!lobbyOpen) toggleConsole();
+                        if (!lobbyOpen && !openingMenuOpen) toggleConsole();
                     }
                 }
             });
@@ -145,7 +148,7 @@ public class CubeMovement extends JPanel {
                 if (!escapeHeld) {
                     if (consoleOpen) toggleConsole();
                     else if (lobbyOpen) closeLobby();
-                    else setPaused(!paused);
+                    else if (!openingMenuOpen) setPaused(!paused);
                 }
                 escapeHeld = true;
             }
@@ -200,7 +203,7 @@ public class CubeMovement extends JPanel {
             getActionMap().put(action, new AbstractAction() {
                 @Override public void actionPerformed(ActionEvent e) {
                     if (released) classKeyHeld = false;
-                    else if (consoleOpen || lobbyOpen) return;
+                    else if (openingMenuOpen || consoleOpen || lobbyOpen) return;
                     else if (!classKeyHeld) {
                         classKeyHeld = true;
                         if (classMenuOpen) setPaused(false);
@@ -297,6 +300,8 @@ public class CubeMovement extends JPanel {
     }
 
     @Override public void doLayout() {
+        Dimension openingSize=openingMenu.getPreferredSize();
+        openingMenu.setBounds((getWidth()-openingSize.width)/2,(getHeight()-openingSize.height)/2,openingSize.width,openingSize.height);
         Dimension size = menu.getPreferredSize();
         menu.setBounds((getWidth() - size.width) / 2, (getHeight() - size.height) / 2,
                 size.width, size.height);
@@ -357,7 +362,7 @@ public class CubeMovement extends JPanel {
     }
 
     private void setPaused(boolean value) {
-        if (!value && (consoleOpen || lobbyOpen || (lobbyClient != null
+        if (!value && (openingMenuOpen || consoleOpen || lobbyOpen || (lobbyClient != null
                 && (lobbyClient.snapshot == null || !lobbyClient.snapshot.started)))) return;
         if (!value) {
             Window window = SwingUtilities.getWindowAncestor(this);
@@ -381,7 +386,8 @@ public class CubeMovement extends JPanel {
         mouseCenter = null;
         previous = System.nanoTime();
         menuMessage.setText("Mouse is unlocked");
-        menu.setVisible(paused && !classMenuOpen && !consoleOpen && !lobbyOpen);
+        menu.setVisible(paused && !openingMenuOpen && !classMenuOpen && !consoleOpen && !lobbyOpen);
+        openingMenu.setVisible(openingMenuOpen && !lobbyOpen);
         classMenu.setVisible(paused && classMenuOpen && !consoleOpen && !lobbyOpen);
         if (!paused) {
             requestFocusInWindow();
@@ -458,9 +464,28 @@ public class CubeMovement extends JPanel {
 
     private boolean held(int a, int b) { return keys.contains(a) || keys.contains(b); }
 
+    private void showOpeningMenu() {
+        openingMenuOpen=true;
+        setPaused(true);
+        doLayout();
+    }
+
+    private void openingLobby(boolean host) {
+        openLobby();
+        lobby.status.setText(host?"Choose your name and port, then click Host Lobby.":"Enter the host's local IP and port, then click Join Lobby.");
+        if(host)lobby.name.requestFocusInWindow();else lobby.address.requestFocusInWindow();
+    }
+
+    private void startPractice() {
+        openingMenuOpen=false;openingMenu.setVisible(false);
+        executeCommand("reset");
+        setPaused(true);setPaused(false);
+    }
+
     private void openLobby() {
         setPaused(true);
         lobbyOpen = true;
+        openingMenu.setVisible(false);
         menu.setVisible(false); classMenu.setVisible(false);
         lobby.setVisible(true); doLayout();
         lobby.session(lobbyClient != null, lobbyClient != null && lobbyClient.host, connecting);
@@ -573,7 +598,7 @@ public class CubeMovement extends JPanel {
                     .append(p.name).append(p.host ? " (host)" : "").append("  -  ")
                     .append(p.className.isEmpty() ? "No class" : p.className).append('\n');
             lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);
-            if (startNow) { lobbyOpen = false; lobby.setVisible(false); setPaused(true); setPaused(false); }
+            if (startNow) { openingMenuOpen=false; openingMenu.setVisible(false); lobbyOpen = false; lobby.setVisible(false); setPaused(true); setPaused(false); }
         }
         double blend = first || Math.hypot(local.x - x, local.z - z) > 5 ? 1 : 1 - Math.exp(-25 * dt);
         x += (local.x - x) * blend; y += (local.y - y) * blend; z += (local.z - z) * blend;
@@ -1286,6 +1311,7 @@ public class CubeMovement extends JPanel {
             JFrame window = new JFrame("Cube Movement");
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             CubeMovement demo = new CubeMovement();
+            demo.showOpeningMenu();
             window.setContentPane(demo);
             window.addWindowFocusListener(new WindowAdapter() {
                 @Override public void windowLostFocus(WindowEvent e) {
@@ -1306,7 +1332,6 @@ public class CubeMovement extends JPanel {
             window.setLocationRelativeTo(null);
             window.setVisible(true);
             demo.requestFocusInWindow();
-            SwingUtilities.invokeLater(() -> demo.setPaused(false));
         });
     }
 }

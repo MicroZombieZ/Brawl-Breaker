@@ -9,6 +9,13 @@ Double-click `Run.bat` to build and launch the game. For terminal use, run
 `scripts\Build.bat`, then `java -cp build/classes CubeMovement` from this folder.
 Requires JDK 11 or newer (JDK 24 is installed on this computer).
 
+The opening menu offers **Host**, **Join**, **Quick Match** (disabled for now),
+and **Practice** beneath the Cube Movement title. Host and Join open the LAN
+setup for your name, host IP, and port; the host starts the match once everyone
+has joined. Back returns to the opening menu before connecting. Practice enters
+the existing default test arena directly. Escape pauses during play; F2 opens
+the existing LAN lobby controls.
+
 ## Project folders
 
 | Folder | Contents |
