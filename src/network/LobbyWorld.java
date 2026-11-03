@@ -10,6 +10,7 @@ final class LobbyWorld {
     final Deque<GameEffect> effects = new ArrayDeque<>();
     long lastEffectId;
     private double effectTime;
+    LobbyWorld(){arena.clearDummies();}
 
     private void emit(GameEffect effect) {
         effect.id = ++lastEffectId; effect.time = effectTime;
@@ -40,8 +41,8 @@ final class LobbyWorld {
             spawn();
         }
         void spawn() {
-            x = -6 + ((id - 1) % 4) * 4;
-            z = 5 + ((id - 1) / 4) * 2;
+            MapStorage.MapData map=MapStorage.load(MapStorage.DEFAULT_ID);
+            x=map.spawnX(id);z=map.spawnZ(id);
             y = verticalSpeed = 0;
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
@@ -114,7 +115,10 @@ final class LobbyWorld {
     synchronized void action(int id, int action, String argument) {
         Player player = players.get(id);
         if (player == null) return;
-        if (action == 4 && player.host) { started = true; return; }
+        if (action == 4 && player.host) {
+            if(!started){MapStorage.load(MapStorage.DEFAULT_ID).populate(arena);started=true;}
+            return;
+        }
         if (action == 3) {
             if (player.combat.locked() || player.combat.health <= 0 || held(player)) return;
             if (!Arrays.asList("", "Gauntlet", "Mage", "Ranger", "Rogue").contains(argument)) return;
@@ -174,5 +178,5 @@ final class LobbyWorld {
         }
         drainEffects(arena);
     }
-    private static double bound(double value) { return Math.max(-9.29, Math.min(9.29, value)); }
+    private static double bound(double value) { double limit=MapStorage.load(MapStorage.DEFAULT_ID).edge-.71;return Math.max(-limit, Math.min(limit, value)); }
 }

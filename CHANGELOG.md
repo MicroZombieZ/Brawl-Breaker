@@ -4,6 +4,11 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Hide the arena behind an opaque menu background until match entry; fade through
+  black while loading Practice or LAN player/map state, and unload on disconnect.
+- Store the shared practice map template separately in src/server-storage;
+  LAN waiting rooms no longer instantiate active arena targets.
+
 - Add an opening menu with the Cube Movement title, Host and Join LAN setup,
   disabled Quick Match, and direct entry into the test arena through Practice.
 

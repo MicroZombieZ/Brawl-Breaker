@@ -34,6 +34,12 @@ public class MovementCheck {
                 lobby.back.doClick();check(entry.isVisible()&&!lobby.isVisible(),"Back returns to opening menu");
                 entry.join.doClick();check(lobby.isVisible()&&lobby.status.getText().contains("Join Lobby"),"Join opens address setup");
                 lobby.back.doClick();entry.practice.doClick();
+                check(!field("mapLoaded").getBoolean(demo)&&field("enteringMatch").getBoolean(demo),"Practice starts fade with no active map");
+                Method entryTick=CubeMovement.class.getDeclaredMethod("updateEntry",double.class);entryTick.setAccessible(true);
+                entryTick.invoke(demo,.3);
+                check(field("mapLoaded").getBoolean(demo)&&field("paused").getBoolean(demo),"Map loads behind blackout before controls unlock");
+                entryTick.invoke(demo,.4);
+                check(!field("enteringMatch").getBoolean(demo),"Fade completes");
                 check(!entry.isVisible()&&!field("openingMenuOpen").getBoolean(demo)&&field("lobbyClient").get(demo)==null,"Practice enters offline arena");
                 Field paused = field("paused"), z = field("z"), x = field("x");
                 Field y = field("y"), velocity = field("verticalSpeed");

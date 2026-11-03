@@ -6,7 +6,7 @@ import javax.swing.*;
 
 /** A dependency-free 3D movement demo. Launch with Run.bat from the project root. */
 public class CubeMovement extends JPanel {
-    private static final double EDGE = 10, SPEED = 4;
+    private static final double EDGE = MapStorage.load(MapStorage.DEFAULT_ID).edge, SPEED = 4;
     private static final double SPRINT_SPEED = 7, GRAVITY = 18, JUMP_SPEED = 7;
     private static final double MAX_STAMINA = 100, STAMINA_DRAIN = 20, STAMINA_RECOVERY = 15;
     private double stamina = MAX_STAMINA;
@@ -27,6 +27,8 @@ public class CubeMovement extends JPanel {
     private LobbyNetwork.Snapshot appliedSnapshot;
     private boolean lobbyOpen, connecting;
     private boolean openingMenuOpen;
+    private boolean mapLoaded=true, enteringMatch, enteringLan;
+    private double entryTime;
     private final OpeningMenu openingMenu=new OpeningMenu(() -> openingLobby(true), () -> openingLobby(false), this::startPractice);
     private int connectionGeneration;
     private final LobbyPanel lobby = new LobbyPanel(() -> connectLobby(true), () -> connectLobby(false),
@@ -136,7 +138,7 @@ public class CubeMovement extends JPanel {
                     if (released) consoleKeyHeld = false;
                     else if (!consoleKeyHeld) {
                         consoleKeyHeld = true;
-                        if (!lobbyOpen && !openingMenuOpen) toggleConsole();
+                        if (!enteringMatch && !lobbyOpen && !openingMenuOpen) toggleConsole();
                     }
                 }
             });
@@ -148,7 +150,7 @@ public class CubeMovement extends JPanel {
                 if (!escapeHeld) {
                     if (consoleOpen) toggleConsole();
                     else if (lobbyOpen) closeLobby();
-                    else if (!openingMenuOpen) setPaused(!paused);
+                    else if (!enteringMatch && !openingMenuOpen) setPaused(!paused);
                 }
                 escapeHeld = true;
             }
@@ -203,7 +205,7 @@ public class CubeMovement extends JPanel {
             getActionMap().put(action, new AbstractAction() {
                 @Override public void actionPerformed(ActionEvent e) {
                     if (released) classKeyHeld = false;
-                    else if (openingMenuOpen || consoleOpen || lobbyOpen) return;
+                    else if (enteringMatch || openingMenuOpen || consoleOpen || lobbyOpen) return;
                     else if (!classKeyHeld) {
                         classKeyHeld = true;
                         if (classMenuOpen) setPaused(false);
@@ -222,6 +224,7 @@ public class CubeMovement extends JPanel {
             double dt = Math.min((now - previous) / 1e9, 0.05);
             previous = now;
             updateNetwork(dt);
+            updateEntry(dt);
             animateClassMenu(dt);
             if (!paused) {
                 updateMouseLook();
@@ -362,7 +365,7 @@ public class CubeMovement extends JPanel {
     }
 
     private void setPaused(boolean value) {
-        if (!value && (openingMenuOpen || consoleOpen || lobbyOpen || (lobbyClient != null
+        if (!value && (enteringMatch || !mapLoaded || openingMenuOpen || consoleOpen || lobbyOpen || (lobbyClient != null
                 && (lobbyClient.snapshot == null || !lobbyClient.snapshot.started)))) return;
         if (!value) {
             Window window = SwingUtilities.getWindowAncestor(this);
@@ -386,7 +389,7 @@ public class CubeMovement extends JPanel {
         mouseCenter = null;
         previous = System.nanoTime();
         menuMessage.setText("Mouse is unlocked");
-        menu.setVisible(paused && !openingMenuOpen && !classMenuOpen && !consoleOpen && !lobbyOpen);
+        menu.setVisible(paused && !enteringMatch && !openingMenuOpen && !classMenuOpen && !consoleOpen && !lobbyOpen);
         openingMenu.setVisible(openingMenuOpen && !lobbyOpen);
         classMenu.setVisible(paused && classMenuOpen && !consoleOpen && !lobbyOpen);
         if (!paused) {
@@ -465,6 +468,7 @@ public class CubeMovement extends JPanel {
     private boolean held(int a, int b) { return keys.contains(a) || keys.contains(b); }
 
     private void showOpeningMenu() {
+        mapLoaded=false;enteringMatch=false;combat.clearDummies();particles.clear();
         openingMenuOpen=true;
         setPaused(true);
         doLayout();
@@ -477,12 +481,35 @@ public class CubeMovement extends JPanel {
     }
 
     private void startPractice() {
-        openingMenuOpen=false;openingMenu.setVisible(false);
-        executeCommand("reset");
-        setPaused(true);setPaused(false);
+        beginEntry(false);
+    }
+
+    private void beginEntry(boolean lan) {
+        if(enteringMatch)return;
+        enteringMatch=true;enteringLan=lan;entryTime=0;mapLoaded=false;
+        openingMenuOpen=false;lobbyOpen=false;
+        openingMenu.setVisible(false);lobby.setVisible(false);classMenu.setVisible(false);
+        setPaused(true);
+    }
+
+    private void updateEntry(double dt) {
+        if(!enteringMatch)return;
+        entryTime+=dt;
+        if(entryTime>=.3&&!mapLoaded){
+            MapStorage.MapData map=MapStorage.load(MapStorage.DEFAULT_ID);
+            if(!enteringLan){executeCommand("reset");x=map.spawnX(0);z=map.spawnZ(0);}
+            else if(appliedSnapshot!=null&&lobbyClient!=null){
+                LobbyNetwork.State local=appliedSnapshot.player(lobbyClient.id);
+                if(local==null)return;
+                x=local.x;y=local.y;z=local.z;cubeYaw=local.yaw;
+            }else return;
+            mapLoaded=true;menu.setVisible(false);
+        }
+        if(entryTime>=.7&&mapLoaded){enteringMatch=false;setPaused(true);setPaused(false);}
     }
 
     private void openLobby() {
+        if(enteringMatch)return;
         setPaused(true);
         lobbyOpen = true;
         openingMenu.setVisible(false);
@@ -529,6 +556,7 @@ public class CubeMovement extends JPanel {
                         return;
                     }
                     lobbyServer = (LobbyNetwork.Server) result[0]; lobbyClient = (LobbyNetwork.Client) result[1];
+                    mapLoaded=false;openingMenuOpen=true;combat.clearDummies();
                     appliedSnapshot = null; timeScale = speedMultiplier = 1;
                     particles.clear(); combat.effects.clear(); lastParticleEvent = 0;
                     combat.godMode = false; combat.cooldownsEnabled = true;
@@ -548,11 +576,13 @@ public class CubeMovement extends JPanel {
     }
 
     private void leaveLobby(String reason) {
+        enteringMatch=false;mapLoaded=false;openingMenuOpen=true;
         connectionGeneration++;
         if (lobbyClient != null) lobbyClient.close();
         if (lobbyServer != null) lobbyServer.close();
         lobbyClient = null; lobbyServer = null; appliedSnapshot = null; connecting = false;
         executeCommand("reset");
+        combat.clearDummies();
         lobby.session(false, false, false);
         lobby.roster.setText("No lobby connected."); lobby.status.setText(reason);
         openLobby();
@@ -598,7 +628,7 @@ public class CubeMovement extends JPanel {
                     .append(p.name).append(p.host ? " (host)" : "").append("  -  ")
                     .append(p.className.isEmpty() ? "No class" : p.className).append('\n');
             lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);
-            if (startNow) { openingMenuOpen=false; openingMenu.setVisible(false); lobbyOpen = false; lobby.setVisible(false); setPaused(true); setPaused(false); }
+            if (startNow) beginEntry(true);
         }
         double blend = first || Math.hypot(local.x - x, local.z - z) > 5 ? 1 : 1 - Math.exp(-25 * dt);
         x += (local.x - x) * blend; y += (local.y - y) * blend; z += (local.z - z) * blend;
@@ -625,6 +655,7 @@ public class CubeMovement extends JPanel {
     }
 
     private void updateParticles(double dt) {
+        if(!mapLoaded||enteringMatch)return;
         boolean online = lobbyClient != null && appliedSnapshot != null && appliedSnapshot.started;
         if (!online && (paused || lobbyClient != null)) return;
         double step = online ? dt : dt * timeScale;
@@ -1285,6 +1316,11 @@ public class CubeMovement extends JPanel {
 
     @Override protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
+        if(!mapLoaded){
+            Graphics2D background=(Graphics2D)graphics.create();
+            background.setPaint(new GradientPaint(0,0,new Color(32,45,65),getWidth(),getHeight(),new Color(22,31,46)));
+            background.fillRect(0,0,getWidth(),getHeight());background.dispose();return;
+        }
         resolveCamera();
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -1299,11 +1335,21 @@ public class CubeMovement extends JPanel {
         drawCombatWorld(g);
         drawDebugOverlays(g);
         drawCombatHud(g);
-        if (paused) {
+        if (paused && !enteringMatch) {
             g.setColor(new Color(0, 0, 0, 155));
             g.fillRect(0, 0, getWidth(), getHeight());
         }
         g.dispose();
+    }
+
+    @Override protected void paintChildren(Graphics graphics) {
+        super.paintChildren(graphics);
+        if(enteringMatch){
+            Graphics2D g=(Graphics2D)graphics.create();
+            double alpha=entryTime<.3?entryTime/.3:!mapLoaded?1:1-(entryTime-.3)/.4;
+            g.setColor(new Color(0,0,0,(int)(255*Math.max(0,Math.min(1,alpha)))));
+            g.fillRect(0,0,getWidth(),getHeight());g.dispose();
+        }
     }
 
     public static void main(String[] args) {

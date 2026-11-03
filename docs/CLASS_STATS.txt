@@ -5,6 +5,12 @@ Last updated: 2026-11-03
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
 Host/Join: Open existing LAN setup (name, IP for joining, port); host starts match.
 Practice: Enter the default test arena offline, with reset gameplay state.
+Map storage: src/server-storage/MapStorage.java holds the practice template;
+             solo and LAN share its bounds, target positions and spawn positions.
+Match entry: 0.3s fade to black, load map/player state, 0.4s fade in; input blocked.
+             Startup/waiting rooms show an opaque soft blue background, no map.
+             LAN host creates arena targets on Start Match; disconnect unloads
+             the client map. Only practice map exists; no map selector yet.
 Back from unconnected startup lobby: Return to opening menu. Escape does not
 skip startup selection. Existing Escape pause and F2 lobby controls work in play.
 

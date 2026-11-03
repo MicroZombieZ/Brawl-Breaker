@@ -16,6 +16,16 @@ has joined. Back returns to the opening menu before connecting. Practice enters
 the existing default test arena directly. Escape pauses during play; F2 opens
 the existing LAN lobby controls.
 
+Startup and waiting rooms use an opaque, soft blue background, with no arena
+rendering. Practice and LAN match entry fade out for 0.3 seconds, load the map
+and player state at black, then fade in for 0.4 seconds. Controls stay blocked
+throughout the transition. Leaving/disconnecting returns to lobby setup with
+the map unloaded. Map templates live in `src/server-storage/MapStorage.java`;
+the local session and LAN host use the same `practice` template (bounds, target
+positions, and spawn positions). This is local game data, not cloud storage.
+Only the default map is selectable today; the map ID lookup is the foundation
+for future pre-made maps, not yet a multiplayer map-selection protocol.
+
 ## Project folders
 
 | Folder | Contents |

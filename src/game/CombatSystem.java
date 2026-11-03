@@ -104,12 +104,7 @@ final class CombatSystem {
     }
 
     void resetDummies() {
-        clearDummies();
-        dummies.add(new Dummy(-4, -3));
-        dummies.add(new Dummy(0, -3));
-        dummies.add(new Dummy(4, -3));
-        dummies.add(new Dummy(0, 4));
-        setDummyHealth(dummyMaxHealth);
+        MapStorage.load(MapStorage.DEFAULT_ID).populate(this);
     }
 
     void clearDummies() {
@@ -357,7 +352,7 @@ final class CombatSystem {
         }
     }
 
-    private static double bound(double value) { return Math.max(-9.5, Math.min(9.5, value)); }
+    private static double bound(double value) { double limit=MapStorage.load(MapStorage.DEFAULT_ID).edge-.5;return Math.max(-limit, Math.min(limit, value)); }
     void effect(GameEffect.Kind kind, double x, double y, double z, double strength, int variant) {
         if (effects.size() >= 128) effects.remove(0);
         effects.add(new GameEffect(kind, x, y, z, facing, strength, variant));

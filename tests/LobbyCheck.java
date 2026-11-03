@@ -26,6 +26,7 @@ public class LobbyCheck {
     }
     static void simulation() {
         LobbyWorld world = new LobbyWorld();
+        check(world.arena.dummies.isEmpty(),"Waiting room has no active map targets");
         LobbyWorld.Player a = world.add("Host", true), b = world.add("Guest", false);
         world.action(b.id, 4, ""); check(!world.started, "Only host can start");
         world.input(a.id, 1, 0, 0, false); tick(world, .1);
@@ -208,7 +209,7 @@ public class LobbyCheck {
                 check(MovementCheck.field("lobbyServer").get(game[0]) == null, "Leave closes owned server");
                 check(panel[0].host.isEnabled(), "Leave restores connection controls");
                 CombatSystem combat = (CombatSystem) MovementCheck.field("combat").get(game[0]);
-                check(combat.dummies.size() == 4 && combat.health == 100, "Leave restores offline arena");
+                check(combat.dummies.isEmpty() && combat.health == 100 && !MovementCheck.field("mapLoaded").getBoolean(game[0]), "Leave unloads arena and resets player");
             } catch (Exception error) { throw new RuntimeException(error); }
         });
         System.out.println("Passed: lobby UI host worker, start/leave controls, typing guard, multiplayer dev restrictions, rendering, offline restoration.");
