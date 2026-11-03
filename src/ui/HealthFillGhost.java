@@ -1,6 +1,8 @@
 /** Cosmetic delayed health fill, independent of repaint frequency and gameplay damage. */
 final class HealthFillGhost {
-    static final double HOLD_SECONDS=.3, CATCH_SECONDS=.45, OPACITY=.4;
+    static final double HOLD_SECONDS=.3, OPACITY=.4;
+    // Progress per second, relative to the gap when catch-up starts.
+    static final double START_SPEED=1/(.45*Math.expm1(3)), MAX_SPEED_MULTIPLIER=3.2, GROWTH_RATE=3/.45;
     private double previousHealth,previousMaximum,ghost,hold,elapsed,catchFrom;
     private boolean initialized;
     void reset(double health,double maximum){
@@ -18,10 +20,13 @@ final class HealthFillGhost {
         if(!Double.isFinite(dt)||dt<=0)return;
         double waiting=Math.min(hold,dt);hold-=waiting;dt-=waiting;
         if(hold==0&&dt>0){
-            elapsed=Math.min(CATCH_SECONDS,elapsed+dt);
-            // Normalized exponential ease-in: increasing speed, with an exact endpoint.
-            double progress=Math.expm1(3*elapsed/CATCH_SECONDS)/Math.expm1(3);
-            ghost=elapsed==CATCH_SECONDS?current:catchFrom+(current-catchFrom)*progress;
+            elapsed+=dt;
+            // Integrate exponential speed until capped, then continue at the cap.
+            double capTime=Math.log(MAX_SPEED_MULTIPLIER)/GROWTH_RATE;
+            double accelerating=Math.min(elapsed,capTime);
+            double progress=START_SPEED*Math.expm1(GROWTH_RATE*accelerating)/GROWTH_RATE
+                    +START_SPEED*MAX_SPEED_MULTIPLIER*Math.max(0,elapsed-capTime);
+            ghost=progress>=1?current:catchFrom+(current-catchFrom)*progress;
         }
         ghost=Math.max(current,ghost);
     }

@@ -5,8 +5,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 ## Unreleased
 
 - Add a Health Fill damage ghost: hold lost health for 0.3 seconds, then catch up
-  with exponentially increasing speed over 0.45 seconds, using the same custom
-  artwork/transforms at reduced opacity.
+  with exponentially increasing speed, using the same custom artwork/transforms
+  at reduced opacity. Starting speed is reduced to one third of the previous
+  pace and capped at 3.2x that starting speed (about 2.76 seconds to catch up).
 - Preview the health ghost with HUD Studio's health slider; stamina is unaffected.
 
 - Add independent HUD artwork-layer transforms, visibility, opacity and styling,

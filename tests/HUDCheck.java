@@ -15,14 +15,22 @@ public class HUDCheck {
     static void ghost(){
         HealthFillGhost trail=new HealthFillGhost();trail.reset(100,100);trail.update(0,50,100);
         trail.update(.3,50,100);check(trail.fraction()==1,"Damage ghost holds previous HP for 0.3 seconds");
-        trail.update(.15,50,100);double first=trail.fraction();
-        trail.update(.15,50,100);double second=trail.fraction();
-        check(first<1&&second<first&&(first-second)>2*(1-first),"Ghost starts moving early and accelerates exponentially");
-        trail.update(.15,50,100);check(Math.abs(trail.fraction()-.5)<1e-9,"Ghost finishes catch-up within 0.45 seconds");
+        trail.update(.00001,50,100);double initialSpeed=(1-trail.fraction())/.5/.00001;
+        double oldStartSpeed=3/(.45*Math.expm1(3));
+        check(Math.abs(initialSpeed-oldStartSpeed/3)<.00001,"Starting speed is one third of the previous speed");
+        trail.update(.05,50,100);double first=trail.fraction();
+        trail.update(.05,50,100);double second=trail.fraction();
+        check(first<1&&second<first&&(first-second)>(1-first),"Ghost accelerates over time");
+        trail.update(.2,50,100);double capped=trail.fraction();
+        trail.update(.1,50,100);double capStep=capped-trail.fraction();
+        check(Math.abs(capStep/.5/.1-oldStartSpeed/3*3.2)<1e-9,"Speed caps at 3.2 times starting speed");
+        capped=trail.fraction();trail.update(.1,50,100);
+        check(Math.abs(capped-trail.fraction()-capStep)<1e-9,"Speed stays capped after acceleration");
+        trail.update(3,50,100);check(trail.fraction()==.5,"Ghost reaches current HP without overshoot");
         trail.reset(100,100);trail.update(0,50,100);trail.update(.5,50,100);double interrupted=trail.fraction();
         trail.update(0,25,100);trail.update(0,25,100);check(trail.fraction()==interrupted,"More damage preserves current ghost and paused time does not advance");
         trail.update(.3,25,100);check(trail.fraction()==interrupted,"Further damage restarts full hold");
-        trail.update(.45,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
+        trail.update(3,25,100);check(trail.fraction()==.25,"Ghost reaches current HP exactly");
         trail.update(0,10,100);trail.update(0,60,100);check(trail.fraction()==.6,"Healing clears damage ghost");
         trail.update(0,60,200);check(trail.fraction()==.3,"Class/max HP change resets ghost");
         trail.reset(0,100);trail.update(0,100,100);check(trail.fraction()==1,"Respawn starts clean");
