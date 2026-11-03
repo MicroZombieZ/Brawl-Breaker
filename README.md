@@ -262,7 +262,8 @@ The preview uses the same HUD renderer as the game. Health/stamina sliders and
 LAN/debug toggles let you inspect live states without changing gameplay.
 Health Fill leaves a 40%-opacity ghost of lost health for 0.3 seconds after damage,
 then accelerates exponentially from one-third of its previous starting speed,
-capped at 3.2 times its new starting speed. Catch-up takes about 2.76 seconds.
+capped at 3.2 times its new starting speed. Speed grows throughout a 3-second
+ramp before reaching the cap; catch-up takes about 3.91 seconds.
 More damage restarts the hold; healing,
 respawning, maximum-HP changes, and arena reset clear the trail. The ghost follows
 the fill's custom artwork, transparency, visibility, and layer/piece transforms.

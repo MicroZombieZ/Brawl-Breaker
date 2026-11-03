@@ -2,7 +2,9 @@
 final class HealthFillGhost {
     static final double HOLD_SECONDS=.3, OPACITY=.4;
     // Progress per second, relative to the gap when catch-up starts.
-    static final double START_SPEED=1/(.45*Math.expm1(3)), MAX_SPEED_MULTIPLIER=3.2, GROWTH_RATE=3/.45;
+    static final double START_SPEED=1/(.45*Math.expm1(3)), MAX_SPEED_MULTIPLIER=3.2;
+    // Spread acceleration across three seconds so the speed increase remains visible.
+    static final double ACCELERATION_SECONDS=3, GROWTH_RATE=Math.log(MAX_SPEED_MULTIPLIER)/ACCELERATION_SECONDS;
     private double previousHealth,previousMaximum,ghost,hold,elapsed,catchFrom;
     private boolean initialized;
     void reset(double health,double maximum){

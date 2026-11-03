@@ -499,10 +499,11 @@ Built-in artwork toggle:     Disables default missing-slot backgrounds, fills,
                               and the independent live-text toggle still apply
 Default transparency rule:   Custom bar frame/fill skips old built-in background
 Health Fill damage ghost:    Lost-health segment remains for 0.3 seconds after a
-                              decrease, then catches up in about 2.76 seconds
+                              decrease, then catches up in about 3.91 seconds
 Ghost speed:                 Starts at 0.11644 of the initial gap per second
                               (one third of previous starting speed); grows as
-                              exp((3 / 0.45) * elapsed), capped at 3.2x start speed
+                              exp((ln(3.2) / 3) * elapsed), reaching the 3.2x cap
+                              after 3 seconds of visibly increasing speed
                               and continues at that cap until reaching current HP
 Ghost opacity:               40% of the fill's combined piece/layer opacity;
                               uses same image/transparency, or built-in red fill
