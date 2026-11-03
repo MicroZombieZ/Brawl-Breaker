@@ -22,8 +22,24 @@ final class HUDLayout {
         Placement(Piece piece){x=piece.defaultX(WIDTH);y=piece.defaultY(HEIGHT);}
     }
     final Map<Piece,Placement> placements=new EnumMap<>(Piece.class);
-    HUDLayout(){for(Piece p:Piece.values())placements.put(p,new Placement(p));}
+    final Map<UISkins.Slot,Placement> layers=new EnumMap<>(UISkins.Slot.class);
+    HUDLayout(){for(Piece p:Piece.values())placements.put(p,new Placement(p));for(UISkins.Slot slot:UISkins.Slot.values())layers.put(slot,newLayer(slot));}
+    static Placement newLayer(UISkins.Slot slot){Placement p=new Placement(slot.piece());p.x=p.y=0;return p;}
     Placement get(Piece piece){return placements.get(piece);}
+    Placement get(UISkins.Slot slot){return layers.get(slot);}
+    AffineTransform layerTransform(UISkins.Slot slot){Placement p=get(slot);AffineTransform t=new AffineTransform();
+        t.translate(p.x+slot.width*p.scaleX/2,p.y+slot.y()+slot.height*p.scaleY/2);t.rotate(Math.toRadians(p.rotation));t.scale(p.scaleX,p.scaleY);t.translate(-slot.width/2.0,-slot.height/2.0);return t;}
+    AffineTransform transform(UISkins.Slot slot,int width,int height){AffineTransform t=transform(slot.piece(),width,height);t.concatenate(layerTransform(slot));return t;}
+    Rectangle2D bounds(Piece piece){Rectangle2D bounds=piece.bounds();for(UISkins.Slot slot:order(piece))bounds=bounds.createUnion(layerTransform(slot).createTransformedShape(new Rectangle2D.Double(0,0,slot.width,slot.height)).getBounds2D());return bounds;}
+    static UISkins.Slot[] order(Piece piece){switch(piece){
+        case HEALTH:return new UISkins.Slot[]{UISkins.Slot.HEALTH_BACKGROUND,UISkins.Slot.HEALTH_FILL,UISkins.Slot.HEALTH_FRAME,UISkins.Slot.HEALTH_LABEL};
+        case STAMINA:return new UISkins.Slot[]{UISkins.Slot.STAMINA_BACKGROUND,UISkins.Slot.STAMINA_FILL,UISkins.Slot.STAMINA_FRAME,UISkins.Slot.STAMINA_LABEL};
+        case CLASS:return new UISkins.Slot[]{UISkins.Slot.CLASS_BADGE,UISkins.Slot.CLASS_LABEL};
+        case ABILITIES:return new UISkins.Slot[]{UISkins.Slot.ABILITY_PANEL,UISkins.Slot.ABILITY_LABELS};
+        case CROSSHAIR:return new UISkins.Slot[]{UISkins.Slot.CROSSHAIR};case LAN:return new UISkins.Slot[]{UISkins.Slot.LAN_STATUS};default:return new UISkins.Slot[]{UISkins.Slot.DEBUG_INFO};}}
+    Graphics2D layerGraphics(Graphics2D g,UISkins.Slot slot){Placement p=get(slot);if(!p.visible||p.opacity<=0)return null;
+        Graphics2D copy=(Graphics2D)g.create();copy.transform(layerTransform(slot));float parent=copy.getComposite() instanceof AlphaComposite?((AlphaComposite)copy.getComposite()).getAlpha():1;
+        copy.setComposite(AlphaComposite.SrcOver.derive((float)(parent*p.opacity)));return copy;}
     AffineTransform transform(Piece piece,int width,int height){
         Placement p=get(piece);double x=p.positioned?p.x*width/WIDTH:piece.defaultX(width),y=p.positioned?p.y*height/HEIGHT:piece.defaultY(height);
         AffineTransform t=new AffineTransform();t.translate(x+piece.width*p.scaleX/2,y+piece.height*p.scaleY/2);
@@ -34,25 +50,31 @@ final class HUDLayout {
         Graphics2D copy=(Graphics2D)g.create();copy.transform(transform(piece,width,height));copy.setComposite(AlphaComposite.SrcOver.derive((float)p.opacity));return copy;
     }
     byte[] encode() throws IOException {
-        Properties props=new Properties();props.setProperty("version","1");
-        for(Piece piece:Piece.values()){Placement p=get(piece);String k=piece+".";
+        Properties props=new Properties();props.setProperty("version","2");
+        for(Piece piece:Piece.values())write(props,piece+".",get(piece));
+        for(UISkins.Slot slot:UISkins.Slot.values())write(props,"layer."+slot+".",get(slot));
+        ByteArrayOutputStream out=new ByteArrayOutputStream();props.store(out,"HUD Studio layout; 1000 x 700 reference coordinates");return out.toByteArray();
+    }
+    private static void write(Properties props,String k,Placement p){
             props.setProperty(k+"x",""+p.x);props.setProperty(k+"y",""+p.y);props.setProperty(k+"scaleX",""+p.scaleX);props.setProperty(k+"scaleY",""+p.scaleY);
             props.setProperty(k+"rotation",""+p.rotation);props.setProperty(k+"opacity",""+p.opacity);props.setProperty(k+"fontScale",""+p.fontScale);
             props.setProperty(k+"positioned",""+p.positioned);props.setProperty(k+"visible",""+p.visible);props.setProperty(k+"text",""+p.text);props.setProperty(k+"defaults",""+p.defaults);
-            if(p.color!=null)props.setProperty(k+"color",""+p.color.getRGB());}
-        ByteArrayOutputStream out=new ByteArrayOutputStream();props.store(out,"HUD Studio layout; 1000 x 700 reference coordinates");return out.toByteArray();
+            if(p.color!=null)props.setProperty(k+"color",""+p.color.getRGB());
     }
     static HUDLayout decode(byte[] bytes) throws IOException {
         if(bytes.length>65536)throw new IOException("HUD layout is too large.");Properties props=new Properties();props.load(new ByteArrayInputStream(bytes));
-        if(!"1".equals(props.getProperty("version")))throw new IOException("Unsupported HUD layout version.");HUDLayout layout=new HUDLayout();
-        try{for(Piece piece:Piece.values()){Placement p=layout.get(piece);String k=piece+".";
+        if(!"1".equals(props.getProperty("version"))&&!"2".equals(props.getProperty("version")))throw new IOException("Unsupported HUD layout version.");HUDLayout layout=new HUDLayout();
+        try{for(Piece piece:Piece.values())read(props,piece+".",layout.get(piece));
+            if("2".equals(props.getProperty("version")))for(UISkins.Slot slot:UISkins.Slot.values())read(props,"layer."+slot+".",layout.get(slot));
+        }catch(RuntimeException ex){throw new IOException("Invalid HUD layout settings.",ex);}return layout;
+    }
+    private static void read(Properties props,String k,Placement p){
             p.x=number(props,k+"x",p.x,-2000,3000);p.y=number(props,k+"y",p.y,-1400,2100);
             p.scaleX=number(props,k+"scaleX",1,.1,5);p.scaleY=number(props,k+"scaleY",1,.1,5);
             p.rotation=number(props,k+"rotation",0,-180,180);p.opacity=number(props,k+"opacity",1,0,1);p.fontScale=number(props,k+"fontScale",1,.5,3);
             p.positioned=Boolean.parseBoolean(props.getProperty(k+"positioned","false"));p.visible=Boolean.parseBoolean(props.getProperty(k+"visible","true"));
             p.text=Boolean.parseBoolean(props.getProperty(k+"text","true"));p.defaults=Boolean.parseBoolean(props.getProperty(k+"defaults","true"));
-            if(props.containsKey(k+"color"))p.color=new Color(Integer.parseInt(props.getProperty(k+"color")));}
-        }catch(RuntimeException ex){throw new IOException("Invalid HUD layout settings.",ex);}return layout;
+            if(props.containsKey(k+"color"))p.color=new Color(Integer.parseInt(props.getProperty(k+"color")));
     }
     private static double number(Properties p,String key,double fallback,double min,double max){double value=Double.parseDouble(p.getProperty(key,""+fallback));
         if(!Double.isFinite(value)||value<min||value>max)throw new IllegalArgumentException(key);return value;}

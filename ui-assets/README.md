@@ -15,6 +15,9 @@ Launch HUDEditor.bat to select linked HUD pieces, upload artwork layers, and
 move/scale/rotate them with a shared live game preview. Save & Apply writes
 hud-layout.properties here and updates only changed images. Copy this layout
 and the PNG files together to share your HUD. Layout backups do not embed images.
+Use Edit target to choose Whole HUD piece or Selected artwork layer. Individual
+frame/fill/background/label transforms are saved inside the parent piece; moving
+the whole piece preserves them. Older layouts open with default layer transforms.
 Custom bar frames/fills no longer have the old translucent background behind
 them; assign a background explicitly if wanted. Built-in artwork and live text
 can each be hidden through HUD Studio.

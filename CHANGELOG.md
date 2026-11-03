@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add independent HUD artwork-layer transforms, visibility, opacity and styling,
+  alongside whole-piece selection; preserve live fills, parent-relative dragging,
+  undo/redo and existing HUD layouts.
+
 - Remove the old translucent background behind custom health/stamina artwork;
   add replaceable backgrounds and artwork layers for all normal HUD text areas.
 - Add HUD Studio for linked artwork uploads, placement, scale, rotation, opacity,

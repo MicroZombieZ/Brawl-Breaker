@@ -238,7 +238,13 @@ remains the painting/layering editor. They share the same `ui-assets` artwork.
    transparent PNGs work best. For health, the frame, fill, background, and label
    are separate images but stay linked as one moving HUD piece. Removing an
    image is staged until Save & Apply.
-3. Drag a piece in the preview or edit its X/Y values. Adjust width/height scale
+3. **Edit target** selects **Whole HUD piece** or **Selected artwork layer**.
+   Choosing an artwork layer switches to individual editing. Move, scale, rotate,
+   hide, or change opacity for just the frame, fill, background, or label. Layer
+   X/Y values are offsets inside the parent piece; dragging follows its rotation
+   and scale. Switch back to Whole HUD piece to transform everything together,
+   preserving individual adjustments. The outline shows the current selection.
+   Drag the selection in the preview or edit its X/Y values. Adjust width/height scale
    (0.1-5x), optionally locked together, rotation (-180 to 180 degrees), and
    opacity. Rotation is around the scaled piece's center. Bar fills still clip
    to the live resource value before being scaled and rotated.
@@ -246,6 +252,8 @@ remains the painting/layering editor. They share the same `ui-assets` artwork.
    empty slots. Disable built-in artwork to remove default backgrounds, fills,
    borders, panels, and crosshair strokes for that piece. Text has separate
    color and size controls; hide live text if your artwork already contains it.
+   Layer text/default-art settings apply within the whole-piece settings. Parent
+   and layer opacity/font size multiply; a layer color overrides the parent color.
 5. **Save & Apply** writes `ui-assets/hud-layout.properties` and only changed
    artwork files. Restart the game to load them. Existing PNG assignments from
    UI Studio continue to work. Saving clears the editor's undo/redo history.
@@ -255,8 +263,9 @@ LAN/debug toggles let you inspect live states without changing gameplay. The
 game still uses its real values, LAN status, and F11 debug toggle. Middle-drag
 pans the preview; scrolling zooms it around the cursor. These preview controls
 do not change the actual HUD scale. **Reset view** recovers the preview;
-**Reset piece placement** restores that piece's default position/style while
-keeping uploaded images.
+**Reset selection** restores the selected piece or layer's default position/style
+while keeping uploaded images. Resetting the whole piece keeps its individual
+layer adjustments; reset those layers separately if needed.
 
 Undo/redo supports up to 40 placement/style/image edits, including whole drags
 (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z). Ctrl+S saves and applies. **Export layout** saves
@@ -264,7 +273,10 @@ a placement/style backup; **Open layout** loads one with the current artwork.
 Copy its PNG files as well when sharing. **Reload from game** reads the current
 on-disk layout and images. Closing, opening, or reloading prompts for unsaved
 changes. HUD positions use a 1000 x 700 reference frame and adapt to window
-dimensions; scale remains relative to each piece's normal size. HUD Studio edits
+dimensions; scale remains relative to each piece's normal size. Layer offsets
+stay relative to that piece. Layout format 2 saves both levels; existing format 1
+layouts open with unchanged whole-piece placement and default layer transforms.
+HUD Studio edits
 the player HUD; pause/class/lobby menus and world-space NPC labels stay in their
 existing interfaces. Gameplay values and network messages are unchanged.
 

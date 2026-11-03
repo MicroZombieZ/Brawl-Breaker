@@ -13,6 +13,7 @@ final class UISkins {
         CLASS_LABEL(240,38),ABILITY_LABELS(240,142),LAN_STATUS(600,22),DEBUG_INFO(650,48);
         final int width,height;
         Slot(int width,int height){this.width=width;this.height=height;}
+        int y(){return this==HEALTH_LABEL||this==STAMINA_LABEL?-25:0;}
         HUDLayout.Piece piece(){
             if(name().startsWith("HEALTH"))return HUDLayout.Piece.HEALTH;
             if(name().startsWith("STAMINA"))return HUDLayout.Piece.STAMINA;

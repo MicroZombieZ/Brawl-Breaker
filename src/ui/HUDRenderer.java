@@ -1,5 +1,6 @@
 import java.awt.*;
 import java.util.Locale;
+import java.util.function.BiConsumer;
 
 /** One live HUD renderer used by the game and the editor preview. */
 final class HUDRenderer {
@@ -11,6 +12,14 @@ final class HUDRenderer {
     }
     final UISkins skins;final HUDLayout layout;
     HUDRenderer(UISkins skins,HUDLayout layout){this.skins=skins;this.layout=layout;}
+    private void layer(Graphics2D parent,UISkins.Slot slot,HUDLayout.Placement group,Double fraction,BiConsumer<Graphics2D,HUDLayout.Placement> content){
+        Graphics2D g=layout.layerGraphics(parent,slot);if(g==null)return;
+        HUDLayout.Placement child=layout.get(slot),style=new HUDLayout.Placement(slot.piece());
+        style.text=group.text&&child.text;style.defaults=group.defaults&&child.defaults;style.fontScale=group.fontScale*child.fontScale;style.color=child.color==null?group.color:child.color;
+        if(fraction==null)skins.draw(g,slot,0,0,slot.width,slot.height);else skins.fill(g,slot,0,0,slot.width,slot.height,fraction);
+        content.accept(g,style);g.dispose();
+    }
+    private void art(Graphics2D g,UISkins.Slot slot,HUDLayout.Placement p){layer(g,slot,p,null,(copy,style)->{});}
     void draw(Graphics2D graphics,int width,int height,Data data){
         for(HUDLayout.Piece piece:HUDLayout.Piece.values()){
             if(piece==HUDLayout.Piece.CROSSHAIR&&!data.playing||piece==HUDLayout.Piece.DEBUG&&!data.debug||piece==HUDLayout.Piece.LAN&&!data.lan)continue;
@@ -20,21 +29,20 @@ final class HUDRenderer {
                 case HEALTH:resource(g,true,data.health,data.maxHealth,data.health<=0?"DEFEATED":null,p);break;
                 case STAMINA:resource(g,false,data.stamina,100,data.exhausted?"RECOVERING":null,p);break;
                 case CLASS:
-                    skins.draw(g,UISkins.Slot.CLASS_BADGE,0,0,240,38);skins.draw(g,UISkins.Slot.CLASS_LABEL,0,0,240,38);
-                    if(p.text){text(g,p,20,new Color(230,236,242));String name="Class: "+data.className;g.drawString(name,Math.max(0,240-g.getFontMetrics().stringWidth(name)),26);}break;
+                    art(g,UISkins.Slot.CLASS_BADGE,p);layer(g,UISkins.Slot.CLASS_LABEL,p,null,(copy,style)->{
+                        if(style.text){text(copy,style,20,new Color(230,236,242));String name="Class: "+data.className;copy.drawString(name,Math.max(0,240-copy.getFontMetrics().stringWidth(name)),26);}});break;
                 case ABILITIES:
-                    if(!skins.draw(g,UISkins.Slot.ABILITY_PANEL,0,0,240,142)&&p.defaults){g.setColor(new Color(15,20,28,215));g.fillRoundRect(0,0,240,142,12,12);}
-                    skins.draw(g,UISkins.Slot.ABILITY_LABELS,0,0,240,142);
-                    if(p.text){for(int i=0;i<4;i++){double remaining=data.cooldowns[i];text(g,p,16,!data.equipped?new Color(140,149,160):remaining>0?new Color(244,193,108):new Color(125,231,182));
-                        g.drawString(CombatSystem.Move.values()[i].label+(!data.equipped?"  --":remaining>0?String.format(Locale.ROOT,"  %.1fs",remaining):"  Ready"),10,25+i*29);}}break;
+                    layer(g,UISkins.Slot.ABILITY_PANEL,p,null,(copy,style)->{if(!skins.images.containsKey(UISkins.Slot.ABILITY_PANEL)&&style.defaults){copy.setColor(new Color(15,20,28,215));copy.fillRoundRect(0,0,240,142,12,12);}});
+                    layer(g,UISkins.Slot.ABILITY_LABELS,p,null,(copy,style)->{if(style.text){for(int i=0;i<4;i++){double remaining=data.cooldowns[i];text(copy,style,16,!data.equipped?new Color(140,149,160):remaining>0?new Color(244,193,108):new Color(125,231,182));
+                        copy.drawString(CombatSystem.Move.values()[i].label+(!data.equipped?"  --":remaining>0?String.format(Locale.ROOT,"  %.1fs",remaining):"  Ready"),10,25+i*29);}}});break;
                 case CROSSHAIR:
-                    if(!skins.draw(g,UISkins.Slot.CROSSHAIR,0,0,24,24)&&p.defaults){g.setColor(p.color==null?new Color(245,245,245,190):p.color);g.drawLine(7,12,17,12);g.drawLine(12,7,12,17);}break;
+                    layer(g,UISkins.Slot.CROSSHAIR,p,null,(copy,style)->{if(!skins.images.containsKey(UISkins.Slot.CROSSHAIR)&&style.defaults){copy.setColor(style.color==null?new Color(245,245,245,190):style.color);copy.drawLine(7,12,17,12);copy.drawLine(12,7,12,17);}});break;
                 case LAN:
-                    skins.draw(g,UISkins.Slot.LAN_STATUS,0,0,600,22);if(p.text){text(g,p,16,new Color(160,230,192));g.drawString("LAN match: "+data.players+"/8 players  |  F2: roster / leave",0,15);}break;
+                    layer(g,UISkins.Slot.LAN_STATUS,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(160,230,192));copy.drawString("LAN match: "+data.players+"/8 players  |  F2: roster / leave",0,15);}});break;
                 case DEBUG:
-                    skins.draw(g,UISkins.Slot.DEBUG_INFO,0,0,650,48);if(p.text){text(g,p,16,new Color(230,236,242));
-                        g.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense 0%%",data.speed,data.maxSpeed),0,16);
-                        g.drawString(String.format(Locale.ROOT,"Damage modifier %.2fx%s",data.multiplier,data.streak>0?String.format(Locale.ROOT,"  (%.1fs)",data.streak):""),0,40);}break;
+                    layer(g,UISkins.Slot.DEBUG_INFO,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(230,236,242));
+                        copy.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense 0%%",data.speed,data.maxSpeed),0,16);
+                        copy.drawString(String.format(Locale.ROOT,"Damage modifier %.2fx%s",data.multiplier,data.streak>0?String.format(Locale.ROOT,"  (%.1fs)",data.streak):""),0,40);}});break;
             }g.dispose();
         }
     }
@@ -42,15 +50,14 @@ final class HUDRenderer {
     void resource(Graphics2D g,boolean health,double value,double maximum,String status,HUDLayout.Placement p){
         UISkins.Slot frame=health?UISkins.Slot.HEALTH_FRAME:UISkins.Slot.STAMINA_FRAME,fill=health?UISkins.Slot.HEALTH_FILL:UISkins.Slot.STAMINA_FILL;
         UISkins.Slot background=health?UISkins.Slot.HEALTH_BACKGROUND:UISkins.Slot.STAMINA_BACKGROUND,label=health?UISkins.Slot.HEALTH_LABEL:UISkins.Slot.STAMINA_LABEL;
-        skins.draw(g,label,0,-25,250,25);
-        if(p.text){text(g,p,12,new Color(230,236,242));g.drawString((health?"HEALTH":"STAMINA")+"  "+(int)Math.ceil(Math.max(0,value))+" / "+(int)maximum+(status==null?"":"  "+status),0,-5);}
         // Custom bar art owns its transparent interior: never put the old background behind it.
-        if(!skins.draw(g,background,0,0,250,18)&&p.defaults&&!skins.images.containsKey(frame)&&!skins.images.containsKey(fill)){
-            g.setColor(new Color(12,17,24,235));g.fillRoundRect(0,0,250,18,8,8);}
+        layer(g,background,p,null,(copy,style)->{if(!skins.images.containsKey(background)&&style.defaults&&!skins.images.containsKey(frame)&&!skins.images.containsKey(fill)){
+            copy.setColor(new Color(12,17,24,235));copy.fillRoundRect(0,0,250,18,8,8);}});
         double fraction=Math.max(0,Math.min(1,value/Math.max(1,maximum)));
-        if(!skins.fill(g,fill,0,0,250,18,fraction)&&p.defaults&&fraction>0){
-            g.setColor(health?new Color(226,87,91):status!=null?new Color(245,158,66):new Color(87,213,151));
-            g.fillRoundRect(2,2,Math.max(0,(int)Math.round(fraction*250)-4),14,6,6);}
-        if(!skins.draw(g,frame,0,0,250,18)&&p.defaults){g.setColor(new Color(180,194,208));g.drawRoundRect(0,0,250,18,8,8);}
+        layer(g,fill,p,fraction,(copy,style)->{if(!skins.images.containsKey(fill)&&style.defaults&&fraction>0){
+            copy.setColor(health?new Color(226,87,91):status!=null?new Color(245,158,66):new Color(87,213,151));
+            copy.fillRoundRect(2,2,Math.max(0,(int)Math.round(fraction*250)-4),14,6,6);}});
+        layer(g,frame,p,null,(copy,style)->{if(!skins.images.containsKey(frame)&&style.defaults){copy.setColor(new Color(180,194,208));copy.drawRoundRect(0,0,250,18,8,8);}});
+        layer(g,label,p,null,(copy,style)->{if(style.text){text(copy,style,12,new Color(230,236,242));copy.drawString((health?"HEALTH":"STAMINA")+"  "+(int)Math.ceil(Math.max(0,value))+" / "+(int)maximum+(status==null?"":"  "+status),0,20);}});
     }
 }

@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 ================================
 
 This file describes the current game and the remaining class designs.
@@ -473,9 +473,19 @@ Editor source:               tools/hud-editor/HUDEditor.java
 Shared renderer/layout:      src/ui/HUDRenderer.java; src/ui/HUDLayout.java
 Linked pieces:               HEALTH, STAMINA, CLASS, ABILITIES, CROSSHAIR, LAN, DEBUG
 Grouped resource art:        Frame, fill, background and label move/scale/rotate
-                              together; fill remains linked to real HP/stamina
+                              together in Whole HUD piece mode; Selected artwork
+                              layer mode adjusts each one independently. Selecting
+                              an artwork layer switches to individual editing.
+Layer transforms:            X/Y offsets inside parent piece, independent width/
+                              height scale, rotation, opacity and visibility;
+                              parent transform applies on top without resetting
+                              the child's settings. Fill stays linked to real data.
+Layer drag:                  Accounts for parent's rotation and scale
+Layer style:                 Text/default-art visibility combines with parent;
+                              opacity/font scale multiply, layer color overrides
 Image uploads:               Same limits as UI Studio; replace selected art layer
-Layout file:                 ui-assets/hud-layout.properties, loaded at startup
+Layout file:                 ui-assets/hud-layout.properties, loaded at startup;
+                              format 2 saves layer settings; format 1 remains readable
 Position reference:          1000 x 700; custom X/Y positions scale with game window
 X / Y limits:                -2000..3000 / -1400..2100 reference pixels
 Width / height scale:        0.1-5x normal size, optionally locked together
@@ -488,7 +498,8 @@ Built-in artwork toggle:     Disables default missing-slot backgrounds, fills,
                               borders, panels and crosshair strokes; uploaded art
                               and the independent live-text toggle still apply
 Default transparency rule:   Custom bar frame/fill skips old built-in background
-Reset piece:                 Default placement/style, keeping assigned artwork
+Reset selection:             Default placement/style of selected piece or layer,
+                              keeping images; whole-piece reset keeps child edits
 Preview:                     Shared game HUD renderer; test health/stamina %, LAN
                               status and debug visibility without changing game
 Preview navigation:          Middle-drag pan; cursor-anchored wheel zoom; Reset view
