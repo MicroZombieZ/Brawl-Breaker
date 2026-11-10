@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-11-03
+Last updated: 2026-11-10
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
@@ -21,6 +21,14 @@ Map Studio: MapEditor.bat; right-drag orbit, middle-drag pan, wheel zoom,
             duplicate/delete, object colors, yaw, anchoring, player collision.
 Map limits: 128 objects, 64 team spawns, 64 targets; width/depth 4–200 units;
             rectangular or elliptical ground. Box, sphere, cylinder, wedge.
+Map editor shortcuts: 1 Select, 2 Move, 3 Y Rotate, 4 Dimensions, 5 Uniform Scale,
+                      6/F Focus; Delete; Ctrl+C/V/X copy/paste/cut; Ctrl+D
+                      duplicate; Ctrl+S save, Ctrl+Shift+S save as, Ctrl+O open.
+                      Shortcuts do not intercept inspector typing.
+Map handles: World X/Y/Z move; local width/height/depth resize; yaw-only rotation
+             ring (horizontal drag); uniform scale center handle; Shift precision
+             (15% drag speed), Escape cancels drag. Spawn markers can be moved.
+             Dimensions stay 0.1–100; position X/Z -200..200, Y 0..200.
 Teams: Everyone uses Team 1 spawn markers, cycling by player ID; teams 2–8
        can be authored but are not used yet. Friendly fire remains unchanged.
 Collision: Shared swept bounding boxes in solo and LAN; jumping onto platforms

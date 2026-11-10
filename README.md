@@ -36,6 +36,20 @@ middle-drag to pan, wheel zoom, and left-click to select. Left-drag moves the
 selected object or spawn along X/Z; use the inspector for precise X/Y/Z,
 dimensions, yaw, color, anchoring, player collision, and starting velocities.
 
+Map Studio shortcuts: **1 Select**, **2 Move**, **3 Rotate**, **4 Dimensions**,
+**5 Uniform Scale**, **6 / F Focus selection**, **Delete**, **Ctrl+C / Ctrl+V**
+copy/paste, **Ctrl+X** cut, **Ctrl+D** duplicate, **Ctrl+S** save,
+**Ctrl+Shift+S** save as, and **Ctrl+O** open. Text fields keep their normal
+typing/editing shortcuts. Copy/paste supports objects, team spawns, and targets.
+
+Select a model to reveal the current tool's handles. Move uses red X, green Y,
+and blue Z axes. Dimensions changes local width/height/depth, following the
+object's yaw. Rotate uses a green Y-rotation ring (drag left/right); the map
+format currently supports yaw rotation only. Uniform Scale uses the white
+center handle (drag right/up to enlarge). Hold **Shift** for fine adjustment;
+**Escape** cancels a drag. The inspector updates when you release the mouse.
+Spawn markers support move handles. Handles are hidden during physics preview.
+
 - Create boxes, spheres, cylinders, and wedges. Duplicate or delete objects.
 - Select **Map / ground** for the map name, rectangular/elliptical plane,
   width/depth (4–200 units), and ground color.

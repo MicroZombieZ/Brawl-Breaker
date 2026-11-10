@@ -61,12 +61,27 @@ public class MapCheck {
         MapEditor editor=new MapEditor();editor.setSize(1280,800);editor.doLayout();editor.map=custom();editor.refreshList(editor.map.objects.get(0));editor.view.setSize(740,700);
         BufferedImage image=new BufferedImage(740,700,BufferedImage.TYPE_INT_RGB);Graphics2D g=image.createGraphics();editor.view.paint(g);g.dispose();check(editor.view.painted.size()>30,"Editor renders 3D shapes and spawn markers");
         editor.duplicate();check(editor.map.objects.size()==5,"Duplicate object");editor.delete();check(editor.map.objects.size()==4,"Delete object");
+        MapDefinition.Part selected=editor.map.objects.get(0);editor.refreshList(selected);
+        editor.getActionMap().get("control C").actionPerformed(null);editor.getActionMap().get("control V").actionPerformed(null);
+        MapDefinition.Part pasted=(MapDefinition.Part)editor.selection.getSelectedValue();check(pasted!=selected&&pasted.color==selected.color,"Clipboard preserves independent object data");pasted.w=17;check(selected.w!=17,"Paste does not alias original");
+        editor.getActionMap().get("DELETE").actionPerformed(null);check(editor.map.objects.size()==4,"Delete shortcut removes selection");editor.refreshList(selected);
+        check(MapEditor.editingText(new JTextField())&&MapEditor.editingText(new JSpinner()),"Typing controls protected from shortcuts");
+        for(int i=1;i<=5;i++){editor.getActionMap().get(""+i).actionPerformed(null);check(editor.tool.ordinal()==i-1,"Number selects tool");}
+        editor.setTool(MapEditor.Tool.MOVE);Graphics2D handles=image.createGraphics();editor.gizmo.paint(handles);check(editor.gizmo.handles.size()==3,"Three move axes rendered");
+        MapGizmo.Handle axis=editor.gizmo.handles.get(1);editor.gizmo.active=axis;editor.gizmo.begin(selected);double originalY=selected.y;
+        editor.gizmo.drag(axis.dx,axis.dy,false);near(selected.y,originalY+1,"Projected axis drag moves one world unit");editor.gizmo.cancel();near(selected.y,originalY,"Escape cancellation restores transform");
+        editor.setTool(MapEditor.Tool.RESIZE);editor.gizmo.paint(handles);axis=editor.gizmo.handles.get(0);editor.gizmo.active=axis;editor.gizmo.begin(selected);double originalWidth=selected.w;
+        editor.gizmo.drag(axis.dx*2,axis.dy*2,false);near(selected.w,originalWidth+2,"Dimensions handle changes local width");editor.gizmo.cancel();
+        editor.setTool(MapEditor.Tool.ROTATE);editor.gizmo.paint(handles);editor.gizmo.active=editor.gizmo.handles.get(0);editor.gizmo.begin(selected);double angle=selected.yaw;editor.gizmo.drag(30,0,false);near(selected.yaw,angle+30,"Rotation handle changes yaw");editor.gizmo.cancel();
+        editor.setTool(MapEditor.Tool.SCALE);editor.gizmo.paint(handles);editor.gizmo.active=editor.gizmo.handles.get(0);editor.gizmo.begin(selected);double ratio=selected.w/selected.h;editor.gizmo.drag(50,0,false);check(selected.w>originalWidth,"Uniform scale grows model");near(selected.w/selected.h,ratio,"Uniform scale preserves proportions");editor.gizmo.cancel();
+        editor.getActionMap().get("6").actionPerformed(null);near(editor.view.tx,selected.x,"Focus centers on selection");handles.dispose();
         try{
             CubeMovement game=new CubeMovement();MovementCheck.field("activeMap").set(game,custom());MovementCheck.field("mapLoaded").setBoolean(game,true);game.setSize(1000,700);game.doLayout();BufferedImage arena=new BufferedImage(1000,700,BufferedImage.TYPE_INT_RGB);Graphics2D ag=arena.createGraphics();game.paint(ag);ag.dispose();ImageIO.write(arena,"png",Paths.get("build","custom-map-game-preview.png").toFile());
             MapDefinition collision=MapEditor.newMap();MapDefinition.Part wall=new MapDefinition.Part();wall.x=3;wall.w=.2;wall.h=3;wall.d=6;collision.objects.add(wall);
             MovementCheck.field("activeMap").set(game,collision);((CombatSystem)MovementCheck.field("combat").get(game)).map=collision;MovementCheck.field("paused").setBoolean(game,false);
             MovementCheck.key(game,java.awt.event.KeyEvent.VK_D,false,false);java.lang.reflect.Method move=CubeMovement.class.getDeclaredMethod("move",double.class);move.setAccessible(true);for(int i=0;i<100;i++)move.invoke(game,.01);near(MovementCheck.field("x").getDouble(game),2.4,"Solo movement respects same scenery collision as LAN");
         }catch(Exception ex){throw new RuntimeException(ex);}
+        editor.setTool(MapEditor.Tool.MOVE);Graphics2D clean=image.createGraphics();editor.view.paint(clean);clean.dispose();
         try{ImageIO.write(image,"png",Paths.get("build","map-studio-preview.png").toFile());}catch(Exception ex){throw new RuntimeException(ex);}
     });}
     public static void main(String[] args){try{Path dir=Files.createTempDirectory("map-check-");try{persistence(dir);physics();network();editor();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}System.out.println("Passed: map/asset round trips, validation, random pool, collision/platforms, loose physics, LAN map/physics transfer, Team 1 spawns, editor rendering.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}

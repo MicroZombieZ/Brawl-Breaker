@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Map Studio keyboard shortcuts, independent object/spawn copy and paste,
+  and selection handles for moving, yaw rotation, dimensions, and uniform scale.
+  Include selection focus, precision dragging, cancellation, and typing guards.
+
 - Add Map Studio (MapEditor.bat): 3D shape/ground editing, object colors and
   transforms, anchored/loose physics, collision flags, team spawns, targets,
   reusable assets, full map saving/loading, and a non-destructive physics preview.
