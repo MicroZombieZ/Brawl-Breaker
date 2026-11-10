@@ -90,6 +90,18 @@ public class MapCheck {
         check(editor.selectedItems().containsAll(all)&&editor.selectedItems().size()==all.size(),"Reverse box selects all objects and markers, excludes ground");
         editor.view.boxStart=new Point(0,0);editor.view.boxEnd=new Point(5,5);editor.view.boxAdd=false;editor.view.finishBox();check(editor.selectedItems().isEmpty(),"Empty box clears selection");
         editor.selectItems(Arrays.asList(editor.map.objects.get(0)));editor.view.boxOriginal.clear();editor.view.boxOriginal.addAll(editor.selectedItems());editor.view.boxStart=new Point(0,0);editor.view.boxEnd=new Point(5,5);editor.view.boxAdd=true;editor.view.finishBox();check(editor.selectedItems().size()==1,"Shift box preserves prior selection");
+        for(MapEditor.Tool tool:MapEditor.Tool.values()){
+            editor.setTool(tool);editor.selectItems(Arrays.asList(editor.map.objects.get(0)));editor.view.painted.clear();
+            java.awt.geom.Path2D hit=new java.awt.geom.Path2D.Double();hit.append(new Rectangle(20,20,40,40),false);
+            editor.view.painted.add(new MapEditor.Face(hit,1,Color.WHITE,editor.map.objects.get(1)));
+            for(int click=0;click<2;click++){
+                editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_PRESSED,0,java.awt.event.InputEvent.SHIFT_DOWN_MASK,30,30,1,false,1));
+                editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_RELEASED,0,java.awt.event.InputEvent.SHIFT_DOWN_MASK,30,30,1,false,1));
+                check(editor.selectedItems().size()==(click==0?2:1),"Shift-click adds/toggles in "+tool);
+                check(editor.selectedItems().contains(editor.map.objects.get(0)),"Shift-click keeps original selection");
+                check(editor.gizmo.target==null,"Shift selection does not start transform");
+            }
+        }
         editor.selectItems(Arrays.asList(editor.map.objects.get(0),editor.map.objects.get(1)));editor.setTool(MapEditor.Tool.MOVE);
         Graphics2D groupPaint=image.createGraphics();editor.gizmo.paint(groupPaint);groupPaint.dispose();editor.gizmo.active=editor.gizmo.handles.get(1);editor.gizmo.begin(editor.selection.getSelectedValue());
         double y0=editor.map.objects.get(0).y,y1=editor.map.objects.get(1).y;MapGizmo.Handle yAxis=editor.gizmo.active;editor.gizmo.drag(yAxis.dx,yAxis.dy,false);

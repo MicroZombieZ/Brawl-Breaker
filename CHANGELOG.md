@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Make Shift-click add/toggle viewport selections in every Map Studio tool,
+  preserving the existing selection and avoiding accidental transforms.
+
 - Add Map Studio rectangle selection, Shift-add/toggle, list multi-selection,
   group clipboard/delete operations, and transforms with group cancellation.
 - Add Map Studio Undo/Redo (Ctrl+Z/Ctrl+Y) with one history step per group drag.

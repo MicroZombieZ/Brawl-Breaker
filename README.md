@@ -54,7 +54,10 @@ In **Select (1)** mode, left-drag a selection rectangle to select objects and
 spawn/target markers whose projected shapes overlap it (including obscured
 items). Drag in either direction. Hold **Shift** to add; **Shift-click** toggles
 an item. An empty box/click clears the selection; Escape cancels an unfinished
-box. The list also supports Ctrl/Shift multi-selection. Copy, cut, paste,
+box. Shift-click also adds/toggles objects in Move, Rotate, Dimensions, and Scale
+without starting a transform. For precision transforms, press Shift during a
+handle drag. Shift-clicking empty space keeps the selection.
+The list also supports Ctrl/Shift multi-selection. Copy, cut, paste,
 duplicate, delete, and movement apply to all selected items. Rotation/resize/
 scale apply to each selected object's own transform; markers only move.
 The inspector and Save asset operate on the first selected item.

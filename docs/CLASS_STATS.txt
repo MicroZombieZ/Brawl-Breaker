@@ -32,6 +32,9 @@ Map handles: World X/Y/Z move; local width/height/depth resize; yaw-only rotatio
 Map selection: Select (1), drag box in either direction; intersects projected
                object/marker faces, including obscured items; excludes ground.
                Shift adds, Shift-click toggles; empty box clears, Escape cancels.
+               Shift-click adds/toggles in all tools without starting a transform;
+               empty Shift-click keeps selection. Press Shift during a handle
+               drag for precision.
                Group copy/cut/paste/duplicate/delete/move; each object's local
                rotate/resize/scale; inspector and Save asset edit first item.
 Map undo/redo: Ctrl+Z / Ctrl+Y (also Ctrl+Shift+Z), toolbar buttons; 100 steps.
