@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0.."
 call scripts\Build.bat tests
 if errorlevel 1 exit /b 1
-for %%T in (MapCheck HUDCheck UIEditorCheck ParticleEditorCheck HitboxCheck ParticleCheck LobbyCheck ConsoleCheck CombatCheck MovementCheck StaminaCheck CameraCheck RotationCheck) do (
+for %%T in (WorldRenderCheck MapCheck HUDCheck UIEditorCheck ParticleEditorCheck HitboxCheck ParticleCheck LobbyCheck ConsoleCheck CombatCheck MovementCheck StaminaCheck CameraCheck RotationCheck) do (
     echo Running %%T...
     java -Dcamera.maps=build/test-empty-map-pool -cp "build\test-classes;build\classes" %%T
     if errorlevel 1 exit /b 1

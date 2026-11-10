@@ -58,6 +58,10 @@ Spawn markers support move handles. Handles are hidden during physics preview.
 The Map Studio viewport clips faces at the camera boundary and uses per-pixel
 depth for surfaces and selection outlines. Clicking selects the nearest visible
 surface. Manipulation handles remain an overlay so they stay accessible.
+The game uses the same depth renderer for ground, scenery, players, and targets.
+Particles and shockwaves depth-test against solid geometry and blend per pixel;
+image particles clip correctly at the camera boundary. HUD and debug overlays
+remain screen overlays.
 
 In **Select (1)** mode, left-drag a selection rectangle to select objects and
 spawn/target markers whose projected shapes overlap it (including obscured

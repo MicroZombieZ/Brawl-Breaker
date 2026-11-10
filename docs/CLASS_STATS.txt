@@ -57,6 +57,11 @@ Map preview: Test physics simulates a copy; Stop/edit restores authored data.
 Map rendering: Near-camera face clipping, per-pixel depth-tested surfaces and
                selection outlines, nearest-surface click picking. Manipulation
                handles remain an overlay; box selection includes obscured items.
+Game rendering: Shares depth rasterizer with Map Studio; ground, grid, scenery,
+                player/target faces and solid outlines use per-pixel depth.
+                Transparent effects blend back-to-front per pixel and respect
+                solid occlusion. Texture UVs survive camera clipping. HUD/debug
+                displays remain overlays. WorldRenderCheck covers the game path.
 Map saves: Self-contained format 1; validates Team 1 spawn and finite ranges;
            invalid maps skipped. Files saved atomically. Asset copies embedded.
 Testing: MapCheck covers persistence, random selection, bounds/platforms,

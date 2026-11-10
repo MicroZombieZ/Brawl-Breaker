@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Apply Map Studio's depth/clipping fix to gameplay through a shared rasterizer;
+  fix scenery/player/target overlap and depth-test transparent particles and
+  shockwaves, including image particles crossing the camera boundary.
+
 - Rework Map Studio navigation with screen-relative panning, cursor-centered
   zoom, selection/map framing, view presets, and visible camera controls.
 

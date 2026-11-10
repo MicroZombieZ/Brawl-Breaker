@@ -143,9 +143,8 @@ public final class MapEditor extends JPanel {
         void add(Face f){if(f!=null)painted.add(f);}
         void marker(MapDefinition.Spawn s,boolean target){MapDefinition.Part p=new MapDefinition.Part();p.x=s.x;p.y=s.y+.02;p.z=s.z;p.w=p.d=.8;p.h=target?1.5:.15;int rgb=target?0xd9a66b:s.team==1?0x52db9b:0xb589ed;for(double[][] f:MapMeshes.faces(p))add(face(f,rgb,s));}
     }
-    static final class Face {
-        final Path2D path;final double depth;final Color color;final Object owner;final double[][] screen;
-        Face(Path2D p,double d,Color c,Object o,double[][] vertices){path=p;depth=d;color=c;owner=o;screen=vertices;}
+    static final class Face extends SceneDepthRenderer.Face {
+        Face(Path2D p,double d,Color c,Object o,double[][] vertices){super(p,d,c,o,vertices);}
         Face(Path2D p,double d,Color c,Object o){this(p,d,c,o,points(p,d));}
         static double[][] points(Path2D path,double depth){java.util.List<double[]> result=new ArrayList<>();double[] v=new double[6];for(PathIterator i=path.getPathIterator(null);!i.isDone();i.next()){int type=i.currentSegment(v);if(type==PathIterator.SEG_MOVETO||type==PathIterator.SEG_LINETO)result.add(new double[]{v[0],v[1],1/depth});}return result.toArray(new double[0][]);}
     }

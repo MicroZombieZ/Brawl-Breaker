@@ -1128,29 +1128,31 @@ public class CubeMovement extends JPanel {
         }
     }
 
-    private void drawWave(Graphics2D g, double time, double waveX, double waveY, double waveZ) {
-        if (time > 0) {
-            double progress = 1 - time / .7;
-            g.setStroke(new BasicStroke(3));
-            for (double radius : new double[]{CombatSystem.INNER_RADIUS, CombatSystem.OUTER_RADIUS}) {
-                double[][] ring = new double[80][3];
-                for (int i = 0; i < ring.length; i++) {
-                    double angle = i * Math.PI * 2 / ring.length;
-                    ring[i] = new double[]{waveX + Math.cos(angle) * radius * progress,
-                            waveY + .03, waveZ + Math.sin(angle) * radius * progress};
-                }
-                g.setColor(new Color(110, 222, 255, (int) (220 * (1 - progress))));
-                g.draw(polygon(ring));
-            }
-            g.setStroke(new BasicStroke(1));
+    private final SceneDepthRenderer worldRenderer=new SceneDepthRenderer();
+    private SceneDepthRenderer.Face projectFace(RenderFace face){
+        double[][] vertices=new double[face.vertices.length][5];
+        for(int i=0;i<vertices.length;i++){double[] v=face.vertices[i],p=cameraPoint(v[0],v[1],v[2]);vertices[i]=new double[]{p[0],p[1],p[2],i==0||i==3?0:1,i<2?0:1};}
+        SceneDepthRenderer.Face projected=SceneDepthRenderer.project(vertices,getWidth()/2.0,getHeight()*.55,Math.min(getWidth(),getHeight())*1.05,face.color,face);
+        if(projected!=null){projected.texture=face.image;projected.soft=face.soft;projected.outline=!face.effect;}return projected;
+    }
+    private void addWave(java.util.List<RenderFace> scene,double time,double wx,double wy,double wz){
+        if(time<=0)return;double progress=1-time/.7;
+        for(double radius:new double[]{CombatSystem.INNER_RADIUS,CombatSystem.OUTER_RADIUS})for(int i=0;i<80;i++){
+            double a=i*Math.PI/40,b=(i+1)*Math.PI/40,inner=Math.max(0,radius*progress-.025),outer=radius*progress+.025;
+            scene.add(new RenderFace(new double[][]{{wx+Math.cos(a)*inner,wy+.03,wz+Math.sin(a)*inner},{wx+Math.cos(a)*outer,wy+.03,wz+Math.sin(a)*outer},{wx+Math.cos(b)*outer,wy+.03,wz+Math.sin(b)*outer},{wx+Math.cos(b)*inner,wy+.03,wz+Math.sin(b)*inner}},new Color(110,222,255,(int)(220*(1-progress))),true,false));
         }
     }
-
+    private void addGround(java.util.List<RenderFace> scene){
+        scene.add(new RenderFace(MapMeshes.plane(activeMap),new Color(activeMap.color),true,false));
+        for(int i=-(int)EDGE;i<=EDGE;i++){
+            if(Math.abs(i)<activeMap.width/2){double limit=activeMap.depth/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.width/2),2))):1);scene.add(new RenderFace(new double[][]{{i-.01,.002,-limit},{i+.01,.002,-limit},{i+.01,.002,limit},{i-.01,.002,limit}},new Color(89,104,114),true,false));}
+            if(Math.abs(i)<activeMap.depth/2){double limit=activeMap.width/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.depth/2),2))):1);scene.add(new RenderFace(new double[][]{{-limit,.002,i-.01},{limit,.002,i-.01},{limit,.002,i+.01},{-limit,.002,i+.01}},new Color(89,104,114),true,false));}
+        }
+    }
     private void drawCombatWorld(Graphics2D g) {
-        drawWave(g, combat.waveTime, combat.waveX, combat.waveY, combat.waveZ);
-        if (lobbyClient != null && appliedSnapshot != null) for (LobbyNetwork.State player : appliedSnapshot.players)
-            if (player.id != lobbyClient.id) drawWave(g, player.waveTime, player.waveX, player.waveY, player.waveZ);
-        java.util.List<RenderFace> scene = new ArrayList<>();
+        java.util.List<RenderFace> scene = new ArrayList<>();addGround(scene);
+        addWave(scene,combat.waveTime,combat.waveX,combat.waveY,combat.waveZ);
+        if(lobbyClient!=null&&appliedSnapshot!=null)for(LobbyNetwork.State player:appliedSnapshot.players)if(player.id!=lobbyClient.id)addWave(scene,player.waveTime,player.waveX,player.waveY,player.waveZ);
         for(MapDefinition.Part part:activeMap.objects){int index=0;for(double[][] face:MapMeshes.faces(part)){Color color=new Color(part.color);double shade=.7+(index++%4)*.08;scene.add(new RenderFace(face,new Color((int)(color.getRed()*shade),(int)(color.getGreen()*shade),(int)(color.getBlue()*shade))));}}
         for (CombatSystem.Dummy dummy : combat.dummies) {
             if (!dummy.alive()) continue;
@@ -1188,38 +1190,9 @@ public class CubeMovement extends JPanel {
             }
         }
         addParticleFaces(scene);
-        scene.sort(Comparator.comparingDouble((RenderFace face) -> {
-            double total = 0;
-            for (double[] vertex : face.vertices) total += cameraPoint(vertex[0], vertex[1], vertex[2])[2];
-            return -total / face.vertices.length;
-        }));
-        for (RenderFace face : scene) {
-            if(face.image!=null) {
-                double[][] points=new double[4][];boolean visible=true;
-                for(int i=0;i<4;i++) {
-                    double[] point=cameraPoint(face.vertices[i][0],face.vertices[i][1],face.vertices[i][2]);
-                    if(point[2]<NEAR) { visible=false;break; }points[i]=screenPoint(point);
-                }
-                if(visible) ParticleSprites.draw(g,face.image,points,face.color.getAlpha()/255f);
-                continue;
-            }
-            Path2D path = polygon(face.vertices);
-            g.setColor(face.color);
-            if(face.soft) {
-                java.awt.geom.Rectangle2D bounds=path.getBounds2D();
-                double radius=Math.max(bounds.getWidth(),bounds.getHeight())/2;
-                if(radius>.1 && radius<getWidth()*3) {
-                    g.setPaint(new RadialGradientPaint(new java.awt.geom.Point2D.Double(bounds.getCenterX(),bounds.getCenterY()),
-                            (float)radius,new float[]{0,1},new Color[]{face.color,new Color(face.color.getRed(),
-                                    face.color.getGreen(),face.color.getBlue(),0)}));
-                    g.fill(new java.awt.geom.Ellipse2D.Double(bounds.getX(),bounds.getY(),bounds.getWidth(),bounds.getHeight()));
-                }
-            } else g.fill(path);
-            if(!face.effect) {
-                g.setColor(new Color(16, 30, 43, face.color.getAlpha()));
-                g.draw(path);
-            }
-        }
+        java.util.List<SceneDepthRenderer.Face> projected=new ArrayList<>();
+        for(RenderFace face:scene){SceneDepthRenderer.Face visible=projectFace(face);if(visible!=null)projected.add(visible);}
+        worldRenderer.render(getWidth(),getHeight(),projected,Collections.emptySet());g.drawImage(worldRenderer.image,0,0,null);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
         if (lobbyClient != null && appliedSnapshot != null) for (LobbyNetwork.State player : appliedSnapshot.players) {
             if (player.id == lobbyClient.id || player.health <= 0) continue;
@@ -1346,13 +1319,6 @@ public class CubeMovement extends JPanel {
         resolveCamera();
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new Color(activeMap.color));
-        g.fill(polygon(MapMeshes.plane(activeMap)));
-        g.setColor(new Color(89, 104, 114));
-        for (int i = -(int) EDGE; i <= EDGE; i++) {
-            if(Math.abs(i)<=activeMap.width/2){double limit=activeMap.depth/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.width/2),2))):1);line(g,i,-limit,i,limit);}
-            if(Math.abs(i)<=activeMap.depth/2){double limit=activeMap.width/2*(activeMap.plane==MapDefinition.Plane.ELLIPSE?Math.sqrt(Math.max(0,1-Math.pow(i/(activeMap.depth/2),2))):1);line(g,-limit,i,limit,i);}
-        }
         drawCombatWorld(g);
         drawDebugOverlays(g);
         drawCombatHud(g);
