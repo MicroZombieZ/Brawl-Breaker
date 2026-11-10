@@ -57,7 +57,27 @@ public class MapCheck {
             }
         }
     }
+    static void rendering(){
+        MapEditor e=new MapEditor();e.view.setSize(800,600);e.view.yaw=e.view.pitch=0;e.view.distance=10;
+        Object redOwner=new Object(),blueOwner=new Object();
+        MapEditor.Face clipped=e.view.face(new double[][]{{-.1,-.2,9},{1,-.2,11},{1,.2,11},{-.1,.2,9}},0xff0000,redOwner);
+        check(clipped!=null&&clipped.screen.length>=3,"Near-plane crossing preserves visible part of face");
+        check(e.view.face(new double[][]{{-1,-1,11},{1,-1,11},{1,1,11}},0xffffff,redOwner)==null,"Fully behind-camera face is discarded");
+        MapEditor.Face red=e.view.face(new double[][]{{-.4,-.4,8},{2,-2,0},{2,2,0},{-.4,.4,8}},0xff0000,redOwner);
+        MapEditor.Face blue=e.view.face(new double[][]{{-1,-1,5},{1,-1,5},{1,1,5},{-1,1,5}},0x0000ff,blueOwner);
+        java.util.List<MapEditor.Face> faces=new ArrayList<>(Arrays.asList(red,blue));MapDepthRenderer renderer=new MapDepthRenderer();renderer.render(800,600,faces,Collections.emptySet());
+        check((renderer.image.getRGB(400,300)&0xffffff)==0xff0000,"Per-pixel depth fixes slanted-face average-sort failure");
+        int[] first=renderer.pixels.clone();Collections.reverse(faces);renderer.render(800,600,faces,Collections.emptySet());check(Arrays.equals(first,renderer.pixels),"Visibility is independent of draw order");
+        e.view.painted.clear();e.view.painted.addAll(faces);check(e.view.pickObject(new Point(400,300))==redOwner,"Click selects actual front surface");
+        MapEditor.Face hidden=e.view.face(new double[][]{{-.2,-.2,3},{.2,-.2,3},{.2,.2,3},{-.2,.2,3}},0x00ff00,redOwner);
+        renderer.render(800,600,Arrays.asList(hidden,blue),Collections.singleton(redOwner));
+        for(int y=280;y<320;y++)for(int x=380;x<420;x++)check(renderer.image.getRGB(x,y)!=Color.YELLOW.getRGB(),"Hidden selected edges do not bleed through foreground");
+        renderer.render(800,600,Arrays.asList(clipped),Collections.singleton(redOwner));check(Arrays.stream(renderer.depth).anyMatch(d->d>0),"Clipped face rasterizes at close zoom");
+        e.view.distance=4;e.view.pitch=.7;e.view.yaw=.8;MapDefinition.Part box=new MapDefinition.Part();box.w=box.h=box.d=8;
+        for(double angle:new double[]{0,.4,1,2,3,4,5}){e.view.yaw=angle;faces.clear();for(double[][] mesh:MapMeshes.faces(box)){MapEditor.Face f=e.view.face(mesh,0x779db4,redOwner);if(f!=null)faces.add(f);}renderer.render(800,600,faces,Collections.singleton(redOwner));}
+    }
     static void editor()throws Exception{SwingUtilities.invokeAndWait(()->{
+        rendering();
         MapEditor editor=new MapEditor();editor.setSize(1280,800);editor.doLayout();editor.map=custom();editor.refreshList(editor.map.objects.get(0));editor.view.setSize(740,700);
         BufferedImage image=new BufferedImage(740,700,BufferedImage.TYPE_INT_RGB);Graphics2D g=image.createGraphics();editor.view.paint(g);g.dispose();check(editor.view.painted.size()>30,"Editor renders 3D shapes and spawn markers");
         editor.duplicate();check(editor.map.objects.size()==5,"Duplicate object");editor.delete();check(editor.map.objects.size()==4,"Delete object");

@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Fix disappearing Map Studio faces near the camera and incorrect object/outline
+  overlap with near-plane clipping and per-pixel depth testing; align click
+  selection with the frontmost surface.
+
 - Make Shift-click add/toggle viewport selections in every Map Studio tool,
   preserving the existing selection and avoiding accidental transforms.
 

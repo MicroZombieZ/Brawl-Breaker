@@ -49,6 +49,9 @@ format currently supports yaw rotation only. Uniform Scale uses the white
 center handle (drag right/up to enlarge). Hold **Shift** for fine adjustment;
 **Escape** cancels a drag. The inspector updates when you release the mouse.
 Spawn markers support move handles. Handles are hidden during physics preview.
+The Map Studio viewport clips faces at the camera boundary and uses per-pixel
+depth for surfaces and selection outlines. Clicking selects the nearest visible
+surface. Manipulation handles remain an overlay so they stay accessible.
 
 In **Select (1)** mode, left-drag a selection rectangle to select objects and
 spawn/target markers whose projected shapes overlap it (including obscured

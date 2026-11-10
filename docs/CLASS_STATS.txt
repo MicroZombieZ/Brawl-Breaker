@@ -50,6 +50,9 @@ Loose physics: Gravity 18 units/s^2; 0.2 bounce coefficient; impact horizontal
                -50..50. Anchored objects never simulate; no angular physics,
                mass, player pushing, or full rigid-body solving.
 Map preview: Test physics simulates a copy; Stop/edit restores authored data.
+Map rendering: Near-camera face clipping, per-pixel depth-tested surfaces and
+               selection outlines, nearest-surface click picking. Manipulation
+               handles remain an overlay; box selection includes obscured items.
 Map saves: Self-contained format 1; validates Team 1 spawn and finite ranges;
            invalid maps skipped. Files saved atomically. Asset copies embedded.
 Testing: MapCheck covers persistence, random selection, bounds/platforms,
