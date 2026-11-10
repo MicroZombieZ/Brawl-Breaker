@@ -31,9 +31,15 @@ All devices need this updated game build (LAN protocol 5).
 
 ## Map Studio
 
-Launch **`MapEditor.bat`**. The 3D viewport supports right-drag to orbit,
-middle-drag to pan, wheel zoom, and left-click to select. Left-drag moves the
-selected object or spawn along X/Z; use the inspector for precise X/Y/Z,
+Launch **`MapEditor.bat`**. The 3D viewport supports middle/right-drag to orbit,
+Shift + middle/right-drag to pan in screen directions, cursor-centered wheel
+zoom, and left-click to select. **F / 6** frames the complete selection and
+sets the orbit center; **Home / Frame all** fits the entire map. Perspective,
+Top, Front, and Right buttons change viewing direction without losing the
+current orbit center. Orbiting cannot flip the camera upside down. Camera
+controls are displayed above the viewport; navigation doesn't edit the map.
+New/Open automatically frames the map. Left-drag in Move mode moves the
+selected object or spawn along X/Z; use the axis handles or inspector for precise X/Y/Z,
 dimensions, yaw, color, anchoring, player collision, and starting velocities.
 
 Map Studio shortcuts: **1 Select**, **2 Move**, **3 Rotate**, **4 Dimensions**,

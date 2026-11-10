@@ -14,7 +14,7 @@ public final class MapEditor extends JPanel {
     final JList<Object> selection=new JList<>(items);
     final View view=new View();
     final JPanel properties=new JPanel();
-    final JLabel status=new JLabel("Right-drag: orbit | Middle-drag: pan | Wheel: zoom | Left: select / drag on XZ plane");
+    final JLabel status=new JLabel("Middle/right drag: orbit | Shift + middle/right: pan | Wheel: zoom | F: focus | Home: frame all");
     boolean dirty,refreshing;
     Path current;
     enum Tool { SELECT, MOVE, ROTATE, RESIZE, SCALE }
@@ -31,10 +31,10 @@ public final class MapEditor extends JPanel {
         button(bar,"New",()->replace(newMap(),null));button(bar,"Built-in Practice",()->replace(MapStorage.practice(),null));button(bar,"Open map",this::open);button(bar,"Save",()->save(false));button(bar,"Save As",()->save(true));
         button(bar,"Save asset",this::saveAsset);button(bar,"Insert asset",this::insertAsset);
         button(bar,"Test physics",()->{try{simulation=map.copy();status.setText("Preview running — Stop restores authored positions. Editing stops preview.");}catch(RuntimeException ex){error(ex);}});
-        button(bar,"Stop",()->{simulation=null;view.repaint();});button(bar,"Reset view",()->{view.yaw=.6;view.pitch=.7;view.distance=35;view.tx=view.ty=view.tz=0;view.repaint();});
+        button(bar,"Stop",()->{simulation=null;view.repaint();});button(bar,"Frame all (Home)",()->view.frameAll());
         JPanel top=new JPanel(new GridLayout(0,1));top.add(bar);JPanel tools=new JPanel(new FlowLayout(FlowLayout.LEFT));ButtonGroup group=new ButtonGroup();
         for(Tool t:Tool.values()){JToggleButton b=new JToggleButton((t.ordinal()+1)+" "+t);toolButtons[t.ordinal()]=b;group.add(b);tools.add(b);b.addActionListener(e->setTool(t));}
-        button(tools,"6 Focus",this::focusSelection);button(tools,"Copy (Ctrl+C)",this::copySelection);button(tools,"Paste (Ctrl+V)",this::pasteSelection);button(tools,"Undo",()->history.travel(false));button(tools,"Redo",()->history.travel(true));top.add(tools);add(top,BorderLayout.NORTH);
+        button(tools,"6 Focus",this::focusSelection);button(tools,"Copy (Ctrl+C)",this::copySelection);button(tools,"Paste (Ctrl+V)",this::pasteSelection);button(tools,"Undo",()->history.travel(false));button(tools,"Redo",()->history.travel(true));top.add(tools);JPanel cameras=new JPanel(new FlowLayout(FlowLayout.LEFT));button(cameras,"Perspective",()->view.preset(.6,.7));button(cameras,"Top",()->view.preset(0,Math.PI/2));button(cameras,"Front",()->view.preset(0,0));button(cameras,"Right",()->view.preset(Math.PI/2,0));cameras.add(new JLabel("Orbit: middle/right drag | Pan: Shift + middle/right | Zoom: wheel | Focus: F | Frame all: Home"));top.add(cameras);add(top,BorderLayout.NORTH);
         JPanel left=new JPanel(new BorderLayout(4,4));left.setPreferredSize(new Dimension(230,600));
         JPanel creators=new JPanel(new GridLayout(0,2,4,4));
         for(MapDefinition.Shape shape:MapDefinition.Shape.values())button(creators,"+ "+shape,()->{if(map.objects.size()>=128){status.setText("128 object limit reached.");return;}MapDefinition.Part p=new MapDefinition.Part();p.shape=shape;p.name=shape.toString();p.x=3;map.objects.add(p);changed();refreshList(p);});
@@ -49,12 +49,12 @@ public final class MapEditor extends JPanel {
         for(Tool t:Tool.values())shortcut(""+(t.ordinal()+1),()->setTool(t));shortcut("6",this::focusSelection);shortcut("F",this::focusSelection);
         shortcut("DELETE",this::delete);shortcut("control C",this::copySelection);shortcut("control V",this::pasteSelection);shortcut("control X",()->{copySelection();delete();});shortcut("control D",this::duplicate);
         shortcut("control S",()->save(false));shortcut("control shift S",()->save(true));shortcut("control O",this::open);shortcut("ESCAPE",()->gizmo.cancel());
-        shortcut("control Z",()->history.travel(false));shortcut("control Y",()->history.travel(true));shortcut("control shift Z",()->history.travel(true));history.reset();
+        shortcut("HOME",()->view.frameAll());shortcut("control Z",()->history.travel(false));shortcut("control Y",()->history.travel(true));shortcut("control shift Z",()->history.travel(true));history.reset();
     }
     static boolean editingText(Component focus){return focus instanceof javax.swing.text.JTextComponent||focus instanceof JComboBox||focus instanceof JSpinner||focus!=null&&SwingUtilities.getAncestorOfClass(JSpinner.class,focus)!=null;}
     void shortcut(String key,Runnable action){Action handler=new AbstractAction(){public void actionPerformed(ActionEvent e){if(key.equals("control Z")||key.equals("control Y")||key.equals("control shift Z")||!editingText(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner()))action.run();}};getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(key),key);getActionMap().put(key,handler);for(JComponent c:new JComponent[]{view,selection}){c.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(key),key);c.getActionMap().put(key,handler);}}
     void setTool(Tool next){gizmo.cancel();tool=next;toolButtons[next.ordinal()].setSelected(true);simulation=null;status.setText("1 Select | 2 Move | 3 Rotate (Y) | 4 Dimensions | 5 Scale | 6/F Focus | Shift: precision | Esc: cancel drag");view.repaint();}
-    void focusSelection(){double[] p=gizmo.pivot();if(p==null)return;view.tx=p[0];view.tz=p[2];view.ty=p[1];double extent=2;for(Object o:selectedItems()){if(o instanceof MapDefinition.Part){MapDefinition.Part part=(MapDefinition.Part)o;extent=Math.max(extent,Math.sqrt(Math.pow(part.x-p[0],2)+Math.pow(part.y+part.h/2-p[1],2)+Math.pow(part.z-p[2],2))+Math.max(part.w,Math.max(part.h,part.d)));}else{MapDefinition.Spawn marker=(MapDefinition.Spawn)o;extent=Math.max(extent,Math.sqrt(Math.pow(marker.x-p[0],2)+Math.pow(marker.y-p[1],2)+Math.pow(marker.z-p[2],2))+1);}}view.distance=Math.min(400,Math.max(6,3*extent));view.repaint();}
+    void focusSelection(){if(selectedItems().isEmpty()){view.frameAll();return;}view.frame(selectedItems(),false);}
     java.util.List<Object> selectedItems(){java.util.List<Object> result=new ArrayList<>();for(Object o:selection.getSelectedValuesList())if(o instanceof MapDefinition.Part||o instanceof MapDefinition.Spawn)result.add(o);return result;}
     void selectItems(Collection<?> values){selection.setValueIsAdjusting(true);selection.clearSelection();for(int i=1;i<items.size();i++)if(values.contains(items.get(i)))selection.addSelectionInterval(i,i);selection.setValueIsAdjusting(false);view.repaint();}
     void copySelection(){clipboard.clear();clipboardTargets.clear();for(Object o:selectedItems()){Object copy;if(o instanceof MapDefinition.Part)copy=((MapDefinition.Part)o).copy();else{MapDefinition.Spawn s=(MapDefinition.Spawn)o;copy=new MapDefinition.Spawn(s.x,s.y,s.z,s.team);if(map.targets.contains(o))clipboardTargets.add(copy);}clipboard.add(copy);}status.setText(clipboard.size()+" items copied. Ctrl+V pastes independent copies.");}
@@ -68,7 +68,7 @@ public final class MapEditor extends JPanel {
     @Override public void removeNotify(){timer.stop();super.removeNotify();}
     void changed(){dirty=true;simulation=null;history.record();view.repaint();selection.repaint();}
     boolean discard(){return !dirty||JOptionPane.showConfirmDialog(this,"Discard unsaved changes?","Map Studio",JOptionPane.YES_NO_OPTION)==JOptionPane.YES_OPTION;}
-    void replace(MapDefinition next,Path path){if(!discard())return;gizmo.cancel();map=next;current=path;dirty=false;simulation=null;refreshList(null);history.reset();}
+    void replace(MapDefinition next,Path path){if(!discard())return;gizmo.cancel();map=next;current=path;dirty=false;simulation=null;refreshList(null);history.reset();view.frameAll();}
     void refreshList(Object selected){refreshing=true;items.clear();items.addElement("Map / ground");for(MapDefinition.Part p:map.objects)items.addElement(p);for(MapDefinition.Spawn s:map.spawns)items.addElement(s);for(MapDefinition.Spawn t:map.targets)items.addElement(t);selection.setSelectedValue(selected==null?items.get(0):selected,true);refreshing=false;inspect();view.repaint();}
     void inspect(){if(refreshing)return;properties.removeAll();Object o=selection.getSelectedValue();
         if(selectedItems().size()>1)label(selectedItems().size()+" selected ? inspector edits first item");
@@ -99,7 +99,7 @@ public final class MapEditor extends JPanel {
     void insertAsset(){Path path=choose(MapStorage.ASSETS,"asset",false);if(path==null)return;try{MapDefinition a=MapDefinition.read(path);if(map.objects.size()+a.objects.size()>128)throw new IOException("128 object limit.");for(MapDefinition.Part p:a.objects){p.x+=3;map.objects.add(p);}changed();refreshList(a.objects.isEmpty()?null:a.objects.get(0));}catch(IOException e){error(e);}}
     void error(Exception e){JOptionPane.showMessageDialog(this,e.getMessage(),"Map Studio",JOptionPane.ERROR_MESSAGE);}
     final class View extends JPanel {
-        double yaw=.6,pitch=.7,distance=35,tx,ty,tz;Point last;int drag;Object moving;
+        double yaw=.6,pitch=.7,distance=35,tx,ty,tz;Point last;int drag;boolean panGesture;Object moving;
         Point boxStart,boxEnd;boolean boxAdd;
         final java.util.List<Object> boxOriginal=new ArrayList<>();
         void cancelBox(){boxStart=boxEnd=null;repaint();}
@@ -107,11 +107,24 @@ public final class MapEditor extends JPanel {
         Rectangle boxBounds(){return new Rectangle(Math.min(boxStart.x,boxEnd.x),Math.min(boxStart.y,boxEnd.y),Math.abs(boxEnd.x-boxStart.x),Math.abs(boxEnd.y-boxStart.y));}
         final java.util.List<Face> painted=new ArrayList<>();
         View(){setFocusable(true);setBackground(new Color(25,32,44));MouseAdapter mouse=new MouseAdapter(){
-            public void mousePressed(MouseEvent e){requestFocusInWindow();gizmo.finish();last=e.getPoint();drag=e.getButton();moving=null;if(drag==MouseEvent.BUTTON1){if(tool==Tool.SELECT){boxStart=boxEnd=last;boxAdd=e.isShiftDown();boxOriginal.clear();boxOriginal.addAll(selectedItems());repaint();return;}if(e.isShiftDown()){java.util.Set<Object> chosen=new LinkedHashSet<>(selectedItems());Object object=pickObject(last);if(object!=null){if(!chosen.add(object))chosen.remove(object);}selectItems(chosen);last=null;return;}if(gizmo.pick(last))return;Object object=pickObject(last);if(!selectedItems().contains(object))selection.setSelectedValue(object==null?items.get(0):object,true);if(tool==Tool.MOVE){moving=object;if(object!=null)gizmo.begin(object);}repaint();}}
-            public void mouseDragged(MouseEvent e){if(last==null)return;if(boxStart!=null){boxEnd=e.getPoint();repaint();return;}double dx=e.getX()-last.x,dy=e.getY()-last.y;if(gizmo.active!=null)gizmo.drag(dx,dy,e.isShiftDown());else if(drag==MouseEvent.BUTTON3){yaw+=dx*.01;pitch=Math.max(.12,Math.min(1.5,pitch+dy*.01));}else if(drag==MouseEvent.BUTTON2){tx-=dx*distance/600;tz-=dy*distance/600;}else if(moving!=null){if(e.isShiftDown()){dx*=.15;dy*=.15;}double a=dx*distance/600,b=dy*distance/600/Math.sin(pitch),x=Math.cos(yaw)*a+Math.sin(yaw)*b,z=-Math.sin(yaw)*a+Math.cos(yaw)*b;gizmo.translateXZ(x,z);}last=e.getPoint();repaint();}
+            public void mousePressed(MouseEvent e){requestFocusInWindow();gizmo.finish();last=e.getPoint();drag=e.getButton();panGesture=e.isShiftDown();moving=null;if(drag==MouseEvent.BUTTON1){if(tool==Tool.SELECT){boxStart=boxEnd=last;boxAdd=e.isShiftDown();boxOriginal.clear();boxOriginal.addAll(selectedItems());repaint();return;}if(e.isShiftDown()){java.util.Set<Object> chosen=new LinkedHashSet<>(selectedItems());Object object=pickObject(last);if(object!=null){if(!chosen.add(object))chosen.remove(object);}selectItems(chosen);last=null;return;}if(gizmo.pick(last))return;Object object=pickObject(last);if(!selectedItems().contains(object))selection.setSelectedValue(object==null?items.get(0):object,true);if(tool==Tool.MOVE){moving=object;if(object!=null)gizmo.begin(object);}repaint();}}
+            public void mouseDragged(MouseEvent e){if(last==null)return;if(boxStart!=null){boxEnd=e.getPoint();repaint();return;}double dx=e.getX()-last.x,dy=e.getY()-last.y;if(gizmo.active!=null)gizmo.drag(dx,dy,e.isShiftDown());else if(drag==MouseEvent.BUTTON3||drag==MouseEvent.BUTTON2){if(panGesture)pan(dx,dy);else orbit(dx,dy);}else if(moving!=null){if(e.isShiftDown()){dx*=.15;dy*=.15;}double[] delta=screenDelta(dx,-dy);gizmo.translateXZ(delta[0],delta[2]);}last=e.getPoint();repaint();}
             public void mouseReleased(MouseEvent e){if(boxStart!=null){boxEnd=e.getPoint();finishBox();}last=null;if(moving!=null||gizmo.target!=null)inspect();moving=null;gizmo.finish();}
-            public void mouseWheelMoved(MouseWheelEvent e){distance=Math.max(4,Math.min(400,distance*Math.pow(1.12,e.getPreciseWheelRotation())));repaint();}
+            public void mouseWheelMoved(MouseWheelEvent e){zoom(e.getPoint(),e.getPreciseWheelRotation());}
         };addMouseListener(mouse);addMouseMotionListener(mouse);addMouseWheelListener(mouse);}
+        double focal(){return Math.max(1,Math.min(getWidth(),getHeight())*.9);}
+        double[] screenDelta(double dx,double dy){double k=distance/focal(),c=Math.cos(yaw),s=Math.sin(yaw),sp=Math.sin(pitch),cp=Math.cos(pitch);return new double[]{k*(dx*c-dy*sp*s),k*dy*cp,k*(-dx*s-dy*sp*c)};}
+        void pan(double dx,double dy){double[] v=screenDelta(-dx,dy);tx+=v[0];ty+=v[1];tz+=v[2];repaint();}
+        void orbit(double dx,double dy){yaw=Math.IEEEremainder(yaw-dx*.006,Math.PI*2);pitch=Math.max(-Math.PI/2+.01,Math.min(Math.PI/2-.01,pitch+dy*.006));repaint();}
+        void zoom(Point cursor,double notches){double old=distance,next=Math.max(.5,Math.min(1500,old*Math.pow(1.12,notches)));double[] offset=screenDelta(cursor.x-getWidth()/2.0,getHeight()/2.0-cursor.y);double blend=1-next/old;tx+=offset[0]*blend;ty+=offset[1]*blend;tz+=offset[2]*blend;distance=next;repaint();}
+        void preset(double angle,double elevation){yaw=angle;pitch=elevation;repaint();}
+        void frameAll(){java.util.List<Object> all=new ArrayList<>();all.addAll(map.objects);all.addAll(map.spawns);all.addAll(map.targets);frame(all,true);}
+        void frame(Collection<?> objects,boolean ground){double[] low={Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY},high={Double.NEGATIVE_INFINITY,Double.NEGATIVE_INFINITY,Double.NEGATIVE_INFINITY};
+            if(ground){include(low,high,new double[]{-map.width/2,0,-map.depth/2});include(low,high,new double[]{map.width/2,0,map.depth/2});}
+            for(Object o:objects)if(o instanceof MapDefinition.Part){double[] b=((MapDefinition.Part)o).bounds();include(low,high,new double[]{b[0],b[1],b[2]});include(low,high,new double[]{b[3],b[4],b[5]});}else if(o instanceof MapDefinition.Spawn){MapDefinition.Spawn p=(MapDefinition.Spawn)o;include(low,high,new double[]{p.x-.5,p.y,p.z-.5});include(low,high,new double[]{p.x+.5,p.y+1.5,p.z+.5});}
+            if(!Double.isFinite(low[0]))return;tx=(low[0]+high[0])/2;ty=(low[1]+high[1])/2;tz=(low[2]+high[2])/2;double radius=Math.sqrt(Math.pow(high[0]-low[0],2)+Math.pow(high[1]-low[1],2)+Math.pow(high[2]-low[2],2))/2;distance=Math.max(3,Math.min(1500,radius*2.5));repaint();
+        }
+        void include(double[] low,double[] high,double[] point){for(int i=0;i<3;i++){low[i]=Math.min(low[i],point[i]);high[i]=Math.max(high[i],point[i]);}}
         double[] camera(double[] v){double x=v[0]-tx,z=v[2]-tz,y=v[1]-ty,rx=Math.cos(yaw)*x-Math.sin(yaw)*z,rz=Math.sin(yaw)*x+Math.cos(yaw)*z;return new double[]{rx,Math.cos(pitch)*y-Math.sin(pitch)*rz,distance-Math.sin(pitch)*y-Math.cos(pitch)*rz};}
         final MapDepthRenderer renderer=new MapDepthRenderer();
         Object pickObject(Point point){Object owner=null;double closest=0;for(Face face:painted){double q=MapDepthRenderer.at(face,point.x+.5,point.y+.5);if(q>closest+1e-12){closest=q;owner=face.owner;}}return owner;}

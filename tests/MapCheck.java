@@ -78,6 +78,7 @@ public class MapCheck {
     }
     static void editor()throws Exception{SwingUtilities.invokeAndWait(()->{
         rendering();
+        cameraNavigation();
         MapEditor editor=new MapEditor();editor.setSize(1280,800);editor.doLayout();editor.map=custom();editor.refreshList(editor.map.objects.get(0));editor.view.setSize(740,700);
         BufferedImage image=new BufferedImage(740,700,BufferedImage.TYPE_INT_RGB);Graphics2D g=image.createGraphics();editor.view.paint(g);g.dispose();check(editor.view.painted.size()>30,"Editor renders 3D shapes and spawn markers");
         editor.duplicate();check(editor.map.objects.size()==5,"Duplicate object");editor.delete();check(editor.map.objects.size()==4,"Delete object");
@@ -136,5 +137,19 @@ public class MapCheck {
         editor.refreshList(editor.map.objects.get(0));editor.setTool(MapEditor.Tool.MOVE);Graphics2D clean=image.createGraphics();editor.view.paint(clean);clean.dispose();
         try{ImageIO.write(image,"png",Paths.get("build","map-studio-preview.png").toFile());}catch(Exception ex){throw new RuntimeException(ex);}
     });}
-    public static void main(String[] args){try{Path dir=Files.createTempDirectory("map-check-");try{persistence(dir);physics();network();editor();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}System.out.println("Passed: map/asset round trips, validation, random pool, collision/platforms, loose physics, LAN map/physics transfer, Team 1 spawns, editor rendering.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
+    static void cameraNavigation(){
+        MapEditor e=new MapEditor();e.view.setSize(800,600);
+        for(double angle:new double[]{0,Math.PI/2,Math.PI,4})for(double elevation:new double[]{0,.7,Math.PI/2}){
+            e.view.yaw=angle;e.view.pitch=elevation;e.view.distance=30;e.view.tx=e.view.ty=e.view.tz=0;
+            double[] before=e.gizmo.screen(new double[]{0,0,0});e.view.pan(60,-25);double[] after=e.gizmo.screen(new double[]{0,0,0});near(after[0]-before[0],60,"Pan follows screen horizontal at every angle");near(after[1]-before[1],-25,"Pan follows screen vertical at every angle");
+            Point cursor=new Point(520,230);double[] offset=e.view.screenDelta(cursor.x-400,300-cursor.y);double[] anchor={e.view.tx+offset[0],e.view.ty+offset[1],e.view.tz+offset[2]};e.view.zoom(cursor,-2);double[] zoomed=e.gizmo.screen(anchor);near(zoomed[0],cursor.x,"Cursor zoom anchors horizontal position");near(zoomed[1],cursor.y,"Cursor zoom anchors vertical position");
+            double tx=e.view.tx,ty=e.view.ty,tz=e.view.tz;e.view.orbit(250,900);near(e.view.tx,tx,"Orbit keeps pivot X");near(e.view.ty,ty,"Orbit keeps pivot height");near(e.view.tz,tz,"Orbit keeps pivot Z");check(Math.abs(e.view.pitch)<Math.PI/2,"Orbit cannot flip upside down");
+        }
+        e.map=custom();e.view.preset(.6,.7);e.view.frameAll();
+        for(MapDefinition.Part p:e.map.objects)for(double[][] face:MapMeshes.faces(p))for(double[] vertex:face){double[] screen=e.gizmo.screen(vertex);check(screen!=null&&screen[0]>=0&&screen[0]<=800&&screen[1]>=0&&screen[1]<=600,"Frame all fits map objects");}
+        e.view.preset(0,0);double[] d=e.view.screenDelta(0,20);check(Arrays.stream(d).allMatch(Double::isFinite),"Front-view dragging has no division by zero");
+        e.view.zoom(new Point(400,300),1000);near(e.view.distance,1500,"Far zoom is bounded");e.view.zoom(new Point(400,300),-1000);near(e.view.distance,.5,"Close zoom is bounded");
+        check(!e.dirty&&e.history.undo.isEmpty(),"Camera navigation does not change map/history");
+    }
+    public static void main(String[] args){try{Path dir=Files.createTempDirectory("map-check-");try{persistence(dir);physics();network();editor();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}System.out.println("Passed: map/asset round trips, validation, random pool, collision/platforms, loose physics, LAN map/physics transfer, Team 1 spawns, editor rendering and camera navigation.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
 }

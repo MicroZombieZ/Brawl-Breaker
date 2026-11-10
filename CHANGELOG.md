@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Rework Map Studio navigation with screen-relative panning, cursor-centered
+  zoom, selection/map framing, view presets, and visible camera controls.
+
 - Fix disappearing Map Studio faces near the camera and incorrect object/outline
   overlap with near-plane clipping and per-pixel depth testing; align click
   selection with the frontmost surface.

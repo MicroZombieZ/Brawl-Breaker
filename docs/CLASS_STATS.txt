@@ -15,7 +15,11 @@ Match entry: 0.3s fade to black, load map/player state, 0.4s fade in; input bloc
              LAN host creates arena targets on Start Match; disconnect unloads
              the client map. Host transmits selected map and moving objects to
              all clients and late joiners (LAN protocol 5; update every device).
-Map Studio: MapEditor.bat; right-drag orbit, middle-drag pan, wheel zoom,
+Map Studio: MapEditor.bat; middle/right-drag orbit around current focus;
+            Shift + middle/right-drag screen-relative pan; cursor-centered zoom;
+            F/6 frames selected group, Home frames map. Perspective/Top/Front/
+            Right presets preserve focus. New/Open frames map automatically.
+            Zoom distance 0.5–1500; orbit pitch clamped to avoid flipping.
             left-click select, left-drag X/Z, inspector for numeric transforms.
             New/Open/Built-in Practice, Save/Save As, reusable .asset save/insert,
             duplicate/delete, object colors, yaw, anchoring, player collision.
