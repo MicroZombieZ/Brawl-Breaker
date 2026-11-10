@@ -29,6 +29,14 @@ Map handles: World X/Y/Z move; local width/height/depth resize; yaw-only rotatio
              ring (horizontal drag); uniform scale center handle; Shift precision
              (15% drag speed), Escape cancels drag. Spawn markers can be moved.
              Dimensions stay 0.1–100; position X/Z -200..200, Y 0..200.
+Map selection: Select (1), drag box in either direction; intersects projected
+               object/marker faces, including obscured items; excludes ground.
+               Shift adds, Shift-click toggles; empty box clears, Escape cancels.
+               Group copy/cut/paste/duplicate/delete/move; each object's local
+               rotate/resize/scale; inspector and Save asset edit first item.
+Map undo/redo: Ctrl+Z / Ctrl+Y (also Ctrl+Shift+Z), toolbar buttons; 100 steps.
+               Whole drag/group transform is one step. Creation, deletion,
+               paste and inspector edits included; New/Open clears history.
 Teams: Everyone uses Team 1 spawn markers, cycling by player ID; teams 2–8
        can be authored but are not used yet. Friendly fire remains unchanged.
 Collision: Shared swept bounding boxes in solo and LAN; jumping onto platforms

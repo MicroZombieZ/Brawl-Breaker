@@ -50,6 +50,20 @@ center handle (drag right/up to enlarge). Hold **Shift** for fine adjustment;
 **Escape** cancels a drag. The inspector updates when you release the mouse.
 Spawn markers support move handles. Handles are hidden during physics preview.
 
+In **Select (1)** mode, left-drag a selection rectangle to select objects and
+spawn/target markers whose projected shapes overlap it (including obscured
+items). Drag in either direction. Hold **Shift** to add; **Shift-click** toggles
+an item. An empty box/click clears the selection; Escape cancels an unfinished
+box. The list also supports Ctrl/Shift multi-selection. Copy, cut, paste,
+duplicate, delete, and movement apply to all selected items. Rotation/resize/
+scale apply to each selected object's own transform; markers only move.
+The inspector and Save asset operate on the first selected item.
+**Ctrl+Z** undoes and **Ctrl+Y / Ctrl+Shift+Z** redoes; toolbar buttons are also
+available. History includes creation, deletion, paste, inspector changes, and
+group transforms. A complete drag is one undo step. Up to 100 steps are kept;
+editing after Undo clears Redo. New/Open clears history; saved files are only
+updated when you save again. Selection and camera navigation do not add steps.
+
 - Create boxes, spheres, cylinders, and wedges. Duplicate or delete objects.
 - Select **Map / ground** for the map name, rectangular/elliptical plane,
   width/depth (4–200 units), and ground color.

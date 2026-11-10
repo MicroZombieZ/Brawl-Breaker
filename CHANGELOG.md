@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Map Studio rectangle selection, Shift-add/toggle, list multi-selection,
+  group clipboard/delete operations, and transforms with group cancellation.
+- Add Map Studio Undo/Redo (Ctrl+Z/Ctrl+Y) with one history step per group drag.
+
 - Add Map Studio keyboard shortcuts, independent object/spawn copy and paste,
   and selection handles for moving, yaw rotation, dimensions, and uniform scale.
   Include selection focus, precision dragging, cancellation, and typing guards.
