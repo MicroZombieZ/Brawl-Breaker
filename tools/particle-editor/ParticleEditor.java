@@ -18,7 +18,13 @@ public class ParticleEditor extends JPanel {
     private final JLabel imageLabel=new JLabel("Built-in shapes; PNG transparency supported");
     private final JLabel colorSwatch=new JLabel("",SwingConstants.CENTER);
     private final JComboBox<ParticleEffect.Pattern> presets=new JComboBox<>(ParticleEffect.Pattern.values());
-    private final JComboBox<ParticleSystem.Shape> shapes=new JComboBox<>(ParticleSystem.Shape.values());
+    private static final String CUSTOM_MESH="Custom mesh";
+    private final JComboBox<Object> shapes=new JComboBox<>();
+    final JComboBox<String> meshPresets=new JComboBox<>();
+    final Path shapeDirectory;
+    private Path activeShapePreset;
+    private boolean refreshingShapes;
+    private final java.util.Map<String,Path> shapeFiles=new LinkedHashMap<>();
     private final JComboBox<GameEffect.Kind> events=new JComboBox<>(GameEffect.Kind.values());
     private final JCheckBox loop=new JCheckBox("Loop emission",true),paused=new JCheckBox("Pause");
     private final java.util.List<Runnable> refreshers=new ArrayList<>();
@@ -36,14 +42,17 @@ public class ParticleEditor extends JPanel {
         public boolean getScrollableTracksViewportHeight(){return false;}
     }
 
-    public ParticleEditor() {
+    public ParticleEditor() {this(Paths.get("particle-effects","shapes"));}
+    ParticleEditor(Path shapeDirectory) {
         super(new BorderLayout(12,12));setBorder(BorderFactory.createEmptyBorder(16,18,12,18));
+        this.shapeDirectory=shapeDirectory;
+        for(ParticleSystem.Shape shape:ParticleSystem.Shape.values())shapes.addItem(shape);shapes.addItem(CUSTOM_MESH);
         system.quality(ParticleSystem.Quality.HIGH);
         JPanel header=new JPanel(new BorderLayout());
         JLabel title=new JLabel("PARTICLE STUDIO");title.setFont(new Font("SansSerif",Font.BOLD,24));
         header.add(title,BorderLayout.WEST);
         JPanel files=new JPanel(new FlowLayout(FlowLayout.RIGHT,6,0));
-        button(files,"New",()->{ if(discard()) { effect=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);currentFile=null;dirty=false;refresh();restart(); } });
+        button(files,"New",()->{ if(discard()) { effect=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);currentFile=null;activeShapePreset=null;dirty=false;refresh();restart(); } });
         button(files,"Open effect",this::open);button(files,"Save",()->save(false));button(files,"Save as",()->save(true));
         header.add(files,BorderLayout.EAST);add(header,BorderLayout.NORTH);
         JPanel workspace=new JPanel(new BorderLayout(0,8));workspace.add(preview,BorderLayout.CENTER);
@@ -59,7 +68,13 @@ public class ParticleEditor extends JPanel {
             effect=ParticleEffect.preset((ParticleEffect.Pattern)presets.getSelectedItem());effect.image=image;effect.mesh=mesh;
             dirty=true;refresh();restart();
         }});
-        row("Shape",shapes);shapes.addActionListener(e->{if(!refreshing){effect.shape=(ParticleSystem.Shape)shapes.getSelectedItem();dirty=true;}});
+        row("Shape",shapes);shapes.addActionListener(e->{if(!refreshing&&!refreshingShapes){
+            if(shapes.getSelectedItem() instanceof ParticleSystem.Shape){effect.shape=(ParticleSystem.Shape)shapes.getSelectedItem();effect.mesh=null;activeShapePreset=null;dirty=true;refresh();restart();}
+            else if(effect.mesh==null){importShapePreset();syncShapeChoices();}
+        }});
+        row("Shape preset",meshPresets);meshPresets.addActionListener(e->{if(!refreshingShapes&&!refreshing){Path path=shapeFiles.get(meshPresets.getSelectedItem());if(path!=null)try{useShapePreset(path);}catch(Exception ex){error(ex);syncShapeChoices();}}});
+        JPanel shapeButtons=new JPanel(new FlowLayout(FlowLayout.LEFT,4,2));
+        button(shapeButtons,"Import preset",this::importShapePreset);button(shapeButtons,"Save shape preset",this::saveShapePreset);button(shapeButtons,"Refresh",this::syncShapeChoices);sliders.add(shapeButtons);
         slider("Aggressiveness",10,300,100,"x",()->effect.aggression,v->effect.aggression=v);
         slider("Particles / burst",1,400,1,"",()->effect.count,v->effect.count=(int)v);
         slider("Repeat interval",10,500,100,"s",()->effect.interval,v->effect.interval=v);
@@ -110,7 +125,7 @@ public class ParticleEditor extends JPanel {
         JScrollPane scroll=new JScrollPane(sliders);scroll.setPreferredSize(new Dimension(370,600));
         scroll.getVerticalScrollBar().setUnitIncrement(18);scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         JSplitPane split=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,workspace,scroll);split.setResizeWeight(1);split.setBorder(null);
-        shapeEditor=new ParticleShapeEditor(()->effect.mesh,mesh->{effect.mesh=mesh;dirty=true;restart();},()->effect.color);
+        shapeEditor=new ParticleShapeEditor(()->effect.mesh,mesh->{effect.mesh=mesh;activeShapePreset=null;dirty=true;syncShapeChoices();restart();},()->effect.color);
         JTabbedPane tabs=new JTabbedPane();tabs.addTab("Particle effects",split);tabs.addTab("Custom shape",shapeEditor);
         add(tabs,BorderLayout.CENTER);status.setBorder(BorderFactory.createEmptyBorder(6,4,0,0));add(status,BorderLayout.SOUTH);
         refresh();restart();
@@ -138,13 +153,53 @@ public class ParticleEditor extends JPanel {
         JButton button=new JButton(text);button.addActionListener(e->action.run());panel.add(button);
     }
     private void refresh() {
-        refreshing=true;presets.setSelectedItem(effect.pattern);shapes.setSelectedItem(effect.shape);
+        refreshing=true;presets.setSelectedItem(effect.pattern);syncShapeChoices();
         for(Runnable r:refreshers)r.run();
         refreshColor();
         imageLabel.setText(effect.image==null?"Built-in shapes; PNG transparency supported":
                 "Image: "+effect.image.getWidth()+" x "+effect.image.getHeight()+" (embedded when saved)");
         refreshing=false;
         if(shapeEditor!=null)shapeEditor.reset();
+    }
+    void syncShapeChoices(){
+        refreshingShapes=true;
+        try{
+            shapes.setSelectedItem(effect.mesh==null?effect.shape:CUSTOM_MESH);
+            shapeFiles.clear();meshPresets.removeAllItems();
+            meshPresets.addItem(effect.mesh==null?"Choose a saved shape?":"Current custom shape");
+            if(Files.isDirectory(shapeDirectory))try(java.util.stream.Stream<Path> paths=Files.list(shapeDirectory)){
+                paths.filter(p->Files.isRegularFile(p)&&p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".obj"))
+                    .sorted(Comparator.comparing(p->p.getFileName().toString().toLowerCase(Locale.ROOT))).forEach(p->{String label=p.getFileName().toString();shapeFiles.put(label,p);meshPresets.addItem(label);});
+            }catch(java.io.IOException ex){status.setText("Could not read shape presets: "+ex.getMessage());}
+            if(effect.mesh!=null&&activeShapePreset!=null&&shapeFiles.containsValue(activeShapePreset))meshPresets.setSelectedItem(activeShapePreset.getFileName().toString());
+            else meshPresets.setSelectedIndex(0);
+        }finally{refreshingShapes=false;}
+    }
+    void useShapePreset(Path path) throws java.io.IOException {
+        ParticleMesh mesh=ParticleMesh.read(path); // Load completely before replacing current work.
+        effect.mesh=mesh;activeShapePreset=path;dirty=true;refresh();restart();
+        status.setText("Using shape preset: "+path.getFileName()+". Embedded when the effect is saved.");
+    }
+    Path storeShapePreset(String name,ParticleMesh mesh,boolean replace) throws java.io.IOException {
+        if(!name.matches("[A-Za-z0-9][A-Za-z0-9 _-]{0,63}"))throw new java.io.IOException("Use 1-64 letters, numbers, spaces, hyphens or underscores; start with a letter or number.");
+        Files.createDirectories(shapeDirectory);Path path=shapeDirectory.resolve(name+".obj");
+        Path temp=Files.createTempFile(shapeDirectory,"shape-",".tmp");
+        try{Files.writeString(temp,mesh.obj());if(replace)Files.move(temp,path,StandardCopyOption.REPLACE_EXISTING);else Files.move(temp,path);}finally{Files.deleteIfExists(temp);}
+        return path;
+    }
+    private void importShapePreset(){
+        JFileChooser chooser=new JFileChooser(shapeDirectory.toFile());chooser.setFileFilter(new FileNameExtensionFilter("Triangulated shape (*.obj)","obj"));
+        if(chooser.showOpenDialog(this)!=JFileChooser.APPROVE_OPTION)return;
+        try{ParticleMesh mesh=ParticleMesh.read(chooser.getSelectedFile().toPath()).normalize();String base=chooser.getSelectedFile().getName().replaceFirst("(?i)\\.obj$","").replaceAll("[^A-Za-z0-9 _-]","_");if(base.isEmpty()||!Character.isLetterOrDigit(base.charAt(0)))base="Shape_"+base;base=base.substring(0,Math.min(54,base.length()));
+            String name=base;int n=2;while(Files.exists(shapeDirectory.resolve(name+".obj")))name=base+"_"+(n++);
+            useShapePreset(storeShapePreset(name,mesh,false));
+        }catch(Exception ex){error(ex);}
+    }
+    private void saveShapePreset(){
+        if(effect.mesh==null){status.setText("Create or import a custom shape first, then save it as a preset.");return;}
+        String name=JOptionPane.showInputDialog(this,"Name for this reusable shape:","Save shape preset",JOptionPane.PLAIN_MESSAGE);if(name==null)return;name=name.trim();
+        boolean replace=false;if(Files.exists(shapeDirectory.resolve(name+".obj"))){replace=JOptionPane.showConfirmDialog(this,"Replace this shape preset?","Shape preset",JOptionPane.YES_NO_OPTION)==JOptionPane.YES_OPTION;if(!replace)return;}
+        try{activeShapePreset=storeShapePreset(name,effect.mesh,replace);syncShapeChoices();status.setText("Saved reusable shape preset: "+activeShapePreset.getFileName());}catch(Exception ex){error(ex);}
     }
     private void refreshColor(){
         colorSwatch.setText(ParticleColorEditor.format(effect.color));colorSwatch.setBackground(effect.color);
@@ -185,7 +240,7 @@ public class ParticleEditor extends JPanel {
     }
     private void open() {
         if(!discard())return;JFileChooser c=chooser();if(c.showOpenDialog(this)!=JFileChooser.APPROVE_OPTION)return;
-        try{ParticleEffect loaded=ParticleEffect.load(c.getSelectedFile().toPath());effect=loaded;currentFile=c.getSelectedFile().toPath();
+        try{ParticleEffect loaded=ParticleEffect.load(c.getSelectedFile().toPath());effect=loaded;activeShapePreset=null;currentFile=c.getSelectedFile().toPath();
             dirty=false;refresh();restart();status.setText("Opened "+currentFile.getFileName());}catch(Exception ex){error(ex);}
     }
     private boolean save(boolean saveAs) {

@@ -142,10 +142,10 @@ public class ParticleEditorCheck {
         e=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);s.quality(ParticleSystem.Quality.HIGH);s.emit(e,0,3,0,0);
         check(s.particles.stream().anyMatch(v->v.delay>0&&v.twinkle>0),"Sparkle emission staggers and twinkles");
     }
-    static void ui(Path screenshot) throws Exception {
+    static void ui(Path screenshot,Path shapeDirectory) throws Exception {
         SwingUtilities.invokeAndWait(()->{
             ParticleEditor.theme();
-            ParticleEditor editor=new ParticleEditor();
+            ParticleEditor editor=new ParticleEditor(shapeDirectory);
             try {
                 final Color[] selected={Color.WHITE};
                 ParticleColorEditor colors=new ParticleColorEditor(Color.WHITE,c->selected[0]=c);
@@ -163,6 +163,24 @@ public class ParticleEditorCheck {
                 Graphics2D colorGraphics=colorImage.createGraphics();colors.paint(colorGraphics);colorGraphics.dispose();
                 try{javax.imageio.ImageIO.write(colorImage,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-colors.png").toFile());}
                 catch(java.io.IOException ex){throw new RuntimeException(ex);}
+                try{
+                    Path cubePreset=editor.storeShapePreset("My Cube",ParticleMesh.cube(),false);
+                    Path conePreset=editor.storeShapePreset("My Cone",ParticleMesh.primitive(ParticleMesh.Primitive.CONE),false);
+                    editor.syncShapeChoices();editor.meshPresets.setSelectedItem("My Cone.obj");
+                    java.lang.reflect.Field effectField=ParticleEditor.class.getDeclaredField("effect");effectField.setAccessible(true);
+                    ParticleEffect active=(ParticleEffect)effectField.get(editor);
+                    check(active.mesh.obj().equals(ParticleMesh.read(conePreset).obj()),"Main particle tab selects saved custom geometry");
+                    double speed=active.speed;editor.useShapePreset(cubePreset);near(active.speed,speed,"Shape preset preserves emission parameters");
+                    ParticleMesh before=active.mesh;Path bad=shapeDirectory.resolve("broken.obj");Files.writeString(bad,"invalid");
+                    try{editor.useShapePreset(bad);throw new AssertionError("Bad preset accepted");}catch(java.io.IOException expected){}
+                    check(active.mesh==before,"Bad preset leaves active geometry intact");
+                    try{editor.storeShapePreset("../escape",before,false);throw new AssertionError("Unsafe name accepted");}catch(java.io.IOException expected){}
+                    try{editor.storeShapePreset("My Cube",before,false);throw new AssertionError("Preset silently overwritten");}catch(java.nio.file.FileAlreadyExistsException expected){}
+                    ParticleEditor reopenedEditor=new ParticleEditor(shapeDirectory);try{check(reopenedEditor.meshPresets.getItemCount()==4,"Preset library persists across editor sessions");}finally{reopenedEditor.stop();}
+                    java.lang.reflect.Field shapesField=ParticleEditor.class.getDeclaredField("shapes");shapesField.setAccessible(true);JComboBox shapes=(JComboBox)shapesField.get(editor);
+                    check("Custom mesh".equals(shapes.getSelectedItem()),"Main shape selector reflects custom mesh");shapes.setSelectedItem(ParticleSystem.Shape.CUBE);check(active.mesh==null,"Built-in selection disables custom mesh");
+                    editor.useShapePreset(conePreset);Path saved=shapeDirectory.resolve("selected.pfx");active.save(saved);check(ParticleEffect.load(saved).mesh.obj().equals(active.mesh.obj()),"Selected preset embedded in effect");
+                }catch(Exception ex){throw new RuntimeException(ex);}
                 editor.setSize(1220,820);layout(editor);
                 check(components(editor,JTabbedPane.class).stream().anyMatch(t->t.getTabCount()==2&&t.getTitleAt(1).equals("Custom shape")),"Shape workspace is a secondary particle editor tab");
                 check(components(editor,JSlider.class).size()==25,"All twenty-five parameter sliders exist");
@@ -218,7 +236,7 @@ public class ParticleEditorCheck {
     }
     private static void run() throws Exception {
         Path directory=Files.createTempDirectory("particle-editor-check-");
-        try{files(directory);advanced(directory);meshes(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
+        try{files(directory);advanced(directory);meshes(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"),directory.resolve("shapes"));}
         finally{try(java.util.stream.Stream<Path> files=Files.walk(directory)){
             for(Path path:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(path);}}
         System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders, live color/hex/palette editing and editor rendering.");

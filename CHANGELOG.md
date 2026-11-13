@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add a Custom mesh option and reusable shape preset picker to the main Particle
+  effects tab, with OBJ import, save-current-shape, and library refresh controls.
+  Store presets in particle-effects/shapes while embedding selected meshes in effects.
+
 - Add visible vertex selection and dragging to Particle Studio's Custom shape
   tab, with coordinate-table selection, one undo step per drag, and Escape cancel.
   Add sphere, cylinder, cone, trapezoid prism, and pyramid shape starters.

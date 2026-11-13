@@ -222,6 +222,15 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
+On the **Particle effects** tab, **Shape preset** selects reusable custom meshes
+without opening the shape editor. **Import preset** copies and normalizes a
+triangulated OBJ into `particle-effects/shapes`; **Save shape preset** saves the
+current edited mesh under a reusable name. Use **Refresh** after placing OBJ files
+in that folder yourself. The main **Shape** selector shows **Custom mesh** when
+one is active; choosing a built-in shape disables the custom mesh. Presets change
+only geometry, preserving emission settings. Selected meshes remain embedded in
+saved effects, so gameplay does not depend on the preset folder.
+
 The **Custom shape** tab lives inside Particle Studio. Import a triangulated
 Wavefront OBJ (geometry only, up to 512 vertices / 256 triangles / 256 KB), or
 choose **Cube, Sphere, Cylinder, Cone, Trapezoid, or Pyramid** and click

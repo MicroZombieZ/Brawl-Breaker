@@ -415,6 +415,13 @@ PARTICLE STUDIO -- IMPLEMENTED
 Launch (project root):        ParticleEditor.bat, or scripts\Build.bat followed by
                               java -cp build/classes ParticleEditor
 Editor source:                tools/particle-editor/ParticleEditor.java
+Main-tab shape presets:       Shape preset list on Particle effects tab; Import
+                              preset copies/normalizes OBJ to particle-effects/shapes
+                              Save shape preset stores current edited geometry;
+                              Refresh discovers added OBJ files; presets persist
+                              Shape shows Custom mesh when active; built-in choice
+                              disables mesh. Emission parameters are preserved.
+                              Selected mesh stays embedded in saved .pfx files.
 Custom shape workspace:       Second tab inside Particle Studio (not a separate app)
 Import/export:                Triangulated OBJ geometry; positive/negative face indices
 Limits per shape:             512 vertices, 256 triangles, 256 KB OBJ file
