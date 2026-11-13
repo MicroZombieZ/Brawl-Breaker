@@ -14,6 +14,7 @@ final class ParticleEffect {
     ParticleSystem.Shape shape = ParticleSystem.Shape.SPARK;
     Color color = new Color(255, 198, 91);
     BufferedImage image;
+    ParticleMesh mesh;
     double aggression=1, speed=3, range=.15, spread=65, heading=0, elevation=45,
             size=.1, lifetime=.8, gravity=2, growth=0, spin=3, opacity=1, interval=.8;
     double speedVariation=.3, sizeVariation=.25, lifetimeVariation=.25,
@@ -91,6 +92,7 @@ final class ParticleEffect {
         try {
             try(ZipOutputStream out=new ZipOutputStream(Files.newOutputStream(temporary))) {
                 out.putNextEntry(new ZipEntry("effect.properties"));p.store(out,"CameraUpdate particle effect");out.closeEntry();
+                if(mesh!=null){out.putNextEntry(new ZipEntry("shape.obj"));out.write(mesh.obj().getBytes(java.nio.charset.StandardCharsets.UTF_8));out.closeEntry();}
                 if(image!=null) { out.putNextEntry(new ZipEntry("sprite.png"));ImageIO.write(image,"png",out);out.closeEntry(); }
             }
             Files.move(temporary,absolute,StandardCopyOption.REPLACE_EXISTING);
@@ -124,6 +126,8 @@ final class ParticleEffect {
             if(sprite!=null) try(InputStream in=zip.getInputStream(sprite)) {
                 e.image=readImage(new ByteArrayInputStream(readLimited(in,16*1024*1024)));
             }
+            ZipEntry mesh=zip.getEntry("shape.obj");
+            if(mesh!=null)try(InputStream in=zip.getInputStream(mesh)){e.mesh=ParticleMesh.read(in);}
             e.validate();return e;
         }
     }

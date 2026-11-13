@@ -1063,10 +1063,12 @@ public class CubeMovement extends JPanel {
         for(ParticleSystem.Particle p:particles.particles) {
             if(p.delay>0 || p.life<=0) continue;
             double fade=ParticleSystem.alpha(p);
-            int alpha=(int)((p.image==null&&p.shape==ParticleSystem.Shape.DUST?90:220)*fade);
+            int alpha=(int)((p.mesh==null&&p.image==null&&p.shape==ParticleSystem.Shape.DUST?90:220)*fade);
             if(alpha<2) continue;
             Color color=new Color(p.color.getRed(),p.color.getGreen(),p.color.getBlue(),alpha);
-            if(p.image!=null) {
+            if(p.mesh!=null){
+                for(int[] triangle:p.mesh.triangles){double[][] vertices=p.mesh.face(triangle,p.x,p.y,p.z,p.size,p.angle);scene.add(new RenderFace(vertices,ParticleMesh.shade(color,vertices),true,false));}
+            }else if(p.image!=null) {
                 double[][] vertices=new double[4][3];
                 double aspect=(double)p.image.getWidth()/p.image.getHeight();
                 for(int i=0;i<4;i++) {

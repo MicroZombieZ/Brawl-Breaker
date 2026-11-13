@@ -65,6 +65,39 @@ public class ParticleEditorCheck {
         loaded=ParticleEffect.load(path);
         check(Arrays.equals(e.extraValues(),loaded.extraValues())&&loaded.groundCollision,"Legacy files preserve defaults");
     }
+    static void meshes(Path directory) throws Exception {
+        ParticleMesh cube=ParticleMesh.cube();
+        Path obj=directory.resolve("cube.obj");Files.writeString(obj,cube.obj());
+        ParticleMesh loaded=ParticleMesh.read(obj);
+        check(loaded.vertices.length==8&&loaded.triangles.length==12,"OBJ geometry round trip");
+        ParticleMesh changed=loaded.transform(2,3,4,0,90,0);
+        near(changed.vertices[0][0],-2,"Mesh Y rotation");near(changed.vertices[0][1],-1.5,"Mesh axis scale");
+        ParticleMesh normalized=changed.normalize();double max=0;for(double[] v:normalized.vertices)for(double n:v)max=Math.max(max,Math.abs(n));near(max,.5,"Imported size normalization");
+        String negative="v 0 0 0\nv 1 0 0\nv 0 1 0\nf -3/1/2 -2/2/2 -1/3/2\n";
+        loaded=ParticleMesh.read(new java.io.ByteArrayInputStream(negative.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        check(loaded.triangles[0][0]==0,"OBJ relative indices and UV/normal syntax");
+        for(String invalid:new String[]{negative.replace("-3/1/2","0"),negative.replace("1 0 0","NaN 0 0"),negative.replace("f -3/1/2 -2/2/2 -1/3/2","f 1 2 3 1")}){
+            try{ParticleMesh.read(new java.io.ByteArrayInputStream(invalid.getBytes(java.nio.charset.StandardCharsets.UTF_8)));throw new AssertionError("Invalid OBJ accepted");}catch(java.io.IOException expected){}
+        }
+        ParticleEffect effect=new ParticleEffect();effect.mesh=changed;Path file=directory.resolve("mesh.pfx");effect.save(file);effect=ParticleEffect.load(file);
+        check(effect.mesh.obj().equals(changed.obj()),"Edited mesh embedded in effect archive");
+        ParticleSystem system=new ParticleSystem();system.emit(effect,0,2,0,0);
+        check(system.particles.stream().allMatch(p->p.mesh!=null&&p.mesh.obj().equals(changed.obj())),"Particle instances retain shape geometry");
+        system.quality(ParticleSystem.Quality.HIGH);for(int i=0;i<30;i++)system.emit(effect,0,2,0,0);
+        check(system.particles.stream().mapToInt(p->p.mesh.triangles.length).sum()<=8192,"Custom mesh triangle budget");
+        final ParticleMesh[] selected={cube};
+        SwingUtilities.invokeAndWait(()->{
+            ParticleShapeEditor editor=new ParticleShapeEditor(()->selected[0],v->selected[0]=v,()->Color.ORANGE);
+            editor.model.setValueAt("0.75",0,1);near(selected[0].vertices[0][0],.75,"Vertex cell edits shape");
+            editor.travel(editor.undo,editor.redo);near(selected[0].vertices[0][0],-.5,"Shape undo");
+            editor.travel(editor.redo,editor.undo);near(selected[0].vertices[0][0],.75,"Shape redo");
+            editor.setSize(1100,700);layout(editor);BufferedImage image=new BufferedImage(1100,700,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();editor.paint(g);g.dispose();
+            check(editor.view.renderer.image!=null,"Shape tab uses shared depth renderer");
+            editor.view.distance=.3;g=image.createGraphics();editor.view.paint(g);g.dispose();
+            int pixels=0;for(int argb:editor.view.renderer.pixels)if((argb>>>24)!=0)pixels++;check(pixels>0,"Near-plane intersecting mesh remains visible");
+            editor.edit(null);check(selected[0]==null,"Remove custom shape");editor.travel(editor.undo,editor.redo);check(selected[0]!=null,"Undo removal");
+        });
+    }
     static void physics() {
         for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values()) {
             ParticleEffect e=ParticleEffect.preset(pattern);ParticleSystem s=new ParticleSystem();s.quality(ParticleSystem.Quality.HIGH);
@@ -103,6 +136,7 @@ public class ParticleEditorCheck {
                 try{javax.imageio.ImageIO.write(colorImage,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-colors.png").toFile());}
                 catch(java.io.IOException ex){throw new RuntimeException(ex);}
                 editor.setSize(1220,820);layout(editor);
+                check(components(editor,JTabbedPane.class).stream().anyMatch(t->t.getTabCount()==2&&t.getTitleAt(1).equals("Custom shape")),"Shape workspace is a secondary particle editor tab");
                 check(components(editor,JSlider.class).size()==25,"All twenty-five parameter sliders exist");
                 java.util.List<JComboBox> combos=components(editor,JComboBox.class);
                 for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values())combos.get(0).setSelectedItem(pattern);
@@ -131,6 +165,16 @@ public class ParticleEditorCheck {
                     graphics=after.createGraphics();draw.invoke(game,graphics);graphics.dispose();
                     int changed=0;for(int y=0;y<700;y++)for(int x=0;x<1000;x++)if(before.getRGB(x,y)!=after.getRGB(x,y))changed++;
                     check(changed>100,"Uploaded sprite renders in actual game world");
+                    particles.clear();sprite.mesh=ParticleMesh.cube();particles.emit(sprite,0,2,0,0);
+                    graphics=after.createGraphics();draw.invoke(game,graphics);graphics.dispose();
+                    changed=0;for(int y=0;y<700;y++)for(int x=0;x<1000;x++)if(before.getRGB(x,y)!=after.getRGB(x,y))changed++;
+                    check(changed>50,"Custom mesh renders in actual game world with sprite also assigned");
+                    java.lang.reflect.Field effectField=ParticleEditor.class.getDeclaredField("effect");effectField.setAccessible(true);effectField.set(editor,sprite);
+                    java.lang.reflect.Method restart=ParticleEditor.class.getDeclaredMethod("restart");restart.setAccessible(true);restart.invoke(editor);
+                    Graphics2D previewGraphics=image.createGraphics();editor.paint(previewGraphics);previewGraphics.dispose();
+                    java.lang.reflect.Field previewField=ParticleEditor.class.getDeclaredField("preview");previewField.setAccessible(true);Object preview=previewField.get(editor);
+                    java.lang.reflect.Field rendererField=preview.getClass().getDeclaredField("meshRenderer");rendererField.setAccessible(true);
+                    check(((SceneDepthRenderer)rendererField.get(preview)).image!=null,"Animated custom particles use shared depth renderer");
                 }catch(ReflectiveOperationException ex){throw new RuntimeException(ex);}
             } finally {editor.stop();}
         });
@@ -146,7 +190,7 @@ public class ParticleEditorCheck {
     }
     private static void run() throws Exception {
         Path directory=Files.createTempDirectory("particle-editor-check-");
-        try{files(directory);advanced(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
+        try{files(directory);advanced(directory);meshes(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
         finally{try(java.util.stream.Stream<Path> files=Files.walk(directory)){
             for(Path path:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(path);}}
         System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders, live color/hex/palette editing and editor rendering.");

@@ -222,6 +222,22 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
+The **Custom shape** tab lives inside Particle Studio. Import a triangulated
+Wavefront OBJ (geometry only, up to 512 vertices / 256 triangles / 256 KB), or
+start with **New cube**. Imports are centered and normalized to one unit across
+their longest dimension. Edit individual vertex X/Y/Z cells, apply axis scales
+and rotations, or center/normalize again. **Undo/Redo** (Ctrl+Z/Ctrl+Y) cover shape
+edits. Drag to orbit, scroll to zoom, and use **Frame shape** to fit the view.
+Export the edited geometry as OBJ or save the effect: its shape is embedded in
+`.pfx`, including game assignments. **Use built-in shape** removes the mesh.
+Custom shapes override the sprite and built-in shape, use the effect color,
+size and spin, and render with the same depth-buffer and near-plane clipping
+as Map Studio in both the shape tab and animated preview/game. OBJ materials,
+textures, and animation are not imported; triangulate polygons before exporting
+from your modeling software. A shared 8,192-triangle budget trims the oldest
+mesh particles in addition to the normal quality count cap. Shapes are cosmetic;
+the ground bounce uses the existing particle-size approximation.
+
 Advanced customization includes speed/size/lifetime randomness (zero removes
 variation), emission duration (0-5 seconds), fade-in/out as fractions of each
 particle's lifetime, air resistance (0-10 per second), and world-axis X/Y/Z wind

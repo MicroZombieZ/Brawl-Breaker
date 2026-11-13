@@ -14,6 +14,7 @@ final class ParticleSystem {
             BLUE = new Color(121, 217, 255), AIR = new Color(204, 237, 245);
     static final class Particle {
         java.awt.image.BufferedImage image;
+        ParticleMesh mesh;
         double opacity=1, twinkle;
         Shape shape;
         Color color;
@@ -68,14 +69,22 @@ final class ParticleSystem {
             Particle p=add(e.shape,e.color,px,Math.max(.03,y),pz,e.size*between(1-e.sizeVariation,1+e.sizeVariation),e.lifetime*between(1-e.lifetimeVariation,1+e.lifetimeVariation));
             p.vx=dx*velocity;p.vy=dy*velocity;p.vz=dz*velocity;
             p.gravity=e.gravity;p.growth=e.growth;p.spin=between(-e.spin,e.spin);
-            p.image=e.image;p.opacity=e.opacity;
+            p.image=e.image;p.mesh=e.mesh;p.opacity=e.opacity;
             p.drag=e.drag;p.windX=e.windX;p.windY=e.windY;p.windZ=e.windZ;
             p.fadeIn=e.fadeIn;p.fadeOut=e.fadeOut;p.bounce=e.bounce;p.groundCollision=e.groundCollision;
             p.delay=between(0,e.emissionDuration);
             if(e.pattern==ParticleEffect.Pattern.SPARKLE) { p.delay+=between(0,.35);p.twinkle=between(12,24); }
         }
+        trimMeshBudget();
     }
 
+    // Bound total mesh work as well as the normal live-particle count.
+    private void trimMeshBudget(){
+        int triangles=0;for(Particle p:particles)if(p.mesh!=null)triangles+=p.mesh.triangles.length;
+        Iterator<Particle> it=particles.iterator();while(triangles>8192&&it.hasNext()){
+            Particle p=it.next();if(p.mesh!=null){triangles-=p.mesh.triangles.length;it.remove();}
+        }
+    }
     static double alpha(Particle p) {
         double age=Math.max(0,1-p.life/p.duration);
         double fade=Math.min(p.fadeIn==0?1:age/p.fadeIn,p.fadeOut==0?1:(1-age)/p.fadeOut);
@@ -246,9 +255,9 @@ final class ParticleSystem {
             p.y+=p.vy*step-.5*p.gravity*step*step; p.vy-=p.gravity*step;
             }
             p.size=Math.max(.005,p.size+p.growth*step);p.angle+=p.spin*step;
-            if(p.groundCollision && p.shape!=Shape.RING && p.y<p.size*.3) {
+            if(p.groundCollision && (p.mesh!=null || p.shape!=Shape.RING) && p.y<p.size*.3) {
                 p.y=p.size*.3;
-                if((p.shape==Shape.CUBE || p.shape==Shape.SHARD) && p.bounces++<2 && Math.abs(p.vy)>.5) p.vy=-p.vy*p.bounce;
+                if((p.mesh!=null || p.shape==Shape.CUBE || p.shape==Shape.SHARD) && p.bounces++<2 && Math.abs(p.vy)>.5) p.vy=-p.vy*p.bounce;
                 else p.vy=0;
                 p.vx*=Math.exp(-5*step);p.vz*=Math.exp(-5*step);
             }

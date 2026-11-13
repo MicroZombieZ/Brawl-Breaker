@@ -4,6 +4,11 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add a Custom shape tab within Particle Studio: triangulated OBJ import/export,
+  vertex editing, scale/rotation, cube creation, normalization and undo/redo.
+  Embed meshes in effect files and game assignments; render custom particles
+  using Map Studio's shared depth/clipping renderer with a bounded mesh budget.
+
 - Expand Particle Studio with randomness, emission duration, lifetime fades,
   wind, air resistance, ground collision and debris bounce controls. Save and
   apply these settings in-game while preserving older effect defaults.

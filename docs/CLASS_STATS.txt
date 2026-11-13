@@ -415,6 +415,23 @@ PARTICLE STUDIO -- IMPLEMENTED
 Launch (project root):        ParticleEditor.bat, or scripts\Build.bat followed by
                               java -cp build/classes ParticleEditor
 Editor source:                tools/particle-editor/ParticleEditor.java
+Custom shape workspace:       Second tab inside Particle Studio (not a separate app)
+Import/export:                Triangulated OBJ geometry; positive/negative face indices
+Limits per shape:             512 vertices, 256 triangles, 256 KB OBJ file
+Import fitting:               Centered; longest dimension normalized to one unit
+Editing:                      Vertex X/Y/Z table, axis scale and XYZ rotation,
+                              center/normalize, cube starter, remove custom shape
+Shape history:                Undo/Redo buttons or Ctrl+Z/Ctrl+Y; up to 50 edits
+Shape camera:                 Drag orbit, scroll zoom, Frame shape button
+Saving:                       Embedded shape.obj in .pfx; no external mesh dependency
+Rendering:                    Shared SceneDepthRenderer (Map Studio), depth testing
+                              and near-plane clipping in shape tab, preview and game
+Appearance priority:          Custom mesh > uploaded sprite > built-in shape
+Mesh appearance:              Effect color, size, Y-axis spin and flat face lighting
+OBJ scope:                    Geometry only; no materials/textures/animation
+Runtime mesh budget:          8192 triangles across live/delayed mesh particles;
+                              oldest meshes trimmed, plus normal quality count cap
+Mesh physics:                 Cosmetic; existing size-based ground bounce approximation
 Shared particle code:         src/particles
 Saved designs/assignments:    particle-effects (default Open/Save location)
 Purpose:                      Separate desktop cosmetic effect editor; shared

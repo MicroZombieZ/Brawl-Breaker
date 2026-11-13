@@ -12,6 +12,7 @@ public class ParticleEditor extends JPanel {
     private ParticleEffect effect=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);
     private final ParticleSystem system=new ParticleSystem();
     private final Preview preview=new Preview();
+    private ParticleShapeEditor shapeEditor;
     private final JPanel sliders=new Controls();
     private final JLabel status=new JLabel("Create an effect, then save it or assign it to a game event.");
     private final JLabel imageLabel=new JLabel("Built-in shapes; PNG transparency supported");
@@ -54,8 +55,8 @@ public class ParticleEditor extends JPanel {
         sliders.setLayout(new BoxLayout(sliders,BoxLayout.Y_AXIS));
         section("EMISSION");
         row("Preset",presets);presets.addActionListener(e->{ if(!refreshing) {
-            java.awt.image.BufferedImage image=effect.image;
-            effect=ParticleEffect.preset((ParticleEffect.Pattern)presets.getSelectedItem());effect.image=image;
+            java.awt.image.BufferedImage image=effect.image;ParticleMesh mesh=effect.mesh;
+            effect=ParticleEffect.preset((ParticleEffect.Pattern)presets.getSelectedItem());effect.image=image;effect.mesh=mesh;
             dirty=true;refresh();restart();
         }});
         row("Shape",shapes);shapes.addActionListener(e->{if(!refreshing){effect.shape=(ParticleSystem.Shape)shapes.getSelectedItem();dirty=true;}});
@@ -109,7 +110,9 @@ public class ParticleEditor extends JPanel {
         JScrollPane scroll=new JScrollPane(sliders);scroll.setPreferredSize(new Dimension(370,600));
         scroll.getVerticalScrollBar().setUnitIncrement(18);scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         JSplitPane split=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,workspace,scroll);split.setResizeWeight(1);split.setBorder(null);
-        add(split,BorderLayout.CENTER);status.setBorder(BorderFactory.createEmptyBorder(6,4,0,0));add(status,BorderLayout.SOUTH);
+        shapeEditor=new ParticleShapeEditor(()->effect.mesh,mesh->{effect.mesh=mesh;dirty=true;restart();},()->effect.color);
+        JTabbedPane tabs=new JTabbedPane();tabs.addTab("Particle effects",split);tabs.addTab("Custom shape",shapeEditor);
+        add(tabs,BorderLayout.CENTER);status.setBorder(BorderFactory.createEmptyBorder(6,4,0,0));add(status,BorderLayout.SOUTH);
         refresh();restart();
         timer=new javax.swing.Timer(16,e->tick());timer.start();
     }
@@ -141,6 +144,7 @@ public class ParticleEditor extends JPanel {
         imageLabel.setText(effect.image==null?"Built-in shapes; PNG transparency supported":
                 "Image: "+effect.image.getWidth()+" x "+effect.image.getHeight()+" (embedded when saved)");
         refreshing=false;
+        if(shapeEditor!=null)shapeEditor.reset();
     }
     private void refreshColor(){
         colorSwatch.setText(ParticleColorEditor.format(effect.color));colorSwatch.setBackground(effect.color);
@@ -148,8 +152,8 @@ public class ParticleEditor extends JPanel {
     }
     private void previewColor(Color color){
         effect.color=color;refreshColor();
-        for(ParticleSystem.Particle p:system.particles)if(p.image==null)p.color=color;
-        preview.repaint();
+        for(ParticleSystem.Particle p:system.particles)if(p.mesh!=null||p.image==null)p.color=color;
+        preview.repaint();if(shapeEditor!=null)shapeEditor.view.repaint();
     }
     private void editColor(){
         Color original=effect.color;boolean wasDirty=dirty;
@@ -212,6 +216,7 @@ public class ParticleEditor extends JPanel {
     void stop(){timer.stop();}
 
     private final class Preview extends JPanel {
+        final SceneDepthRenderer meshRenderer=new SceneDepthRenderer();
         double yaw=.65,pitch=.4,distance=10;Point drag;
         Preview(){
             setPreferredSize(new Dimension(700,600));setBackground(new Color(17,23,32));
@@ -243,7 +248,19 @@ public class ParticleEditor extends JPanel {
                     1+Math.sin(elevation)*2,-Math.cos(heading)*Math.cos(elevation)*2);
             ArrayList<ParticleSystem.Particle> sorted=new ArrayList<>(system.particles);
             sorted.sort(Comparator.comparingDouble(p->-project(p.x,p.y,p.z)[3]));
+            java.util.List<SceneDepthRenderer.Face> meshFaces=new ArrayList<>();
             for(ParticleSystem.Particle p:sorted){
+                if(p.mesh==null||p.delay>0)continue;
+                int alpha=(int)(220*ParticleSystem.alpha(p));if(alpha<2)continue;
+                Color color=new Color(p.color.getRed(),p.color.getGreen(),p.color.getBlue(),alpha);
+                for(int[] tri:p.mesh.triangles){double[][] world=p.mesh.face(tri,p.x,p.y,p.z,p.size,p.angle),camera=new double[3][5];
+                    for(int i=0;i<3;i++){double[] v=world[i];double forward=v[0]*Math.sin(yaw)+v[2]*Math.cos(yaw);camera[i]=new double[]{v[0]*Math.cos(yaw)-v[2]*Math.sin(yaw),(v[1]-1)*Math.cos(pitch)-forward*Math.sin(pitch),distance-forward*Math.cos(pitch)-(v[1]-1)*Math.sin(pitch),0,0};}
+                    SceneDepthRenderer.Face f=SceneDepthRenderer.project(camera,getWidth()*.5,getHeight()*.52,Math.min(getWidth(),getHeight())*.95,ParticleMesh.shade(color,world),p);if(f!=null){f.outline=false;meshFaces.add(f);}
+                }
+            }
+            if(!meshFaces.isEmpty()&&getWidth()>0&&getHeight()>0){meshRenderer.render(getWidth(),getHeight(),meshFaces,Collections.emptySet());g.drawImage(meshRenderer.image,0,0,null);}
+            for(ParticleSystem.Particle p:sorted){
+                if(p.mesh!=null)continue;
                 if(p.delay>0)continue;double[] point=project(p.x,p.y,p.z);if(point[3]<.1)continue;
                 float alpha=(float)ParticleSystem.alpha(p);if(alpha<.005)continue;
                 double radius=Math.max(.3,p.size*point[2]);
