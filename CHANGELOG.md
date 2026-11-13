@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Expand Particle Studio with randomness, emission duration, lifetime fades,
+  wind, air resistance, ground collision and debris bounce controls. Save and
+  apply these settings in-game while preserving older effect defaults.
+
 - Apply Map Studio's depth/clipping fix to gameplay through a shared rasterizer;
   fix scenery/player/target overlap and depth-test transparent particles and
   shockwaves, including image particles crossing the camera boundary.

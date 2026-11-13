@@ -18,6 +18,8 @@ final class ParticleSystem {
         Shape shape;
         Color color;
         double x, y, z, vx, vy, vz, gravity, size, growth, life, duration, angle, spin, delay;
+        double drag, windX, windY, windZ, fadeIn, fadeOut=1, bounce=.35;
+        boolean groundCollision=true;
         int bounces;
     }
     private static final class Track {
@@ -62,17 +64,22 @@ final class ParticleSystem {
                 dy=fy*cos+uy*Math.sin(a)*sin;
                 dz=fz*cos+(rz*Math.cos(a)+uz*Math.sin(a))*sin;
             }
-            double velocity=e.speed*Math.sqrt(e.aggression)*between(.6,1.2);
-            Particle p=add(e.shape,e.color,px,Math.max(.03,y),pz,e.size*between(.75,1.25),e.lifetime*between(.75,1.25));
+            double velocity=e.speed*Math.sqrt(e.aggression)*between(Math.max(0,1-e.speedVariation*4/3),1+e.speedVariation*2/3);
+            Particle p=add(e.shape,e.color,px,Math.max(.03,y),pz,e.size*between(1-e.sizeVariation,1+e.sizeVariation),e.lifetime*between(1-e.lifetimeVariation,1+e.lifetimeVariation));
             p.vx=dx*velocity;p.vy=dy*velocity;p.vz=dz*velocity;
             p.gravity=e.gravity;p.growth=e.growth;p.spin=between(-e.spin,e.spin);
             p.image=e.image;p.opacity=e.opacity;
-            if(e.pattern==ParticleEffect.Pattern.SPARKLE) { p.delay=between(0,.35);p.twinkle=between(12,24); }
+            p.drag=e.drag;p.windX=e.windX;p.windY=e.windY;p.windZ=e.windZ;
+            p.fadeIn=e.fadeIn;p.fadeOut=e.fadeOut;p.bounce=e.bounce;p.groundCollision=e.groundCollision;
+            p.delay=between(0,e.emissionDuration);
+            if(e.pattern==ParticleEffect.Pattern.SPARKLE) { p.delay+=between(0,.35);p.twinkle=between(12,24); }
         }
     }
 
     static double alpha(Particle p) {
-        double fade=Math.max(0,Math.min(1,p.life/p.duration));
+        double age=Math.max(0,1-p.life/p.duration);
+        double fade=Math.min(p.fadeIn==0?1:age/p.fadeIn,p.fadeOut==0?1:(1-age)/p.fadeOut);
+        fade=Math.max(0,Math.min(1,fade));
         return fade*p.opacity*(p.twinkle==0?1:.25+.75*Math.pow(Math.sin(p.life*p.twinkle),2));
     }
 
@@ -226,12 +233,22 @@ final class ParticleSystem {
             if(step<=0) continue;
             p.life-=step;
             if(p.life<=0) { iterator.remove();continue; }
+            // Exact constant acceleration + linear drag integration, stable at all frame rates.
+            if(p.drag>0 || p.windX!=0 || p.windY!=0 || p.windZ!=0){
+                double decay=Math.exp(-p.drag*step), travel=p.drag==0?step:-Math.expm1(-p.drag*step)/p.drag;
+                double accelTravel=p.drag==0?step*step/2:(step-travel)/p.drag;
+                p.x+=p.vx*travel+p.windX*accelTravel;
+                p.y+=p.vy*travel+(p.windY-p.gravity)*accelTravel;
+                p.z+=p.vz*travel+p.windZ*accelTravel;
+                p.vx=p.vx*decay+p.windX*travel;p.vy=p.vy*decay+(p.windY-p.gravity)*travel;p.vz=p.vz*decay+p.windZ*travel;
+            }else{
             p.x+=p.vx*step;p.z+=p.vz*step;
             p.y+=p.vy*step-.5*p.gravity*step*step; p.vy-=p.gravity*step;
+            }
             p.size=Math.max(.005,p.size+p.growth*step);p.angle+=p.spin*step;
-            if(p.shape!=Shape.RING && p.y<p.size*.3) {
+            if(p.groundCollision && p.shape!=Shape.RING && p.y<p.size*.3) {
                 p.y=p.size*.3;
-                if((p.shape==Shape.CUBE || p.shape==Shape.SHARD) && p.bounces++<2 && Math.abs(p.vy)>.5) p.vy=-p.vy*.35;
+                if((p.shape==Shape.CUBE || p.shape==Shape.SHARD) && p.bounces++<2 && Math.abs(p.vy)>.5) p.vy=-p.vy*p.bounce;
                 else p.vy=0;
                 p.vx*=Math.exp(-5*step);p.vz*=Math.exp(-5*step);
             }

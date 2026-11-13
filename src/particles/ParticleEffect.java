@@ -16,7 +16,14 @@ final class ParticleEffect {
     BufferedImage image;
     double aggression=1, speed=3, range=.15, spread=65, heading=0, elevation=45,
             size=.1, lifetime=.8, gravity=2, growth=0, spin=3, opacity=1, interval=.8;
+    double speedVariation=.3, sizeVariation=.25, lifetimeVariation=.25,
+            drag=0, windX=0, windY=0, windZ=0, emissionDuration=0,
+            fadeIn=0, fadeOut=1, bounce=.35;
+    boolean groundCollision=true;
     int count=40;
+    private static final String[] EXTRA={"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce"};
+    double[] extraValues(){return new double[]{speedVariation,sizeVariation,lifetimeVariation,drag,windX,windY,windZ,emissionDuration,fadeIn,fadeOut,bounce};}
+    private void extraValues(double[] v){speedVariation=v[0];sizeVariation=v[1];lifetimeVariation=v[2];drag=v[3];windX=v[4];windY=v[5];windZ=v[6];emissionDuration=v[7];fadeIn=v[8];fadeOut=v[9];bounce=v[10];}
 
     static ParticleEffect preset(Pattern pattern) {
         ParticleEffect e=new ParticleEffect();e.pattern=pattern;
@@ -41,6 +48,9 @@ final class ParticleEffect {
         bounded(growth,-1,2,"growth");bounded(spin,0,20,"spin");
         bounded(opacity,0,1,"opacity");bounded(interval,.1,5,"repeat interval");
         bounded(count,1,400,"count");
+        double[] extra=extraValues();
+        for(int i=0;i<extra.length;i++) bounded(extra[i],i>=4&&i<=6?-20:0,
+                i==3?10:i>=4&&i<=6?20:i==7?5:i==2?.95:1,EXTRA[i]);
         if(image!=null && (image.getWidth()>2048 || image.getHeight()>2048))
             throw new IOException("Images must be at most 2048 x 2048 pixels.");
     }
@@ -73,6 +83,9 @@ final class ParticleEffect {
         String[] names={"aggression","speed","range","spread","heading","elevation","size","lifetime","gravity","growth","spin","opacity","interval"};
         double[] values={aggression,speed,range,spread,heading,elevation,size,lifetime,gravity,growth,spin,opacity,interval};
         for(int i=0;i<names.length;i++) p.setProperty(names[i],Double.toString(values[i]));
+        double[] extra=extraValues();
+        for(int i=0;i<EXTRA.length;i++)p.setProperty(EXTRA[i],Double.toString(extra[i]));
+        p.setProperty("groundCollision",Boolean.toString(groundCollision));
         Path absolute=path.toAbsolutePath();Files.createDirectories(absolute.getParent());
         Path temporary=Files.createTempFile(absolute.getParent(),"particle-",".tmp");
         try {
@@ -99,6 +112,14 @@ final class ParticleEffect {
                 e.size=number(p,"size");e.lifetime=number(p,"lifetime");e.gravity=number(p,"gravity");
                 e.growth=number(p,"growth");e.spin=number(p,"spin");e.opacity=number(p,"opacity");e.interval=number(p,"interval");
             } catch(RuntimeException ex) { throw new IOException("Invalid particle settings.",ex); }
+            try {
+                double[] extra=e.extraValues();
+                for(int i=0;i<EXTRA.length;i++)if(p.containsKey(EXTRA[i]))extra[i]=number(p,EXTRA[i]);
+                e.extraValues(extra);
+                String collision=p.getProperty("groundCollision","true");
+                if(!collision.equals("true")&&!collision.equals("false"))throw new IllegalArgumentException("groundCollision");
+                e.groundCollision=Boolean.parseBoolean(collision);
+            }catch(RuntimeException ex){throw new IOException("Invalid advanced particle settings.",ex);}
             ZipEntry sprite=zip.getEntry("sprite.png");
             if(sprite!=null) try(InputStream in=zip.getInputStream(sprite)) {
                 e.image=readImage(new ByteArrayInputStream(readLimited(in,16*1024*1024)));

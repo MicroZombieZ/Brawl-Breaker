@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-11-10
+Last updated: 2026-11-13
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
@@ -450,7 +450,22 @@ Editor slider limits (world units and seconds):
   Spin:                       0-20 radians/second, randomized signed rotation
   Opacity:                    0-1, multiplied by lifetime fade and sparkle twinkle
 
-Speed varies by 0.6-1.2x; size and lifetime vary by 0.75-1.25x per particle.
+Default speed varies by 0.6-1.2x; size/lifetime by 0.75-1.25x per particle.
+Advanced custom controls (shared preview and game assignment simulation):
+  Speed randomness:          0-1, default .3; multiplier max(0,1-4r/3) to 1+2r/3
+  Size randomness:           0-1, default .25; multiplier 1-r to 1+r
+  Lifetime randomness:       0-.95, default .25; multiplier 1-r to 1+r
+  Emission duration:         0-5 seconds, default 0; random birth delay within range
+  Sparkle delay:             Adds its existing 0-.35 second stagger
+  Fade in/out:               0-1 lifetime fractions; defaults 0 and 1 respectively
+                             Overlapping fades use the lower opacity envelope
+  Air resistance:            0-10 per second, default 0; exponential velocity decay
+  Wind X/Y/Z:                -20 to 20 units/s2 each, default 0, world-axis forces
+  Ground collision:          On by default; Y=0 plane only, not map geometry
+  Debris bounce:             0-1, default .35; cubes/shards, up to two bounces
+  Compatibility:             Missing advanced fields retain legacy defaults
+  Looping:                   Repeat interval can overlap pending emissions
+These settings are cosmetic; they do not change player collision or abilities.
 Sparkle adds up to 0.35 seconds emission delay and a flickering fade.
 Ring and Dust Explosion use radial horizontal directions, not a directional cone.
 Elevation controls their lift; Dust spread controls extra upward scatter (capped

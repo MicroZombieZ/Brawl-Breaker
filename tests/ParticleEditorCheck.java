@@ -33,6 +33,38 @@ public class ParticleEditorCheck {
         Files.write(directory.resolve("LAND.pfx"),new byte[]{0});system.loadEffects(directory);
         check(system.customEffects.containsKey(GameEffect.Kind.HIT)&&!system.customEffects.containsKey(GameEffect.Kind.LAND),"Bad assignment does not disable valid events");
     }
+    static void advanced(Path directory) throws Exception {
+        ParticleEffect e=ParticleEffect.preset(ParticleEffect.Pattern.CONE);
+        e.speedVariation=0;e.sizeVariation=0;e.lifetimeVariation=0;e.drag=2;
+        e.windX=3;e.windY=1;e.windZ=-2;e.emissionDuration=.5;e.fadeIn=.2;e.fadeOut=.3;
+        e.bounce=.8;e.groundCollision=false;
+        Path path=directory.resolve("advanced.pfx");e.save(path);ParticleEffect loaded=ParticleEffect.load(path);
+        check(Arrays.equals(e.extraValues(),loaded.extraValues())&&!loaded.groundCollision,"Advanced settings round trip");
+        e.emissionDuration=0;e.gravity=0;e.count=1;e.lifetime=4;e.spread=0;
+        ParticleSystem a=new ParticleSystem(),b=new ParticleSystem();a.emit(e,0,10,0,0);b.emit(e,0,10,0,0);
+        ParticleSystem.Particle p=a.particles.get(0);
+        near(p.size,e.size,"Zero size randomness");near(p.duration,e.lifetime,"Zero lifetime randomness");
+        near(Math.sqrt(p.vx*p.vx+p.vy*p.vy+p.vz*p.vz),e.speed,"Zero speed randomness");
+        near(ParticleSystem.alpha(p),0,"Fade begins transparent");
+        a.update(.4);for(int i=0;i<40;i++)b.update(.01);
+        near(p.x,b.particles.get(0).x,"Wind/drag independent of timestep X");
+        near(p.y,b.particles.get(0).y,"Wind/drag independent of timestep Y");
+        near(p.z,b.particles.get(0).z,"Wind/drag independent of timestep Z");
+        near(ParticleSystem.alpha(p),.5,"Fade in follows lifetime fraction");
+        p.life=.6;near(ParticleSystem.alpha(p),.5,"Fade out follows lifetime fraction");
+        p.y=-1;a.update(.01);check(p.y<0,"Disabled ground collision allows passage");
+        e.emissionDuration=2;e.count=100;a.clear();a.emit(e,0,10,0,0);
+        check(a.particles.stream().allMatch(v->v.delay>=0&&v.delay<=2)&&a.particles.stream().anyMatch(v->v.delay>1),"Emission duration spreads births");
+        e.drag=Double.NaN;reject(e,path);e.drag=2;e.fadeIn=1.1;reject(e,path);
+        // Strip optional properties to simulate an effect saved by the original editor.
+        e=new ParticleEffect();e.save(path);
+        java.util.Properties props=new java.util.Properties();
+        try(java.util.zip.ZipFile zip=new java.util.zip.ZipFile(path.toFile())){props.load(zip.getInputStream(zip.getEntry("effect.properties")));}
+        for(String key:new String[]{"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce","groundCollision"})props.remove(key);
+        try(java.util.zip.ZipOutputStream out=new java.util.zip.ZipOutputStream(Files.newOutputStream(path))){out.putNextEntry(new java.util.zip.ZipEntry("effect.properties"));props.store(out,"");out.closeEntry();}
+        loaded=ParticleEffect.load(path);
+        check(Arrays.equals(e.extraValues(),loaded.extraValues())&&loaded.groundCollision,"Legacy files preserve defaults");
+    }
     static void physics() {
         for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values()) {
             ParticleEffect e=ParticleEffect.preset(pattern);ParticleSystem s=new ParticleSystem();s.quality(ParticleSystem.Quality.HIGH);
@@ -71,7 +103,7 @@ public class ParticleEditorCheck {
                 try{javax.imageio.ImageIO.write(colorImage,"png",Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-colors.png").toFile());}
                 catch(java.io.IOException ex){throw new RuntimeException(ex);}
                 editor.setSize(1220,820);layout(editor);
-                check(components(editor,JSlider.class).size()==14,"All fourteen parameter sliders exist");
+                check(components(editor,JSlider.class).size()==25,"All twenty-five parameter sliders exist");
                 java.util.List<JComboBox> combos=components(editor,JComboBox.class);
                 for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values())combos.get(0).setSelectedItem(pattern);
                 for(JSlider slider:components(editor,JSlider.class)) {slider.setValue(slider.getMinimum());slider.setValue(slider.getMaximum());}
@@ -114,7 +146,7 @@ public class ParticleEditorCheck {
     }
     private static void run() throws Exception {
         Path directory=Files.createTempDirectory("particle-editor-check-");
-        try{files(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
+        try{files(directory);advanced(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"));}
         finally{try(java.util.stream.Stream<Path> files=Files.walk(directory)){
             for(Path path:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(path);}}
         System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders, live color/hex/palette editing and editor rendering.");

@@ -222,6 +222,17 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
+Advanced customization includes speed/size/lifetime randomness (zero removes
+variation), emission duration (0-5 seconds), fade-in/out as fractions of each
+particle's lifetime, air resistance (0-10 per second), and world-axis X/Y/Z wind
+acceleration (-20 to 20 units/s?). Ground collision can be disabled; debris bounce
+strength is adjustable from 0 to 1 (cubes/shards, up to two bounces). Ground
+collision uses the Y=0 plane, not map objects. Sparkle adds its existing birth
+stagger to emission duration. Repeat interval can overlap unfinished emissions.
+These settings are saved in `.pfx` files and used by game event assignments.
+Older effects keep their original defaults. Images retain their original colors.
+
+
 Double-click **ParticleEditor.bat** to open the separate desktop editor, or run
 `scripts\Build.bat` and then `java -cp build/classes ParticleEditor` from the
 project root. It uses the game's particle
