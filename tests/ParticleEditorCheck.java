@@ -66,6 +66,18 @@ public class ParticleEditorCheck {
         check(Arrays.equals(e.extraValues(),loaded.extraValues())&&loaded.groundCollision,"Legacy files preserve defaults");
     }
     static void meshes(Path directory) throws Exception {
+        for(ParticleMesh.Primitive primitive:ParticleMesh.Primitive.values()){
+            ParticleMesh m=ParticleMesh.primitive(primitive);check(m.triangles.length<=256,"Primitive within mesh budget: "+primitive);
+            java.util.Map<String,Integer> edges=new java.util.HashMap<>();
+            for(int[] f:m.triangles){double[] a=m.vertices[f[0]],b=m.vertices[f[1]],c=m.vertices[f[2]];
+                double ax=b[0]-a[0],ay=b[1]-a[1],az=b[2]-a[2],bx=c[0]-a[0],by=c[1]-a[1],bz=c[2]-a[2];
+                check(Math.pow(ay*bz-az*by,2)+Math.pow(az*bx-ax*bz,2)+Math.pow(ax*by-ay*bx,2)>1e-12,"Nondegenerate primitive triangles: "+primitive);
+                for(int i=0;i<3;i++){int u=f[i],v=f[(i+1)%3];String key=Math.min(u,v)+":"+Math.max(u,v);edges.merge(key,1,Integer::sum);}
+            }
+            check(edges.values().stream().allMatch(n->n==2),"Closed primitive: "+primitive);
+            ParticleMesh parsed=ParticleMesh.read(new java.io.ByteArrayInputStream(m.obj().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            check(parsed.obj().equals(m.obj()),"Primitive OBJ round trip: "+primitive);
+        }
         ParticleMesh cube=ParticleMesh.cube();
         Path obj=directory.resolve("cube.obj");Files.writeString(obj,cube.obj());
         ParticleMesh loaded=ParticleMesh.read(obj);
@@ -93,6 +105,22 @@ public class ParticleEditorCheck {
             editor.travel(editor.redo,editor.undo);near(selected[0].vertices[0][0],.75,"Shape redo");
             editor.setSize(1100,700);layout(editor);BufferedImage image=new BufferedImage(1100,700,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();editor.paint(g);g.dispose();
             check(editor.view.renderer.image!=null,"Shape tab uses shared depth renderer");
+            editor.edit(cube);editor.view.setSize(650,550);editor.view.frame();
+            int vertex=-1,hidden=0;for(int i=0;i<cube.vertices.length;i++){double[] p=editor.view.screen(cube.vertices[i]);Point point=new Point((int)Math.round(p[0]),(int)Math.round(p[1]));
+                if(editor.view.pick(point)==i)vertex=i;else hidden++;}
+            check(vertex>=0&&hidden>0,"Visible handles pickable; rear vertices occluded");
+            double[] pos=editor.view.screen(cube.vertices[vertex]);Point start=new Point((int)Math.round(pos[0]),(int)Math.round(pos[1]));
+            double yaw=editor.view.yaw,dist=editor.view.distance;int history=editor.undo.size();
+            editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_PRESSED,0,java.awt.event.InputEvent.BUTTON1_DOWN_MASK,start.x,start.y,1,false,java.awt.event.MouseEvent.BUTTON1));
+            editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_DRAGGED,0,java.awt.event.InputEvent.BUTTON1_DOWN_MASK,start.x+20,start.y+10,0,false,java.awt.event.MouseEvent.NOBUTTON));
+            editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_DRAGGED,0,java.awt.event.InputEvent.BUTTON1_DOWN_MASK,start.x+40,start.y+20,0,false,java.awt.event.MouseEvent.NOBUTTON));
+            editor.view.dispatchEvent(new java.awt.event.MouseEvent(editor.view,java.awt.event.MouseEvent.MOUSE_RELEASED,0,0,start.x+40,start.y+20,1,false,java.awt.event.MouseEvent.BUTTON1));
+            check(editor.undo.size()==history+1,"One undo step per vertex drag");near(editor.view.yaw,yaw,"Vertex drag does not orbit");near(editor.view.distance,dist,"Vertex drag does not reframe");
+            check(editor.table.getSelectedRow()==vertex,"Viewport selection synchronizes vertex table");
+            double[] moved=editor.view.screen(selected[0].vertices[vertex]);near(moved[0],pos[0]+40,"Vertex tracks cursor X");near(moved[1],pos[1]+20,"Vertex tracks cursor Y");
+            for(int i=0;i<cube.vertices.length;i++)if(i!=vertex)check(Arrays.equals(cube.vertices[i],selected[0].vertices[i]),"Only grabbed vertex moves");
+            editor.travel(editor.undo,editor.redo);check(selected[0].obj().equals(cube.obj()),"Undo restores whole drag");
+            editor.view.original=selected[0];editor.view.grabbed=vertex;editor.view.start=start;editor.view.moveVertex(new Point(start.x+10,start.y));editor.view.cancelVertex();check(selected[0].obj().equals(cube.obj()),"Escape restores vertex drag");
             editor.view.distance=.3;g=image.createGraphics();editor.view.paint(g);g.dispose();
             int pixels=0;for(int argb:editor.view.renderer.pixels)if((argb>>>24)!=0)pixels++;check(pixels>0,"Near-plane intersecting mesh remains visible");
             editor.edit(null);check(selected[0]==null,"Remove custom shape");editor.travel(editor.undo,editor.redo);check(selected[0]!=null,"Undo removal");

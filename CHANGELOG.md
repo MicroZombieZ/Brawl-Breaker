@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add visible vertex selection and dragging to Particle Studio's Custom shape
+  tab, with coordinate-table selection, one undo step per drag, and Escape cancel.
+  Add sphere, cylinder, cone, trapezoid prism, and pyramid shape starters.
+
 - Add a Custom shape tab within Particle Studio: triangulated OBJ import/export,
   vertex editing, scale/rotation, cube creation, normalization and undo/redo.
   Embed meshes in effect files and game assignments; render custom particles

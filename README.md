@@ -224,10 +224,15 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 The **Custom shape** tab lives inside Particle Studio. Import a triangulated
 Wavefront OBJ (geometry only, up to 512 vertices / 256 triangles / 256 KB), or
-start with **New cube**. Imports are centered and normalized to one unit across
+choose **Cube, Sphere, Cylinder, Cone, Trapezoid, or Pyramid** and click
+**Create shape** (this replaces the current shape and can be undone). Imports are centered and normalized to one unit across
 their longest dimension. Edit individual vertex X/Y/Z cells, apply axis scales
 and rotations, or center/normalize again. **Undo/Redo** (Ctrl+Z/Ctrl+Y) cover shape
-edits. Drag to orbit, scroll to zoom, and use **Frame shape** to fit the view.
+edits. Left-click a visible vertex handle to select it, then drag to move that vertex
+in the screen plane. Orbit to adjust it along another direction, or use its
+highlighted X/Y/Z row for exact coordinates. Hidden vertices cannot be picked
+through faces. Each drag is one undo step; Escape cancels it. Right/middle-drag
+or drag empty space to orbit, scroll to zoom, and use **Frame shape** to fit the view.
 Export the edited geometry as OBJ or save the effect: its shape is embedded in
 `.pfx`, including game assignments. **Use built-in shape** removes the mesh.
 Custom shapes override the sprite and built-in shape, use the effect color,

@@ -420,9 +420,16 @@ Import/export:                Triangulated OBJ geometry; positive/negative face 
 Limits per shape:             512 vertices, 256 triangles, 256 KB OBJ file
 Import fitting:               Centered; longest dimension normalized to one unit
 Editing:                      Vertex X/Y/Z table, axis scale and XYZ rotation,
-                              center/normalize, cube starter, remove custom shape
+                              center/normalize, remove custom shape
+Shape starters:               Cube, Sphere, Cylinder, Cone, Trapezoid prism, Pyramid;
+                              Create shape replaces current mesh (undoable)
+Vertex handles:               Left-click/drag visible vertex in screen plane;
+                              selection highlights corresponding coordinate row
+                              Hidden vertices are not pickable through faces
+Drag history:                 One undo per drag; Escape restores original vertex
 Shape history:                Undo/Redo buttons or Ctrl+Z/Ctrl+Y; up to 50 edits
-Shape camera:                 Drag orbit, scroll zoom, Frame shape button
+Shape camera:                 Right/middle or empty-space drag orbit, scroll zoom,
+                              Frame shape button
 Saving:                       Embedded shape.obj in .pfx; no external mesh dependency
 Rendering:                    Shared SceneDepthRenderer (Map Studio), depth testing
                               and near-plane clipping in shape tab, preview and game

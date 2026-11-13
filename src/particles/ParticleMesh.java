@@ -61,5 +61,31 @@ final class ParticleMesh {
         for(int i=0;i<3;i++){double[] v=vertices[f[i]];out[i]=new double[]{x+size*(v[0]*Math.cos(angle)+v[2]*Math.sin(angle)),y+size*v[1],z+size*(-v[0]*Math.sin(angle)+v[2]*Math.cos(angle))};}return out;}
     static ParticleMesh cube(){try{return new ParticleMesh(new double[][]{{-.5,-.5,-.5},{.5,-.5,-.5},{.5,.5,-.5},{-.5,.5,-.5},{-.5,-.5,.5},{.5,-.5,.5},{.5,.5,.5},{-.5,.5,.5}},
         new int[][]{{0,1,2},{0,2,3},{4,6,5},{4,7,6},{0,4,5},{0,5,1},{3,2,6},{3,6,7},{0,3,7},{0,7,4},{1,5,6},{1,6,2}});}catch(IOException ex){throw new AssertionError(ex);}}
+    enum Primitive { CUBE, SPHERE, CYLINDER, CONE, TRAPEZOID, PYRAMID }
+    static ParticleMesh primitive(Primitive type){
+        if(type==Primitive.CUBE)return cube();
+        try{
+            if(type==Primitive.TRAPEZOID){ParticleMesh c=cube();double[][] v=new double[c.vertices.length][];
+                for(int i=0;i<v.length;i++){v[i]=c.vertices[i].clone();if(v[i][1]>0)v[i][0]*=.5;}
+                return new ParticleMesh(v,c.triangles);
+            }
+            ArrayList<double[]> v=new ArrayList<>();ArrayList<int[]> f=new ArrayList<>();
+            int n=type==Primitive.PYRAMID?4:12;
+            if(type==Primitive.SPHERE){
+                v.add(new double[]{0,.5,0});int rings=7;
+                for(int r=1;r<=rings;r++){double a=Math.PI*r/(rings+1);for(int j=0;j<n;j++){double b=2*Math.PI*j/n;v.add(new double[]{.5*Math.sin(a)*Math.cos(b),.5*Math.cos(a),.5*Math.sin(a)*Math.sin(b)});}}
+                int bottom=v.size();v.add(new double[]{0,-.5,0});
+                for(int j=0;j<n;j++){int next=(j+1)%n;f.add(new int[]{0,1+j,1+next});f.add(new int[]{bottom,1+(rings-1)*n+next,1+(rings-1)*n+j});}
+                for(int r=0;r<rings-1;r++)for(int j=0;j<n;j++){int a=1+r*n+j,b=1+r*n+(j+1)%n;f.add(new int[]{a,a+n,b});f.add(new int[]{b,a+n,b+n});}
+            }else{
+                for(int j=0;j<n;j++){double a=2*Math.PI*j/n+(type==Primitive.PYRAMID?Math.PI/4:0);v.add(new double[]{.5*Math.cos(a),-.5,.5*Math.sin(a)});}
+                int base=v.size();v.add(new double[]{0,-.5,0});
+                if(type==Primitive.CYLINDER){int top=v.size();for(int j=0;j<n;j++){double[] b=v.get(j);v.add(new double[]{b[0],.5,b[2]});}int center=v.size();v.add(new double[]{0,.5,0});
+                    for(int j=0;j<n;j++){int k=(j+1)%n;f.add(new int[]{base,k,j});f.add(new int[]{center,top+j,top+k});f.add(new int[]{j,k,top+j});f.add(new int[]{k,top+k,top+j});}
+                }else{int tip=v.size();v.add(new double[]{0,.5,0});for(int j=0;j<n;j++){int k=(j+1)%n;f.add(new int[]{base,k,j});f.add(new int[]{j,k,tip});}}
+            }
+            return new ParticleMesh(v.toArray(new double[0][]),f.toArray(new int[0][]));
+        }catch(IOException ex){throw new AssertionError(ex);}
+    }
     static Color shade(Color c,double[][] v){double ax=v[1][0]-v[0][0],ay=v[1][1]-v[0][1],az=v[1][2]-v[0][2],bx=v[2][0]-v[0][0],by=v[2][1]-v[0][1],bz=v[2][2]-v[0][2];double nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,len=Math.sqrt(nx*nx+ny*ny+nz*nz);double light=len<1e-10?.65:.45+.55*Math.abs((nx*.3+ny*.8+nz*.5)/(len*Math.sqrt(.98)));return new Color((int)(c.getRed()*light),(int)(c.getGreen()*light),(int)(c.getBlue()*light),c.getAlpha());}
 }
