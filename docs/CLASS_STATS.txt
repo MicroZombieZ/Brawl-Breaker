@@ -3,6 +3,11 @@ Last updated: 2026-11-16
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
+Reload Game: Main and pause menus when launched with Run.bat. Ends session,
+             closes owned lobby, rebuilds Java and relaunches at main menu;
+             reloads saved maps, UI and particle assets. No match state retained.
+             Compile failure: launcher offers R retry / Q quit.
+             Direct Java launches disable reload (tooltip explains Run.bat).
 Quit: Opening menu only. Pause menu Main Menu leaves the session, closes any
       owned LAN server, resets player state and unloads the map.
 Host/Join: Open existing LAN setup (name, IP for joining, port); host starts match.

@@ -7,6 +7,13 @@ and planned class designs. Keep it updated alongside gameplay changes.
 
 Double-click `Run.bat` to build and launch the game. For terminal use, run
 `scripts\Build.bat`, then `java -cp build/classes CubeMovement` from this folder.
+When launched with `Run.bat`, **Reload Game** in the main or pause menu ends the
+current session, rebuilds the project, and relaunches at the main menu with fresh
+code, maps, UI, and particle assets. Save editor/source changes first. Hosting
+players close their lobby when reloading. Build errors stay visible in the launcher;
+press R to retry after fixing them, or Q to quit. Direct `java` launches disable
+the reload button because they have no rebuild launcher.
+
 Requires JDK 11 or newer (JDK 24 is installed on this computer).
 
 The opening menu offers **Host**, **Join**, **Quick Match** (disabled for now),

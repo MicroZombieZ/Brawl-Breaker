@@ -88,6 +88,9 @@ public class CubeMovement extends JPanel {
     private final JButton equip = new JButton("Equip");
     private final JPanel menu = new JPanel();
     private final JLabel menuMessage = new JLabel("Mouse is unlocked", SwingConstants.CENTER);
+    static final int RELOAD_EXIT_CODE=42;
+    private java.util.function.IntConsumer exitProcess=System::exit;
+    private boolean reloadRequested;
     private long previous = System.nanoTime();
 
     public CubeMovement() {
@@ -106,6 +109,12 @@ public class CubeMovement extends JPanel {
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
         JButton resume = new JButton("Resume");
         JButton mainMenu = new JButton("Main Menu");
+        JButton reload=new JButton("Reload Game");
+        for(JButton button:new JButton[]{reload,openingMenu.reload}){
+            button.setEnabled(Boolean.getBoolean("camera.launcher"));
+            button.setToolTipText(Boolean.getBoolean("camera.launcher")?"End this session, rebuild, and reload code, maps, UI and effects.":"Launch with Run.bat to enable full rebuild and reload.");
+            button.addActionListener(e->reloadGame());
+        }
         JButton lan = new JButton("LAN Lobby");
         JPanel effectsSetting = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         effectsSetting.setOpaque(false); effectsSetting.add(new JLabel("Particles"));
@@ -115,7 +124,7 @@ public class CubeMovement extends JPanel {
         lan.addActionListener(e -> openLobby());
         resume.addActionListener(e -> setPaused(false));
         mainMenu.addActionListener(e -> returnToMainMenu());
-        for (JComponent item : new JComponent[]{title, menuMessage, resume, lan, effectsSetting, mainMenu}) {
+        for (JComponent item : new JComponent[]{title, menuMessage, resume, lan, effectsSetting, mainMenu, reload}) {
             item.setAlignmentX(Component.CENTER_ALIGNMENT);
             menu.add(item);
             menu.add(Box.createVerticalStrut(12));
@@ -472,6 +481,14 @@ public class CubeMovement extends JPanel {
         openingMenuOpen=true;
         setPaused(true);
         doLayout();
+    }
+
+    private void reloadGame(){
+        if(reloadRequested||!Boolean.getBoolean("camera.launcher"))return;
+        reloadRequested=true;setPaused(true);connectionGeneration++;
+        if(lobbyClient!=null)lobbyClient.close();
+        if(lobbyServer!=null)lobbyServer.close();
+        exitProcess.accept(RELOAD_EXIT_CODE);
     }
 
     private void quitGame() {

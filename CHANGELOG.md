@@ -4,6 +4,9 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Reload Game to main/pause menus when launched through Run.bat. End the
+  session, rebuild, and relaunch with fresh code/assets; offer retry on build errors.
+
 - Add saved X/Y/Z particle origin offsets with Reset origin and a moving emitter
   marker. Apply offsets in emitter-facing coordinates in preview/gameplay.
   Add a show/hide wireframe training dummy for scale reference in Particle Studio.

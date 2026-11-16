@@ -20,6 +20,16 @@ public class MovementCheck {
     public static void main(String[] args) throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             try {
+                String launcher=System.getProperty("camera.launcher");
+                try{
+                    System.setProperty("camera.launcher","true");CubeMovement reloadDemo=new CubeMovement();
+                    final int[] exit={0};field("exitProcess").set(reloadDemo,(java.util.function.IntConsumer)(code->exit[0]=code));
+                    OpeningMenu reloadMenu=(OpeningMenu)field("openingMenu").get(reloadDemo);
+                    check(reloadMenu.reload.isEnabled(),"Launcher enables reload button");reloadMenu.reload.doClick();
+                    check(exit[0]==42&&field("paused").getBoolean(reloadDemo),"Reload pauses and requests launcher rebuild");
+                    int generation=field("connectionGeneration").getInt(reloadDemo);reloadMenu.reload.doClick();check(field("connectionGeneration").getInt(reloadDemo)==generation,"Repeated reload clicks ignored");
+                    System.clearProperty("camera.launcher");CubeMovement direct=new CubeMovement();check(!((OpeningMenu)field("openingMenu").get(direct)).reload.isEnabled(),"Direct Java launch explains disabled reload");
+                }finally{if(launcher==null)System.clearProperty("camera.launcher");else System.setProperty("camera.launcher",launcher);}
                 CubeMovement demo = new CubeMovement();
                 demo.setSize(1000, 700);
                 Method opening=CubeMovement.class.getDeclaredMethod("showOpeningMenu");opening.setAccessible(true);opening.invoke(demo);
