@@ -4,117 +4,135 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
-- Add a Custom mesh option and reusable shape preset picker to the main Particle
-  effects tab, with OBJ import, save-current-shape, and library refresh controls.
-  Store presets in particle-effects/shapes while embedding selected meshes in effects.
+Changes since **v0.1.0**, reviewed against Git history through `0e806c8` on
+**2026-11-16**. Related follow-up fixes and tuning are summarized by their final
+behavior below; these changes have not yet been assigned a new release version.
 
-- Add visible vertex selection and dragging to Particle Studio's Custom shape
-  tab, with coordinate-table selection, one undo step per drag, and Escape cancel.
-  Add sphere, cylinder, cone, trapezoid prism, and pyramid shape starters.
+### Combat and airborne hitboxes
 
-- Add a Custom shape tab within Particle Studio: triangulated OBJ import/export,
-  vertex editing, scale/rotation, cube creation, normalization and undo/redo.
-  Embed meshes in effect files and game assignments; render custom particles
-  using Map Studio's shared depth/clipping renderer with a bounded mesh budget.
-
-- Expand Particle Studio with randomness, emission duration, lifetime fades,
-  wind, air resistance, ground collision and debris bounce controls. Save and
-  apply these settings in-game while preserving older effect defaults.
-
-- Apply Map Studio's depth/clipping fix to gameplay through a shared rasterizer;
-  fix scenery/player/target overlap and depth-test transparent particles and
-  shockwaves, including image particles crossing the camera boundary.
-
-- Rework Map Studio navigation with screen-relative panning, cursor-centered
-  zoom, selection/map framing, view presets, and visible camera controls.
-
-- Fix disappearing Map Studio faces near the camera and incorrect object/outline
-  overlap with near-plane clipping and per-pixel depth testing; align click
-  selection with the frontmost surface.
-
-- Make Shift-click add/toggle viewport selections in every Map Studio tool,
-  preserving the existing selection and avoiding accidental transforms.
-
-- Add Map Studio rectangle selection, Shift-add/toggle, list multi-selection,
-  group clipboard/delete operations, and transforms with group cancellation.
-- Add Map Studio Undo/Redo (Ctrl+Z/Ctrl+Y) with one history step per group drag.
-
-- Add Map Studio keyboard shortcuts, independent object/spawn copy and paste,
-  and selection handles for moving, yaw rotation, dimensions, and uniform scale.
-  Include selection focus, precision dragging, cancellation, and typing guards.
-
-- Add Map Studio (MapEditor.bat): 3D shape/ground editing, object colors and
-  transforms, anchored/loose physics, collision flags, team spawns, targets,
-  reusable assets, full map saving/loading, and a non-destructive physics preview.
-- Automatically include valid saved maps in random Practice/LAN match selection.
-  LAN protocol 5 transfers host-selected maps and moving scenery to all clients.
-- Share map collision/platforms and loose-object physics between solo and LAN;
-  use Team 1 spawn markers for all players, including late joins and respawns.
-
-- Replace pause-menu Quit with Main Menu, leaving the session and unloading its
-  map; add Quit to the opening menu.
-
-- Hide the arena behind an opaque menu background until match entry; fade through
-  black while loading Practice or LAN player/map state, and unload on disconnect.
-- Store the shared practice map template separately in src/server-storage;
-  LAN waiting rooms no longer instantiate active arena targets.
-
-- Add an opening menu with the Cube Movement title, Host and Join LAN setup,
-  disabled Quick Match, and direct entry into the test arena through Practice.
-
-- Add a Health Fill damage ghost using the same custom artwork/transforms at
-  reduced opacity: hold for 0.15 seconds, then sweep at exponentially increasing
-  speed with a 0.5-second ramp and 3.2x speed cap. A faster starting speed keeps
-  the complete effect to about 0.70 seconds after the latest damage.
-- Preview the health ghost with HUD Studio's health slider; stamina is unaffected.
-
-- Add independent HUD artwork-layer transforms, visibility, opacity and styling,
-  alongside whole-piece selection; preserve live fills, parent-relative dragging,
-  undo/redo and existing HUD layouts.
-
-- Remove the old translucent background behind custom health/stamina artwork;
-  add replaceable backgrounds and artwork layers for all normal HUD text areas.
-- Add HUD Studio for linked artwork uploads, placement, scale, rotation, opacity,
-  text styling/visibility, undo/redo, and saved resolution-relative HUD layouts.
-- Share the live HUD renderer between the game and editor, retaining functional
-  resource fills/cooldowns and allowing built-in artwork to be disabled per piece.
-
-- Add a UI Studio fill bucket with connected-region filling, paint opacity,
-  selected-layer boundaries, moved-layer support, and undo/redo.
-
-- Center UI Studio's canvas and add middle-mouse panning, cursor-anchored wheel
-  zoom, and a Reset View action to recover artwork moved out of sight.
-
-- Add UI Studio with brush/eraser, shape/line/text tools, advanced colors,
-  image import/export, layered projects, and undo/redo.
-- Assign transparent artwork to health/stamina frames and fills, class badge,
-  ability panel, or crosshair; restore defaults without changing live HUD values.
-- Add layered drawing, tool gesture, PNG, and runtime HUD replacement checks.
-
-- Add a particle color editor with RGB/HSV controls, hex input, live preview,
-  color swatches, session history, and Apply/Cancel behavior.
-
-- Organize game, networking, UI, particle code, editor tools, tests, and docs
-  into folders; keep the two application launchers at the project root.
-- Add shared build/check scripts, keep generated files under build, and start
-  particle file dialogs in particle-effects for new designs.
-
-- Add Particle Studio, a standalone desktop effect editor with image imports,
-  six emission presets, fourteen sliders, and an orbitable 3D preview.
-- Save settings and transparent sprites in portable .pfx files; assign effects
-  to game events or restore defaults without changing gameplay values.
-- Load local event assignments at game startup, respecting particle quality
-  settings, with depth-sorted image particles in the game renderer.
-- Add portable asset, emission, editor UI, and game sprite rendering checks.
-
-- Replace forward melee cones with full 3D boxes that follow movement, height,
-  and turning, with collision against enemy body dimensions.
+- Replace forward melee cones with full 3D attack boxes that follow player
+  movement, height, and turning, and collide with enemy body dimensions.
 - Allow every Gauntlet ability in the air while preserving damage and timings.
 - Carry Pummel targets vertically and release them to fall from their current
-  height; keep Shockwave's radial area with vertical collision bounds.
+  height. Preserve Shockwave's radial area with vertical collision bounds.
 - Render debug hitboxes and airborne impact effects at their actual height.
-- Synchronize airborne Shockwaves over LAN (protocol 4; update every device).
+- Synchronize airborne Shockwaves over LAN, introduced in protocol 4.
 - Add collision and airborne combat checks, including shared LAN behavior.
+
+### Particle Studio and custom particle shapes
+
+- Add Particle Studio (`ParticleEditor.bat`) with image imports, six emission
+  presets, playback controls, and an orbitable 3D preview.
+- Expand from the original 14 sliders to 25: control aggressiveness, count,
+  repeat interval, speed, spawn range, spread, heading, elevation, gravity,
+  size, lifetime, growth, spin, opacity, speed/size/lifetime randomness,
+  emission duration, fade-in/out, wind on three axes, air resistance, and
+  debris bounce. Add a ground-plane collision toggle.
+- Save settings and transparent sprites in portable `.pfx` files; assign them
+  to game events or restore defaults. Load assignments at game startup and
+  respect per-device particle quality settings. Preserve older effect defaults.
+- Add an advanced color editor with RGB/HSV controls, hex input, live preview,
+  swatches, recent colors, and Apply/Cancel behavior.
+- Add a **Custom shape** tab inside Particle Studio with triangulated OBJ
+  import/export, vertex-coordinate editing, axis scaling and rotation,
+  centering/normalization, and undo/redo.
+- Add Cube, Sphere, Cylinder, Cone, Trapezoid prism, and Pyramid starters.
+- Add visible vertex handles: left-click and drag individual vertices in the
+  screen plane, highlight the corresponding coordinate row, and prevent
+  selection through hidden faces. Each drag is one undo step; Escape cancels it.
+- Support right/middle-button or empty-space orbiting, wheel zoom, and framing
+  in the shape workspace.
+- Add **Custom mesh** and a reusable **Shape preset** picker on the main
+  **Particle effects** tab, with Import preset, Save shape preset, and Refresh.
+  Store reusable OBJ presets in `particle-effects/shapes`; selecting a preset
+  preserves emission settings, while selecting a built-in shape disables the mesh.
+- Embed custom meshes in saved effects and game assignments, so selected shapes
+  do not depend on external OBJ files. Use effect color, size, spin, and physics.
+- Share Map Studio's depth/clipping renderer for custom shapes in the shape tab,
+  animated particle preview, and game. Limit shapes to 512 vertices and 256
+  triangles, with an 8,192-triangle budget across live/delayed mesh particles.
+- Add checks for portable assets, legacy compatibility, custom forces and fades,
+  emission, presets, color editing, OBJ validation, vertex dragging, undo/redo,
+  mesh budgets, and preview/game rendering.
+
+### UI Studio
+
+- Add UI Studio with brush/eraser, shape, line, and text tools; advanced color
+  selection; image import/export; layered drawing projects; and undo/redo.
+- Assign transparent artwork to health/stamina frames and fills, the class badge,
+  ability panel, or crosshair. Restore defaults without changing live HUD values.
+- Center the canvas and add middle-mouse panning, cursor-anchored wheel zoom,
+  and Reset View to recover artwork moved out of sight.
+- Add a connected-area fill bucket respecting paint opacity, selected-layer
+  boundaries, moved layers, and undo/redo.
+- Add layered drawing, tool gesture, PNG, and runtime HUD replacement checks.
+
+### HUD Studio and health feedback
+
+- Add HUD Studio for linked artwork uploads, placement, scale, rotation, opacity,
+  text styling/visibility, undo/redo, and resolution-relative saved layouts.
+- Support editing whole HUD pieces or individual artwork layers independently,
+  including frames and fills, with parent-relative dragging and live resource fills.
+- Remove the old translucent background behind custom health/stamina artwork.
+  Add replaceable backgrounds and artwork layers for normal HUD text areas, and
+  allow built-in artwork to be disabled per piece.
+- Share the live HUD renderer between the game and editor, retaining functional
+  resource fills and cooldown displays and compatibility with existing layouts.
+- Add a damage ghost to **Health Fill** using its artwork and transforms at
+  reduced opacity. After follow-up tuning, it holds for 0.15 seconds, then moves
+  with exponentially increasing speed over a 0.5-second ramp, capped at 3.2x
+  its starting speed. The complete effect lasts about 0.70 seconds after the
+  latest damage. Stamina is unaffected.
+- Preview the health ghost through HUD Studio's health slider.
+
+### Main menu and match loading
+
+- Add an opening menu with the Cube Movement title, Host, Join, Practice,
+  disabled Quick Match, and Quit.
+- Replace pause-menu Quit with Main Menu, leaving the session and unloading its map.
+- Hide the arena behind an opaque menu background until match entry. Fade through
+  black while loading Practice or LAN player/map state, and unload on disconnect.
+- Store the shared practice-map template separately in `src/server-storage`;
+  LAN waiting rooms no longer instantiate active arena targets.
+
+### Map Studio, maps, and shared physics
+
+- Add Map Studio (`MapEditor.bat`) with 3D shape/ground editing, object colors
+  and transforms, anchored/loose physics, collision flags, team spawns, targets,
+  reusable assets, full map saving/loading, and a non-destructive physics preview.
+- Automatically include valid saved maps in randomized Practice/LAN map selection.
+  LAN protocol 5 transfers the host-selected map and moving scenery to clients.
+- Share map collision, platforms, and loose-object physics between solo and LAN.
+  Use Team 1 spawn markers for all players, including late joins and respawns.
+- Add keyboard shortcuts, independent object/spawn copy and paste, and selection
+  handles for movement, yaw rotation, dimensions, and uniform scale. Include
+  selection focus, precision dragging, cancellation, and typing guards.
+- Add rectangle selection, Shift-add/toggle, list multi-selection, group clipboard
+  and delete operations, and group transforms with cancellation.
+- Make Shift-click toggle viewport selections in every tool without accidentally
+  starting a transform or clearing the existing selection.
+- Add Undo/Redo (Ctrl+Z/Ctrl+Y), with one history step per group drag.
+- Rework camera navigation with screen-relative panning, cursor-centered zoom,
+  selection/map framing, view presets, and visible camera controls.
+
+### Rendering fixes
+
+- Fix disappearing Map Studio faces near the camera and incorrect object/outline
+  overlap through near-plane clipping and per-pixel depth testing. Align click
+  selection with the frontmost surface.
+- Apply the same fix to gameplay through a shared rasterizer, correcting scenery,
+  player, and target overlap. Depth-test and blend transparent particles and
+  shockwaves, including image particles crossing the camera boundary.
+- Keep rendering fixes separate from player collision physics.
+
+### Project organization and verification
+
+- Organize game, network, UI, particle code, editor tools, tests, and documentation
+  into dedicated folders, with application launchers at the project root.
+- Add shared build/check scripts and keep generated output under `build`.
+  Start particle Open/Save dialogs in `particle-effects` for new designs.
+- Extend automated coverage for maps, editing tools, camera navigation, depth
+  rendering, UI/HUD assets, and particles alongside the gameplay and LAN checks.
 
 ## 0.1.0 - 2026-10-23
 
