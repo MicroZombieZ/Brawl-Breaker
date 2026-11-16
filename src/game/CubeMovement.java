@@ -34,7 +34,7 @@ public class CubeMovement extends JPanel {
     private final OpeningMenu openingMenu=new OpeningMenu(() -> openingLobby(true), () -> openingLobby(false), this::startPractice, this::quitGame);
     private int connectionGeneration;
     private final LobbyPanel lobby = new LobbyPanel(() -> connectLobby(true), () -> connectLobby(false),
-            () -> { if (lobbyClient != null) lobbyClient.action(4, ""); },
+            this::startSelectedLobby,
             () -> leaveLobby("Left lobby."), this::closeLobby);
     private static final double CAMERA_DISTANCE = 8, MAX_CAMERA_DISTANCE = 20, FIRST_PERSON_TRIGGER = 0.75, NEAR = 0.1;
     private static final double ZOOM_STEP = 0.75;
@@ -468,6 +468,7 @@ public class CubeMovement extends JPanel {
 
     private void showOpeningMenu() {
         mapLoaded=false;enteringMatch=false;combat.clearDummies();particles.clear();
+        openingMenu.showMaps(false);
         openingMenuOpen=true;
         setPaused(true);
         doLayout();
@@ -496,8 +497,15 @@ public class CubeMovement extends JPanel {
         if(host)lobby.name.requestFocusInWindow();else lobby.address.requestFocusInWindow();
     }
 
+    private MapDefinition selectedPracticeMap;
     private void startPractice() {
-        beginEntry(false);
+        try{selectedPracticeMap=openingMenu.mapPicker.load();beginEntry(false);}
+        catch(java.io.IOException ex){openingMenu.mapPicker.message.setText("Cannot open map: "+ex.getMessage());}
+    }
+    private void startSelectedLobby(){
+        if(lobbyClient==null||!lobbyClient.host||lobbyServer==null)return;
+        try{MapDefinition selected=lobby.mapPicker.load();synchronized(lobbyServer.world){if(lobbyServer.world.started)return;lobbyServer.world.mapChoice=()->selected;}lobbyClient.action(4, "");}
+        catch(java.io.IOException ex){lobby.mapPicker.message.setText("Cannot open map: "+ex.getMessage());}
     }
 
     private void beginEntry(boolean lan) {
@@ -512,7 +520,7 @@ public class CubeMovement extends JPanel {
         if(!enteringMatch)return;
         entryTime+=dt;
         if(entryTime>=.3&&!mapLoaded){
-            if(!enteringLan){activeMap=MapStorage.choose();combat.map=activeMap;executeCommand("reset");MapDefinition.Spawn spawn=activeMap.spawn(0);x=spawn.x;y=spawn.y;z=spawn.z;}
+            if(!enteringLan){activeMap=selectedPracticeMap;combat.map=activeMap;executeCommand("reset");MapDefinition.Spawn spawn=activeMap.spawn(0);x=spawn.x;y=spawn.y;z=spawn.z;}
             else if(appliedSnapshot!=null&&lobbyClient!=null){
                 activeMap=appliedSnapshot.map;combat.map=activeMap;
                 LobbyNetwork.State local=appliedSnapshot.player(lobbyClient.id);
@@ -528,6 +536,7 @@ public class CubeMovement extends JPanel {
     private void openLobby() {
         if(enteringMatch)return;
         setPaused(true);
+        lobby.mapPicker.reload();
         lobbyOpen = true;
         openingMenu.setVisible(false);
         menu.setVisible(false); classMenu.setVisible(false);
@@ -645,7 +654,8 @@ public class CubeMovement extends JPanel {
             for (LobbyNetwork.State p : snapshot.players) roster.append(p.id == client.id ? "> " : "  ")
                     .append(p.name).append(p.host ? " (host)" : "").append("  -  ")
                     .append(p.className.isEmpty() ? "No class" : p.className).append('\n');
-            lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);
+            lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);lobby.mapPicker.available(client.host&&!snapshot.started);
+            if(snapshot.started)lobby.mapPicker.message.setText("Map: "+snapshot.map.name);
             if (startNow) beginEntry(true);
         }
         double blend = first || Math.hypot(local.x - x, local.z - z) > 5 ? 1 : 1 - Math.exp(-25 * dt);

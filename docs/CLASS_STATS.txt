@@ -1,14 +1,18 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-11-13
+Last updated: 2026-11-16
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
 Quit: Opening menu only. Pause menu Main Menu leaves the session, closes any
       owned LAN server, resets player state and unloads the map.
 Host/Join: Open existing LAN setup (name, IP for joining, port); host starts match.
-Practice: Enter a randomly selected arena offline, with reset gameplay state.
+Practice: Open map picker, choose saved/built-in map or Random, then Start Practice.
+          Back cancels selection; entering a match resets gameplay state.
 Map storage: MapStorage includes built-in practice plus valid .map files in
-             server-storage/maps; saved maps automatically enter the next draw.
+             server-storage/maps; saved maps appear in selection lists and Random pool.
+             Random preserves equal-chance selection of valid maps plus built-in.
+             Refresh maps discovers added files; explicit invalid/missing maps
+             show an error and do not start a match. LAN selection is host-only.
              Solo and LAN use the same geometry, targets, and team spawns.
 Match entry: 0.3s fade to black, load map/player state, 0.4s fade in; input blocked.
              Startup/waiting rooms show an opaque soft blue background, no map.

@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add Practice and LAN host map pickers with saved .map files, built-in Practice,
+  and Random. Refresh newly added maps, report invalid explicit selections, and
+  preserve equal-chance random selection and host map transfer to guests.
+
 Changes since **v0.1.0**, reviewed against Git history through `0e806c8` on
 **2026-11-16**. Related follow-up fixes and tuning are summarized by their final
 behavior below; these changes have not yet been assigned a new release version.

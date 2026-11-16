@@ -34,6 +34,9 @@ public class MovementCheck {
                 lobby.back.doClick();check(entry.isVisible()&&!lobby.isVisible(),"Back returns to opening menu");
                 entry.join.doClick();check(lobby.isVisible()&&lobby.status.getText().contains("Join Lobby"),"Join opens address setup");
                 lobby.back.doClick();entry.practice.doClick();
+                check(entry.mapSelection.isVisible()&&!field("enteringMatch").getBoolean(demo),"Practice first opens map selection");
+                entry.cancelMap.doClick();check(!entry.mapSelection.isVisible()&&entry.practice.isVisible(),"Map picker Back returns to opening choices");
+                entry.practice.doClick();entry.mapPicker.maps.setSelectedIndex(1);entry.playMap.doClick();
                 check(!field("mapLoaded").getBoolean(demo)&&field("enteringMatch").getBoolean(demo),"Practice starts fade with no active map");
                 Method entryTick=CubeMovement.class.getDeclaredMethod("updateEntry",double.class);entryTick.setAccessible(true);
                 entryTick.invoke(demo,.3);
@@ -49,7 +52,7 @@ public class MovementCheck {
                 }
                 check(mainMenuFound&&entry.isVisible()&&!field("mapLoaded").getBoolean(demo),"Main Menu unloads practice and shows entry screen");
                 check(entry.quit.isEnabled(),"Quit is available on main menu");
-                entry.practice.doClick();entryTick.invoke(demo,.7);
+                entry.practice.doClick();entry.playMap.doClick();entryTick.invoke(demo,.7);
                 Field paused = field("paused"), z = field("z"), x = field("x");
                 MapDefinition loaded=(MapDefinition)field("activeMap").get(demo);
                 check(x.getDouble(demo)==loaded.spawn(0).x&&z.getDouble(demo)==loaded.spawn(0).z,"Practice uses Team 1 spawn");

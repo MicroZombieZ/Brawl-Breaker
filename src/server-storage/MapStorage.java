@@ -23,6 +23,18 @@ final class MapStorage {
         if(!DEFAULT_ID.equals(id))throw new IllegalArgumentException("Unknown map: "+id);
         return new MapData(id);
     }
+    static final class Choice {
+        final String label;final Path file;final boolean random;
+        Choice(String label,Path file,boolean random){this.label=label;this.file=file;this.random=random;}
+        MapDefinition load() throws IOException {return random?choose():file==null?practice():MapDefinition.read(file);}
+        public String toString(){return label;}
+    }
+    static java.util.List<Choice> choices(Path directory) throws IOException {
+        java.util.List<Choice> result=new ArrayList<>();result.add(new Choice("Random",null,true));result.add(new Choice("Practice (built-in)",null,false));
+        if(Files.isDirectory(directory))try(java.util.stream.Stream<Path> files=Files.list(directory)){
+            files.filter(p->Files.isRegularFile(p)&&p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".map")).sorted().forEach(p->result.add(new Choice(p.getFileName().toString(),p,false)));
+        }return result;
+    }
     static MapDefinition choose(){return choose(DIRECTORY,new Random());}
     static MapDefinition choose(Path directory,Random random){
         java.util.List<MapDefinition> maps=new ArrayList<>();maps.add(practice());

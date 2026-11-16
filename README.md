@@ -12,8 +12,8 @@ Requires JDK 11 or newer (JDK 24 is installed on this computer).
 The opening menu offers **Host**, **Join**, **Quick Match** (disabled for now),
 and **Practice** beneath the Cube Movement title. Host and Join open the LAN
 setup for your name, host IP, and port; the host starts the match once everyone
-has joined. Back returns to the opening menu before connecting. Practice enters
-a randomly selected arena directly. Escape pauses during play; F2 opens
+has joined. Back returns to the opening menu before connecting. Practice opens a map list; select a saved map, **Practice (built-in)**, or
+**Random**, then click **Start Practice**. Escape pauses during play; F2 opens
 the existing LAN lobby controls.
 The pause menu's **Main Menu** button leaves the session and unloads the map
 (hosting players also close their lobby). **Quit** is on the opening menu.
@@ -23,8 +23,11 @@ rendering. Practice and LAN match entry fade out for 0.3 seconds, load the map
 and player state at black, then fade in for 0.4 seconds. Controls stay blocked
 throughout the transition. Leaving/disconnecting returns to lobby setup with
 the map unloaded. Map templates live in `src/server-storage/MapStorage.java`;
-the local session and LAN host randomly choose from the built-in practice arena
-and valid `.map` files in `server-storage/maps`. This is local game data, not
+Practice and the LAN host can select from `.map` files in `server-storage/maps`
+or the built-in practice arena. **Random** gives each valid saved map and the
+built-in arena an equal chance. **Refresh maps** discovers newly saved files;
+missing or invalid explicit selections show an error without starting a match.
+The lobby map picker is controlled by the host. This is local game data, not
 cloud storage. The host sends the selected map and loose-object positions to
 guests, including late joiners; guests don't need matching custom map files.
 All devices need this updated game build (LAN protocol 5).
@@ -95,7 +98,7 @@ updated when you save again. Selection and camera navigation do not add steps.
   gravity, bounce, settle, and collide with the ground and solid object bounds.
 - **New**, **Built-in Practice**, and **Open map** create/edit entire maps.
   **Save / Save As** writes to `server-storage/maps`; valid saved maps enter
-  the random pool automatically on the next Practice or host-started match.
+  the map lists and Random pool automatically; reopen the picker or use Refresh maps.
   The built-in practice arena stays available; editing it creates a saved map.
 
 Maps support 128 objects, 64 spawn markers, and 64 targets. Saving validates

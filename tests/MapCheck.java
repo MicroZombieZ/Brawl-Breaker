@@ -22,6 +22,11 @@ public class MapCheck {
         Random last=new Random(){@Override public int nextInt(int bound){return bound-1;}};
         check(MapStorage.choose(dir,last).name.equals(m.name),"Saved map automatically joins random pool");
         Files.write(dir.resolve("Broken.map"),new byte[]{0,1,2});check(MapStorage.choose(dir,last).name.equals(m.name),"Invalid file cannot break match selection");
+        java.util.List<MapStorage.Choice> choices=MapStorage.choices(dir);
+        check(choices.size()==4&&choices.get(0).random&&choices.get(1).file==null,"Picker includes Random, built-in, and every map file");
+        MapStorage.Choice selected=choices.stream().filter(c->c.label.equals("Custom.map")).findFirst().get();
+        check(selected.load().name.equals(m.name),"Explicit map choice loads intended file");
+        try{choices.stream().filter(c->c.label.equals("Broken.map")).findFirst().get().load();throw new AssertionError("Invalid explicit choice accepted");}catch(java.io.IOException expected){}
         MapDefinition invalid=custom();invalid.spawns.remove(0);try{invalid.save(file);throw new AssertionError("Missing Team 1 accepted");}catch(java.io.IOException expected){}
         check(MapDefinition.read(file).name.equals(m.name),"Failed save preserves prior file");
         invalid=custom();invalid.width=Double.NaN;try{invalid.encode();throw new AssertionError("NaN accepted");}catch(java.io.IOException expected){}

@@ -3,6 +3,7 @@ import javax.swing.*;
 
 /** LAN connection and waiting-room controls; the game owns session lifecycle. */
 final class LobbyPanel extends JPanel {
+    final MapPicker mapPicker=new MapPicker();
     final JTextField name = new JTextField("Player", 16);
     final JTextField address = new JTextField("", 16);
     final JSpinner port = new JSpinner(new SpinnerNumberModel(LobbyNetwork.DEFAULT_PORT, 1024, 65535, 1));
@@ -27,7 +28,7 @@ final class LobbyPanel extends JPanel {
         fields.add(new JLabel("Port")); fields.add(port); center.add(fields, BorderLayout.NORTH);
         roster.setEditable(false); roster.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
         roster.setText("No lobby connected.\n\nHost: share your local IP address with friends.\nJoin: enter that address and use the same port.");
-        center.add(new JScrollPane(roster), BorderLayout.CENTER); add(center, BorderLayout.CENTER);
+        center.add(new JScrollPane(roster), BorderLayout.CENTER);center.add(mapPicker,BorderLayout.SOUTH); add(center, BorderLayout.CENTER);
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0)); buttons.setOpaque(false);
         for (JButton button : new JButton[]{host, join, start, leave, back}) buttons.add(button);
         host.addActionListener(e -> onHost.run()); join.addActionListener(e -> onJoin.run());
@@ -40,6 +41,7 @@ final class LobbyPanel extends JPanel {
         host.setEnabled(!connected && !busy); join.setEnabled(!connected && !busy);
         name.setEnabled(!connected && !busy); address.setEnabled(!connected && !busy); port.setEnabled(!connected && !busy);
         start.setEnabled(connected && isHost && !busy); leave.setEnabled(connected && !busy);
-        back.setEnabled(!busy);
+        back.setEnabled(!busy);mapPicker.available(!busy&&(!connected||isHost));
+        if(connected&&!isHost)mapPicker.message.setText("The host chooses the map.");
     }
 }

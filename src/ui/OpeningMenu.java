@@ -4,6 +4,9 @@ import javax.swing.*;
 /** Entry points for local practice and LAN play. */
 final class OpeningMenu extends JPanel {
     final JButton host=new JButton("Host"),join=new JButton("Join"),quickMatch=new JButton("Quick Match"),practice=new JButton("Practice");
+    final MapPicker mapPicker=new MapPicker();
+    final JButton playMap=new JButton("Start Practice"),cancelMap=new JButton("Back");
+    final JPanel mapSelection=new JPanel();
     final JButton quit=new JButton("Quit");
     OpeningMenu(Runnable onHost,Runnable onJoin,Runnable onPractice,Runnable onQuit){
         setLayout(new BoxLayout(this,BoxLayout.Y_AXIS));
@@ -15,9 +18,12 @@ final class OpeningMenu extends JPanel {
             c.setAlignmentX(Component.CENTER_ALIGNMENT);add(c);add(Box.createVerticalStrut(16));
         }
         for(JButton b:new JButton[]{host,join,quickMatch,practice,quit}){b.setMaximumSize(new Dimension(310,46));b.setPreferredSize(new Dimension(310,46));b.setFont(new Font(Font.SANS_SERIF,Font.BOLD,18));}
+        mapSelection.setOpaque(false);mapSelection.setLayout(new BoxLayout(mapSelection,BoxLayout.Y_AXIS));mapPicker.message.setForeground(Color.WHITE);mapSelection.add(mapPicker);mapSelection.add(playMap);mapSelection.add(cancelMap);add(mapSelection);mapSelection.setVisible(false);
+        playMap.addActionListener(e->onPractice.run());cancelMap.addActionListener(e->showMaps(false));
         quit.addActionListener(e->onQuit.run());
         quickMatch.setEnabled(false);quickMatch.setToolTipText("Quick Match is not available yet.");
-        host.addActionListener(e->onHost.run());join.addActionListener(e->onJoin.run());practice.addActionListener(e->onPractice.run());
+        host.addActionListener(e->onHost.run());join.addActionListener(e->onJoin.run());practice.addActionListener(e->{mapPicker.reload();showMaps(true);});
         setVisible(false);
     }
+    void showMaps(boolean show){for(JButton b:new JButton[]{host,join,quickMatch,practice,quit})b.setVisible(!show);mapSelection.setVisible(show);revalidate();repaint();}
 }

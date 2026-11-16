@@ -176,9 +176,12 @@ public class LobbyCheck {
             check(panel[0].start.isEnabled(), "Host has Start Match control");
             check(game[0].executeCommand("damage 20").startsWith("Leave the LAN"), "Lobby blocks gameplay dev commands");
             check(game[0].executeCommand("help").contains("cooldowns"), "Lobby allows help");
+            check(panel[0].mapPicker.maps.isEnabled(),"Host can choose map");
+            panel[0].mapPicker.maps.setSelectedIndex(1);
             panel[0].start.doClick();
         });
         waitFor(() -> client[0].snapshot.started, "UI starts match");
+        check(client[0].snapshot.map.name.equals("Practice"),"Host picker selection reaches LAN snapshot");
         SwingUtilities.invokeAndWait(() -> {
             try { MovementCheck.field("yaw").setDouble(game[0], 1.2); }
             catch (Exception error) { throw new RuntimeException(error); }
