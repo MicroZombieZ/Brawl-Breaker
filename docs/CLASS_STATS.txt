@@ -61,7 +61,12 @@ Collision: Shared continuous convex-mesh sweep in solo/LAN, using all face norma
            Simultaneous XYZ motion, sliding and initial-overlap recovery; wedges
            support slope movement. Collision-disabled objects remain passable.
            Player footprint remains conservative axis-aligned bounds, scaled by
-           yaw; camera obstruction/spawn validation still use object bounds.
+           yaw; spawn validation still uses object bounds.
+Camera map collision: Separate swept sphere vs rendered triangles/edges/vertices,
+           radius .25; both face sides checked. All visible map objects affect
+           camera, independently of player collision flag. Empty bounding-box
+           corners do not obstruct it. Ground/player clearance unchanged.
+           Player movement collision is not modified by this camera change.
            Knockback/grabs retain corrected height; LAN resolves ability movement
            using the same yaw-expanded footprint as solo.
 Collision checks: MapCheck sweeps toward every non-degenerate rendered face of

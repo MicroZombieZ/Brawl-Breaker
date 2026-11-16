@@ -4,6 +4,11 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Make camera obstruction follow rendered map triangles and their edges rather
+  than object bounding boxes, including passable visible objects. Preserve camera
+  clearance while removing false obstruction around rotated/curved/sloped shapes;
+  leave player movement collision unchanged.
+
 - Replace axis-separated object-box collision with continuous convex-mesh player
   collision using every face and edge of rotated boxes, spheres, cylinders and
   wedges. Add overlap recovery and surface sliding, including wedge slopes.

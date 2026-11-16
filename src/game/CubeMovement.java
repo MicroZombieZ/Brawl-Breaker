@@ -976,7 +976,7 @@ public class CubeMovement extends JPanel {
         for (double[] box : cameraObstacles) {
             fraction = Math.min(fraction, cameraHit(start, offset, box));
         }
-        for(MapDefinition.Part part:activeMap.objects)if(part.collision)fraction=Math.min(fraction,cameraHit(start,offset,part.bounds()));
+        for(MapDefinition.Part part:activeMap.objects)fraction=Math.min(fraction,CameraSurfaces.hit(start,offset,part,CAMERA_RADIUS));
         // Pull inward before a wall, then restore the desired distance when clear.
         double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
         if (fraction < 1) fraction = Math.max(0, fraction - 0.02 / length);

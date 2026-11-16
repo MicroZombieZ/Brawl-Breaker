@@ -6,6 +6,18 @@ public class CameraCheck {
     public static void main(String[] args) throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             try {
+                MapDefinition.Part mesh=new MapDefinition.Part();mesh.shape=MapDefinition.Shape.SPHERE;mesh.w=mesh.h=mesh.d=2;
+                if(CameraSurfaces.hit(new double[]{.9,.1,-3},new double[]{0,0,6},mesh,.05)!=1)throw new AssertionError("Sphere bounding-box corner still blocks camera");
+                mesh.shape=MapDefinition.Shape.WEDGE;
+                if(CameraSurfaces.hit(new double[]{-3,1.8,.8},new double[]{6,0,0},mesh,.05)!=1)throw new AssertionError("Empty space above wedge blocks camera");
+                mesh.shape=MapDefinition.Shape.BOX;mesh.w=.2;mesh.d=4;mesh.yaw=45;
+                if(CameraSurfaces.hit(new double[]{1.3,1,-3},new double[]{0,0,2},mesh,.05)!=1)throw new AssertionError("Rotated bounding-box corner blocks camera");
+                double[] a={0,0,0},b={2,0,0},c={0,2,0};
+                for(int sign:new int[]{-1,1}){double t=CameraSurfaces.triangle(new double[]{.5,.5,2*sign},new double[]{0,0,-4*sign},a,b,c,.25);if(Math.abs(t-.4375)>1e-9)throw new AssertionError("Both rendered face sides collide");}
+                double edgeHit=CameraSurfaces.triangle(new double[]{1,-.1,-2},new double[]{0,0,4},a,b,c,.25);
+                if(Math.abs(edgeHit-(2-Math.sqrt(.25*.25-.1*.1))/4)>1e-9)throw new AssertionError("Swept camera edge clearance");
+                double vertexHit=CameraSurfaces.triangle(new double[]{-.1,-.1,-2},new double[]{0,0,4},a,b,c,.25);
+                if(Math.abs(vertexHit-(2-Math.sqrt(.25*.25-.02))/4)>1e-9)throw new AssertionError("Swept camera vertex clearance");
                 CubeMovement demo = new CubeMovement();
                 demo.setSize(1000, 700);
                 Method camera = CubeMovement.class.getDeclaredMethod("cameraPoint", double.class, double.class, double.class);
@@ -68,6 +80,11 @@ public class CameraCheck {
                 resolve.invoke(demo);
                 if (Math.abs(distance.getDouble(demo)-8)>1e-9)
                     throw new AssertionError("Camera did not restore distance");
+                Field active=CubeMovement.class.getDeclaredField("activeMap");active.setAccessible(true);MapDefinition map=(MapDefinition)active.get(demo);
+                MapDefinition.Part sphere=new MapDefinition.Part();sphere.shape=MapDefinition.Shape.SPHERE;sphere.w=sphere.h=sphere.d=2;sphere.x=1.2;sphere.z=3;sphere.collision=false;map.objects.add(sphere);
+                resolve.invoke(demo);if(Math.abs(distance.getDouble(demo)-8)>1e-9)throw new AssertionError("Camera should clear empty sphere bounding-box space");
+                sphere.x=0;resolve.invoke(demo);if(distance.getDouble(demo)>=3)throw new AssertionError("Visible surface blocks camera independently of player collision flag");
+                map.objects.clear();resolve.invoke(demo);if(Math.abs(distance.getDouble(demo)-8)>1e-9)throw new AssertionError("Removing mesh restores camera distance");
                 System.out.println("Passed: ground/player collision, thin-object collision, clear-view recovery, full orbit rendering, pause.");
             } catch (Exception error) { throw new RuntimeException(error); }
         });

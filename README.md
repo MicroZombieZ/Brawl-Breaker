@@ -119,8 +119,10 @@ face and edge of rotated boxes, faceted spheres/cylinders, and wedges. Sides,
 tops and undersides block movement; wedges support sliding along their slope.
 The solver handles simultaneous horizontal/vertical movement, thin walls, wall
 sliding and recovery from existing overlaps (including turning near a wall).
-The player retains its conservative axis-aligned footprint; camera obstruction
-and spawn validation still use object bounding boxes. Collision-disabled objects
+The player retains its conservative axis-aligned footprint; spawn validation still uses object bounding boxes. Camera collision is separate:
+it sweeps against rendered triangles and their edges with a 0.25-unit clearance,
+including visible objects whose player collision is disabled. Empty bounding-box
+space around slopes, curved shapes and rotated objects does not block the camera. Collision-disabled objects
 remain passable. Loose physics has linear gravity/bounce, without rotation,
 mass, player pushing, or a full rigid-body solver. Solo and LAN host share
 the collision/physics code. Saved map edits take effect in the next match.
