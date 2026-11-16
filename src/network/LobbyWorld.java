@@ -179,9 +179,13 @@ final class LobbyWorld {
             player.combat.dummies.clear(); player.combat.dummies.addAll(arena.dummies);
             for (Player other : players.values()) if (other != player) player.combat.dummies.add(other.body);
             if (player.combat.health <= 0) continue;
-            player.combat.update(dt, player.body.x, player.body.lift, player.body.z, player.cubeYaw);
-            player.x = player.body.x = player.combat.playerX;
-            player.z = player.body.z = player.combat.playerZ;
+            double startX=player.body.x,startY=player.body.lift,startZ=player.body.z;
+            player.combat.update(dt, startX, startY, startZ, player.cubeYaw);
+            double radius=.5*(Math.abs(Math.cos(player.cubeYaw))+Math.abs(Math.sin(player.cubeYaw)));
+            double[] resolved=MapPhysics.move(map,startX,startY,startZ,player.combat.playerX,player.body.lift,player.combat.playerZ,radius,1);
+            player.x=player.body.x=player.combat.playerX=resolved[0];
+            player.y=player.body.lift=player.combat.playerY=resolved[1];
+            player.z=player.body.z=player.combat.playerZ=resolved[2];
         }
         for (Player player : players.values()) {
             player.x = player.body.x; player.z = player.body.z; player.y = player.body.lift;

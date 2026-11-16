@@ -4,6 +4,12 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Replace axis-separated object-box collision with continuous convex-mesh player
+  collision using every face and edge of rotated boxes, spheres, cylinders and
+  wedges. Add overlap recovery and surface sliding, including wedge slopes.
+  Preserve vertical corrections through knockback/grabs and LAN ability movement;
+  add per-face/rotation, diagonal sweep and overlap regression checks.
+
 - Add multi-effect particle timelines with named steps, per-step settings, relative
   start delays, add/duplicate/import/reorder/remove, and sequence playback/looping.
   Save complete sequences in .pfx and assign them to gameplay events with bounded,

@@ -55,9 +55,18 @@ Map undo/redo: Ctrl+Z / Ctrl+Y (also Ctrl+Shift+Z), toolbar buttons; 100 steps.
                paste and inspector edits included; New/Open clears history.
 Teams: Everyone uses Team 1 spawn markers, cycling by player ID; teams 2–8
        can be authored but are not used yet. Friendly fire remains unchanged.
-Collision: Shared swept bounding boxes in solo and LAN; jumping onto platforms
-           is supported. Curved/rotated/wedge shapes use conservative boxes;
-           wedges are not walkable ramps. Camera collides with solid objects.
+Collision: Shared continuous convex-mesh sweep in solo/LAN, using all face normals
+           and mesh/actor edge axes. Blocks sides, tops and undersides of boxes,
+           rotated objects, faceted spheres/cylinders and wedge slope surfaces.
+           Simultaneous XYZ motion, sliding and initial-overlap recovery; wedges
+           support slope movement. Collision-disabled objects remain passable.
+           Player footprint remains conservative axis-aligned bounds, scaled by
+           yaw; camera obstruction/spawn validation still use object bounds.
+           Knockback/grabs retain corrected height; LAN resolves ability movement
+           using the same yaw-expanded footprint as solo.
+Collision checks: MapCheck sweeps toward every non-degenerate rendered face of
+           each map shape at 0/37/127 degrees; covers overlap recovery, diagonal
+           motion, top-face sliding, wedges, thin walls and disabled collision.
 Loose physics: Gravity 18 units/s^2; 0.2 bounce coefficient; impact horizontal
                damping exp(-7*step); max 0.01s substeps. Initial velocity axes
                -50..50. Anchored objects never simulate; no angular physics,

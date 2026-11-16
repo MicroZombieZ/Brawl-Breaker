@@ -47,6 +47,31 @@ public class MapCheck {
         MapDefinition.Part loose=new MapDefinition.Part();loose.x=-4;loose.y=5;loose.anchored=false;m.objects.add(loose);for(int i=0;i<200;i++)MapPhysics.tick(m,.02);check(loose.y<.02&&loose.y>=0,"Loose object falls and settles");near(wall.y,0,"Anchored object remains fixed");
         for(MapDefinition.Shape shape:MapDefinition.Shape.values()){loose.shape=shape;check(!MapMeshes.faces(loose).isEmpty(),"Shape mesh exists");}
     }
+    static void surfaces()throws Exception{
+        MapDefinition map=MapEditor.newMap();map.width=map.depth=100;
+        for(MapDefinition.Shape shape:MapDefinition.Shape.values())for(double yaw:new double[]{0,37,127}){
+            MapDefinition.Part part=new MapDefinition.Part();part.shape=shape;part.y=3;part.w=part.h=part.d=2;part.yaw=yaw;map.objects.clear();map.objects.add(part);
+            for(double[][] face:MapMeshes.faces(part)){
+                double[] normal=null,mid=new double[3];for(double[] v:face)for(int j=0;j<3;j++)mid[j]+=v[j]/face.length;
+                for(int i=1;i+1<face.length;i++){double[] a={face[i][0]-face[0][0],face[i][1]-face[0][1],face[i][2]-face[0][2]},b={face[i+1][0]-face[0][0],face[i+1][1]-face[0][1],face[i+1][2]-face[0][2]};double[] n={a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]};double len=Math.sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);if(len>1e-8){for(int j=0;j<3;j++)n[j]/=len;normal=n;break;}}
+                if(normal==null)continue;
+                if(normal[0]*mid[0]+normal[1]*(mid[1]-4)+normal[2]*mid[2]<0)for(int j=0;j<3;j++)normal[j]*=-1;
+                double[] start={mid[0]+normal[0]*2,mid[1]+normal[1]*2-.05,mid[2]+normal[2]*2};
+                double[] result=MapPhysics.move(map,start[0],start[1],start[2],mid[0]-normal[0]*.2,mid[1]-normal[1]*.2-.05,mid[2]-normal[2]*.2,.05,.1);
+                double distance=(result[0]-mid[0])*normal[0]+(result[1]+.05-mid[1])*normal[1]+(result[2]-mid[2])*normal[2];
+                check(distance>=-1e-6,"Every visible face blocks entry: "+shape+" yaw "+yaw+" mid "+Arrays.toString(mid)+" normal "+Arrays.toString(normal)+" result "+Arrays.toString(result)+" distance "+distance);
+                double[] stable=MapPhysics.move(map,result[0],result[1],result[2],result[0],result[1],result[2],.05,.1);
+                for(int j=0;j<3;j++)near(stable[j],result[j],"Face sweep leaves actor outside solid");
+            }
+        }
+        MapDefinition.Part box=new MapDefinition.Part();box.w=box.h=box.d=2;map.objects.clear();map.objects.add(box);
+        double[] inside=MapPhysics.move(map,.95,.5,0,.95,.5,0,.5,1);check(inside[0]>=1.5-1e-6,"Recover initial overlap instead of passing through");
+        double[] diagonal=MapPhysics.move(map,-4,4,0,4,-2,0,.5,1);check(diagonal[0]<1.5||diagonal[1]>=2-1e-6,"Simultaneous horizontal/vertical sweep cannot tunnel");
+        double[] top=MapPhysics.move(map,-2,2,0,2,2,0,.5,1);near(top[0],2,"Walk tangentially across top face");
+        box.shape=MapDefinition.Shape.WEDGE;box.h=1;box.d=4;
+        double[] slope=MapPhysics.move(map,0,0,3,0,-.01,0,.5,1);check(slope[1]>.2&&slope[2]<1,"Wedge slope supports upward sliding");
+        box.collision=false;double[] pass=MapPhysics.move(map,-4,.5,0,4,.5,0,.5,1);near(pass[0],4,"Disabled collision remains passable");
+    }
     static void network()throws Exception{
         try(LobbyNetwork.Server server=new LobbyNetwork.Server(0)){
             server.world.mapChoice=MapCheck::custom;
@@ -156,5 +181,5 @@ public class MapCheck {
         e.view.zoom(new Point(400,300),1000);near(e.view.distance,1500,"Far zoom is bounded");e.view.zoom(new Point(400,300),-1000);near(e.view.distance,.5,"Close zoom is bounded");
         check(!e.dirty&&e.history.undo.isEmpty(),"Camera navigation does not change map/history");
     }
-    public static void main(String[] args){try{Path dir=Files.createTempDirectory("map-check-");try{persistence(dir);physics();network();editor();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}System.out.println("Passed: map/asset round trips, validation, random pool, collision/platforms, loose physics, LAN map/physics transfer, Team 1 spawns, editor rendering and camera navigation.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
+    public static void main(String[] args){try{Path dir=Files.createTempDirectory("map-check-");try{persistence(dir);physics();surfaces();network();editor();}finally{try(java.util.stream.Stream<Path> files=Files.walk(dir)){for(Path p:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(p);}}System.out.println("Passed: map/asset round trips, validation, random pool, collision/platforms, loose physics, LAN map/physics transfer, Team 1 spawns, editor rendering and camera navigation.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
 }

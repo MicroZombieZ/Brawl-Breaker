@@ -211,9 +211,9 @@ final class CombatSystem {
                     effect(GameEffect.Kind.GRAB, grabbed.x, grabbed.lift, grabbed.z, 1, 0);
                 }
                 if (grabbed != null) {
-                    double[] hold=MapPhysics.move(map,grabbed.x,grabbed.lift,grabbed.z,playerX-Math.sin(facing)*1.1,grabbed.lift,playerZ-Math.cos(facing)*1.1,.5,grabbed.height());
+                    double[] hold=MapPhysics.move(map,grabbed.x,grabbed.lift,grabbed.z,playerX-Math.sin(facing)*1.1,playerY + (attackTime < .4 ? .5 * Math.sin((attackTime - .2) / .2 * Math.PI) : 0),playerZ-Math.cos(facing)*1.1,.5,grabbed.height());
                     grabbed.x=hold[0];grabbed.z=hold[2];
-                    grabbed.lift = playerY + (attackTime < .4 ? .5 * Math.sin((attackTime - .2) / .2 * Math.PI) : 0);
+                    grabbed.lift = hold[1];
                     grabbed.verticalSpeed = 0;
                     while (pummelHits < 3 && attackTime >= .45 + pummelHits * .25) {
                         if (grabbed.alive()) {
@@ -281,7 +281,7 @@ final class CombatSystem {
         // Exact integration of exponential friction makes pushes independent of frame rate.
         double decay = Math.exp(-5 * dt), displacement = (1 - decay) / 5;
         double[] position=MapPhysics.move(map,dummy.x,dummy.lift,dummy.z,dummy.x+dummy.vx*displacement,dummy.lift,dummy.z+dummy.vz*displacement,.5,dummy.height());
-        dummy.x=position[0];dummy.z=position[2];
+        dummy.x=position[0];dummy.lift=position[1];dummy.z=position[2];
         dummy.vx *= decay; dummy.vz *= decay;
         if(!dummy.playerBody && dummy.lift>0) {
             double oldY=dummy.lift;

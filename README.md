@@ -114,10 +114,14 @@ Invalid files are skipped by random selection. Save replaces files atomically.
 Unsaved changes prompt before New/Open/closing. The editor saves authored
 positions, never the temporary physics-preview positions.
 
-Collision uses conservative axis-aligned bounding boxes for all shapes,
-including rotated objects, spheres, cylinders, and wedges. Platforms support
-landing and standing; wedges are decorative wedge meshes with box collision,
-not walkable ramps. Loose physics has linear gravity/bounce, without rotation,
+Player collision sweeps against the actual convex map meshes, including every
+face and edge of rotated boxes, faceted spheres/cylinders, and wedges. Sides,
+tops and undersides block movement; wedges support sliding along their slope.
+The solver handles simultaneous horizontal/vertical movement, thin walls, wall
+sliding and recovery from existing overlaps (including turning near a wall).
+The player retains its conservative axis-aligned footprint; camera obstruction
+and spawn validation still use object bounding boxes. Collision-disabled objects
+remain passable. Loose physics has linear gravity/bounce, without rotation,
 mass, player pushing, or a full rigid-body solver. Solo and LAN host share
 the collision/physics code. Saved map edits take effect in the next match.
 

@@ -6,24 +6,68 @@ final class MapPhysics {
         if(map.plane==MapDefinition.Plane.ELLIPSE){double distance=Math.hypot(x/a,z/b);if(distance>1){x/=distance;z/=distance;}}
         return new double[]{x,z};
     }
-    /** Axis-separated swept boxes; conservative bounds for curved/rotated shapes. */
-    static double[] move(MapDefinition map,double ox,double oy,double oz,double x,double y,double z,double radius,double height){
-        return move(map,ox,oy,oz,x,y,z,radius,height,null);
+    private static final double EPS=1e-8;
+    private static final java.util.Map<MapDefinition.Part,Hull> HULLS=new java.util.WeakHashMap<>();
+    private static double dot(double[] a,double[] b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+    private static double[] cross(double[] a,double[] b){return new double[]{a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]};}
+    private static double[] sub(double[] a,double[] b){return new double[]{a[0]-b[0],a[1]-b[1],a[2]-b[2]};}
+    /** SAT axes include every face normal and every mesh-edge / actor-edge cross product. */
+    private static final class Hull {
+        final double w,h,d,yaw;final MapDefinition.Shape shape;
+        final java.util.List<double[]> axes=new java.util.ArrayList<>();double[] low,high;
+        Hull(MapDefinition.Part part){w=part.w;h=part.h;d=part.d;yaw=part.yaw;shape=part.shape;
+            MapDefinition.Part local=part.copy();local.x=local.y=local.z=0;
+            java.util.List<double[][]> faces=MapMeshes.faces(local);double[][] basis={{1,0,0},{0,1,0},{0,0,1}};
+            for(double[] axis:basis)add(axis);
+            for(double[][] face:faces){for(int i=1;i+1<face.length;i++)add(cross(sub(face[i],face[0]),sub(face[i+1],face[0])));
+                for(int i=0;i<face.length;i++){double[] edge=sub(face[(i+1)%face.length],face[i]);for(double[] axis:basis)add(cross(edge,axis));}}
+            low=new double[axes.size()];high=new double[axes.size()];java.util.Arrays.fill(low,Double.POSITIVE_INFINITY);java.util.Arrays.fill(high,Double.NEGATIVE_INFINITY);
+            for(int i=0;i<axes.size();i++)for(double[][] face:faces)for(double[] vertex:face){double v=dot(axes.get(i),vertex);low[i]=Math.min(low[i],v);high[i]=Math.max(high[i],v);}
+        }
+        void add(double[] axis){double length=Math.sqrt(dot(axis,axis));if(length<1e-10)return;for(int i=0;i<3;i++)axis[i]/=length;
+            for(double[] old:axes)if(Math.abs(dot(old,axis))>1-1e-9)return;axes.add(axis);}
+        boolean matches(MapDefinition.Part p){return w==p.w&&h==p.h&&d==p.d&&yaw==p.yaw&&shape==p.shape;}
     }
+    private static Hull hull(MapDefinition.Part p){synchronized(HULLS){Hull h=HULLS.get(p);if(h==null||!h.matches(p)){h=new Hull(p);HULLS.put(p,h);}return h;}}
+    private static final class Hit {double time=Double.POSITIVE_INFINITY,penetration;double[] normal;}
+    private static Hit hit(MapDefinition.Part p,double[] center,double[] motion,double radius,double height){
+        // Broad phase uses swept actor bounds; it cannot miss thin surfaces.
+        double[] bounds=p.bounds();for(int i=0;i<3;i++){double extent=i==1?height/2:radius;if(Math.max(center[i],center[i]+motion[i])+extent<bounds[i]-EPS||Math.min(center[i],center[i]+motion[i])-extent>bounds[i+3]+EPS)return null;}
+        Hull h=hull(p);double[] local={center[0]-p.x,center[1]-p.y,center[2]-p.z};
+        double enter=-Double.MAX_VALUE,exit=Double.MAX_VALUE,minPush=Double.POSITIVE_INFINITY;double[] normal=null,push=null;boolean inside=true;
+        for(int i=0;i<h.axes.size();i++){double[] n=h.axes.get(i);double extent=radius*(Math.abs(n[0])+Math.abs(n[2]))+height/2*Math.abs(n[1]);
+            double lo=h.low[i]-extent,hi=h.high[i]+extent,pos=dot(local,n),velocity=dot(motion,n);
+            if(pos<=lo+EPS||pos>=hi-EPS)inside=false;
+            double left=pos-lo,right=hi-pos;
+            if(left>EPS&&left<minPush&&center[1]-n[1]*(left+EPS)>=height/2-EPS){minPush=left;push=new double[]{-n[0],-n[1],-n[2]};}
+            if(right>EPS&&right<minPush&&center[1]+n[1]*(right+EPS)>=height/2-EPS){minPush=right;push=n;}
+            if(Math.abs(velocity)<1e-12){if(pos<=lo+EPS||pos>=hi-EPS)return null;continue;}
+            double t0=(lo-pos)/velocity,t1=(hi-pos)/velocity;double sign=-1;if(t0>t1){double swap=t0;t0=t1;t1=swap;sign=1;}
+            if(t0>enter){enter=t0;normal=new double[]{n[0]*sign,n[1]*sign,n[2]*sign};}exit=Math.min(exit,t1);
+        }
+        Hit result=new Hit();
+        if(inside&&push!=null){result.time=0;result.penetration=minPush+EPS;result.normal=push;return result;}
+        if(enter>exit+EPS||exit<0||enter< -EPS||enter>1||normal==null||dot(motion,normal)>=-1e-12)return null;
+        result.time=Math.max(0,enter);result.normal=normal;return result;
+    }
+    static double[] move(MapDefinition map,double ox,double oy,double oz,double x,double y,double z,double radius,double height){return move(map,ox,oy,oz,x,y,z,radius,height,null);}
     private static double[] move(MapDefinition map,double ox,double oy,double oz,double x,double y,double z,double radius,double height,MapDefinition.Part ignore){
-        double[] edge=boundary(map,x,z,radius);x=edge[0];z=edge[1];
-        // Resolve horizontal movement against the prior foot height, allowing jumps above obstacles.
-        for(MapDefinition.Part p:map.objects)if(p!=ignore&&p.collision){double[] b=p.bounds();if(oy+height<=b[1]+1e-7||oy>=b[4]-1e-7)continue;
-            if(oz+radius>b[2]&&oz-radius<b[5]){if(ox+radius<=b[0]+1e-7&&x+radius>b[0])x=b[0]-radius;else if(ox-radius>=b[3]-1e-7&&x-radius<b[3])x=b[3]+radius;}
+        double[] center={ox,Math.max(0,oy)+height/2,oz},motion={x-ox,y-oy,z-oz};
+        for(int iteration=0;iteration<24;iteration++){
+            Hit nearest=null;
+            for(MapDefinition.Part p:map.objects)if(p!=ignore&&p.collision){Hit h=hit(p,center,motion,radius,height);if(h!=null&&(nearest==null||h.penetration>0&&nearest.penetration==0||h.penetration==0&&nearest.penetration==0&&h.time<nearest.time))nearest=h;}
+            if(nearest!=null&&nearest.penetration>0){for(int i=0;i<3;i++)center[i]+=nearest.normal[i]*nearest.penetration;continue;}
+            if(motion[1]<0&&center[1]+motion[1]<height/2){double t=(height/2-center[1])/motion[1];if(nearest==null||t<nearest.time){nearest=new Hit();nearest.time=Math.max(0,t);nearest.normal=new double[]{0,1,0};}}
+            if(nearest==null){for(int i=0;i<3;i++)center[i]+=motion[i];break;}
+            for(int i=0;i<3;i++){center[i]+=motion[i]*nearest.time;motion[i]*=1-nearest.time;}
+            double inward=dot(motion,nearest.normal);if(inward<0)for(int i=0;i<3;i++)motion[i]-=nearest.normal[i]*inward;
+            // A tiny outward bias prevents numerical re-entry without visible gaps.
+            for(int i=0;i<3;i++)center[i]+=nearest.normal[i]*EPS;
         }
-        for(MapDefinition.Part p:map.objects)if(p!=ignore&&p.collision){double[] b=p.bounds();if(oy+height<=b[1]+1e-7||oy>=b[4]-1e-7)continue;
-            if(x+radius>b[0]&&x-radius<b[3]){if(oz+radius<=b[2]+1e-7&&z+radius>b[2])z=b[2]-radius;else if(oz-radius>=b[5]-1e-7&&z-radius<b[5])z=b[5]+radius;}
-        }
-        y=Math.max(0,y);
-        for(MapDefinition.Part p:map.objects)if(p!=ignore&&p.collision){double[] b=p.bounds();if(x+radius<=b[0]||x-radius>=b[3]||z+radius<=b[2]||z-radius>=b[5])continue;
-            if(oy>=b[4]-1e-6&&y<b[4])y=b[4];else if(oy+height<=b[1]+1e-6&&y+height>b[1])y=b[1]-height;
-        }
-        edge=boundary(map,x,z,radius);return new double[]{edge[0],Math.max(0,y),edge[1]};
+        double[] edge=boundary(map,center[0],center[2],radius);double[] result={edge[0],Math.max(0,center[1]-height/2),edge[1]},target={x,y,z};
+        // Preserve unchanged coordinates exactly: callers use differences to detect landings/bounces.
+        for(int i=0;i<3;i++)if(Math.abs(result[i]-target[i])<1e-10&&(i!=1||target[i]>=0))result[i]=target[i];
+        return result;
     }
     static void tick(MapDefinition map,double dt){
         double remaining=Math.min(.1,Math.max(0,dt));
