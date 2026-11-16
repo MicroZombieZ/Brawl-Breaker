@@ -232,6 +232,25 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
+The **Effect timeline** above the preview combines up to 16 independent effects.
+Use **Add**, **Duplicate**, or **Import effect**, select a row to edit its particle
+settings, and use **Up/Down** or **Remove** to arrange the sequence. Each step has
+its own name, geometry/image, color, motion and origin settings. Set **Wait after
+previous start** (0-30 seconds): the first wait is from Play; later waits are added
+to the previous step's start time. Rows show the resulting start times. Zero waits
+play together, while short waits let effects overlap.
+
+**Play sequence** / **Restart** play from the beginning; Pause freezes the sequence.
+For timelines, Loop emission waits for the last possible particle expiry plus the
+first step's Repeat interval before replaying. Ordinary single effects keep their
+original looping behavior. Changing settings affects the next playback; press Play
+sequence to preview the complete updated timeline. Save/Open preserve all steps,
+sprites, meshes and delays in one `.pfx`; Assign effect installs the whole sequence
+for that game event. Import effect accepts a single-effect `.pfx`; use Open effect
+for an existing timeline. Older single-effect files still load. Use the updated
+game build for timeline assets. Clear/reset and particle quality OFF cancel pending
+steps. Later steps use the event's original position and facing.
+
 **Point of origin** provides X/Y/Z offset sliders (-5 to +5 units) and
 **Reset origin**. Offsets save with the effect and apply to new particles in
 preview and gameplay: X is local right, Y is up, Z is local back; X/Z turn with

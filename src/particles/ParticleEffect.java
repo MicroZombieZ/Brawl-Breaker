@@ -10,6 +10,7 @@ import javax.imageio.stream.ImageInputStream;
 /** Portable cosmetic effect: settings and optional sprite in a single .pfx archive. */
 final class ParticleEffect {
     enum Pattern { BURST, SPARKLE, DUST_EXPLOSION, CONE, RING, FOUNTAIN }
+    java.util.List<ParticleSequence.Step> sequence;
     Pattern pattern = Pattern.SPARKLE;
     ParticleSystem.Shape shape = ParticleSystem.Shape.SPARK;
     Color color = new Color(255, 198, 91);
@@ -42,6 +43,10 @@ final class ParticleEffect {
         return e;
     }
 
+    ParticleEffect copy(){
+        ParticleEffect e=new ParticleEffect();e.pattern=pattern;e.shape=shape;e.color=color;e.image=image;e.mesh=mesh;
+        e.aggression=aggression;e.speed=speed;e.range=range;e.spread=spread;e.heading=heading;e.elevation=elevation;e.size=size;e.lifetime=lifetime;e.gravity=gravity;e.growth=growth;e.spin=spin;e.opacity=opacity;e.interval=interval;e.count=count;e.groundCollision=groundCollision;e.extraValues(extraValues());return e;
+    }
     void validate() throws IOException {
         bounded(aggression,.1,3,"aggressiveness");bounded(speed,0,20,"speed");
         bounded(range,0,5,"range");bounded(spread,0,180,"spread");bounded(heading,-180,180,"heading");
@@ -78,6 +83,7 @@ final class ParticleEffect {
         }
     }
     void save(Path path) throws IOException {
+        if(sequence!=null){ParticleSequence.save(this,path);return;}
         validate();
         Properties p=new Properties();p.setProperty("version","1");
         p.setProperty("pattern",pattern.name());p.setProperty("shape",shape.name());
@@ -101,6 +107,7 @@ final class ParticleEffect {
     }
     static ParticleEffect load(Path path) throws IOException {
         try(ZipFile zip=new ZipFile(path.toFile())) {
+            if(zip.getEntry("sequence.properties")!=null)return ParticleSequence.load(zip);
             ZipEntry settings=zip.getEntry("effect.properties");
             if(settings==null || settings.getSize()>16384) throw new IOException("Missing or oversized effect settings.");
             Properties p=new Properties();

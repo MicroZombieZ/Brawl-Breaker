@@ -424,6 +424,25 @@ PARTICLE STUDIO -- IMPLEMENTED
 Launch (project root):        ParticleEditor.bat, or scripts\Build.bat followed by
                               java -cp build/classes ParticleEditor
 Editor source:                tools/particle-editor/ParticleEditor.java
+Effect timeline:              1-16 named independent steps; Add/Duplicate/Import,
+                              select to edit, Up/Down reorder, Remove (keeps one)
+Step delay:                   0-30 seconds from previous step START; first delay
+                              from sequence trigger; delays accumulate, 0 overlaps
+Playback:                     Play sequence/Restart resets playback; Pause freezes
+                              Timelines loop after latest possible particle expiry
+                              plus first step's Repeat interval; single effects
+                              retain original interval looping
+Timeline persistence:         One .pfx with embedded step settings, sprites, meshes;
+                              Save/Open/Assign preserve entire timeline
+Timeline runtime:             Shared preview/game scheduler; later steps keep event
+                              origin/facing. Pending steps snapshot effect settings.
+                              Clear/reset/OFF cancel pending steps; max 256 pending,
+                              oldest discarded at capacity; existing particle caps
+                              still apply when steps emit. Cosmetic only.
+Timeline compatibility:       Older single .pfx files still load; updated game needed
+                              for sequences; Import effect accepts single effects,
+                              Open effect opens complete timelines. No nesting.
+Timeline archive limit:       64 MB total embedded step files
 Main-tab shape presets:       Shape preset list on Particle effects tab; Import
                               preset copies/normalizes OBJ to particle-effects/shapes
                               Save shape preset stores current edited geometry;

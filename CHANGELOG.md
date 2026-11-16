@@ -4,6 +4,11 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add multi-effect particle timelines with named steps, per-step settings, relative
+  start delays, add/duplicate/import/reorder/remove, and sequence playback/looping.
+  Save complete sequences in .pfx and assign them to gameplay events with bounded,
+  cancellable delayed emission; preserve legacy single-effect loading.
+
 - Add Reload Game to main/pause menus when launched through Run.bat. End the
   session, rebuild, and relaunch with fresh code/assets; offer retry on build errors.
 

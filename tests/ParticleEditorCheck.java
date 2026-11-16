@@ -126,6 +126,26 @@ public class ParticleEditorCheck {
             editor.edit(null);check(selected[0]==null,"Remove custom shape");editor.travel(editor.undo,editor.redo);check(selected[0]!=null,"Undo removal");
         });
     }
+    static void timelines(Path directory)throws Exception{
+        ParticleEffect first=new ParticleEffect();first.pattern=ParticleEffect.Pattern.CONE;first.count=1;first.speed=0;first.range=0;first.lifetime=5;first.lifetimeVariation=0;first.color=Color.RED;
+        ParticleEffect second=first.copy();second.color=Color.BLUE;second.mesh=ParticleMesh.cube();second.image=new BufferedImage(2,2,BufferedImage.TYPE_INT_ARGB);
+        ParticleEffect root=new ParticleEffect();root.sequence=new ArrayList<>();root.sequence.add(new ParticleSequence.Step("First",.2,first));root.sequence.add(new ParticleSequence.Step("Second",.3,second));
+        Path file=directory.resolve("sequence.pfx");root.save(file);ParticleEffect loaded=ParticleEffect.load(file);
+        check(loaded.sequence.size()==2&&loaded.sequence.get(1).effect.mesh!=null&&loaded.sequence.get(1).effect.image!=null,"Timeline embeds settings, sprites and meshes");near(loaded.sequence.get(1).wait,.3,"Timeline delays round trip");
+        ParticleSystem s=new ParticleSystem();s.quality(ParticleSystem.Quality.HIGH);s.emit(loaded,0,2,0,0);check(s.particles.isEmpty(),"First delay queues emission");s.update(.19);check(s.particles.isEmpty(),"No premature emission");s.update(.02);check(s.particles.size()==1,"First step begins at .2s");near(s.particles.get(0).life,4.99,"Step advanced only after its start");
+        s.update(.29);check(s.particles.size()==2&&s.particles.get(1).color.equals(Color.BLUE),"Second starts .3s after previous start");near(s.particles.get(1).life,5,"Exact second boundary");
+        ParticleSystem large=new ParticleSystem();large.quality(ParticleSystem.Quality.HIGH);large.emit(loaded,0,2,0,0);large.update(.5);near(large.particles.get(0).life,s.particles.get(0).life,"Timeline stable across update sizes");
+        s.clear();s.emit(loaded,0,2,0,0);s.clear();s.update(1);check(s.particles.isEmpty(),"Clear cancels pending steps");
+        s.emit(loaded,0,2,0,0);s.quality(ParticleSystem.Quality.OFF);s.quality(ParticleSystem.Quality.HIGH);s.update(1);check(s.particles.isEmpty(),"Off cancels pending sequence");
+        loaded.sequence.get(0).wait=-1;reject(loaded,file);loaded.sequence.get(0).wait=.2;
+        final ParticleEffect[] current={first.copy()};
+        SwingUtilities.invokeAndWait(()->{
+            ParticleTimeline timeline=new ParticleTimeline(()->current[0],e->current[0]=e,()->{});
+            timeline.add(second.copy(),"Blue");current[0].speed=7;timeline.list.setSelectedIndex(0);near(current[0].speed,0,"Step settings independent");
+            timeline.list.setSelectedIndex(1);near(current[0].speed,7,"Step selection retains edits");timeline.delay.setValue(.75);near(timeline.model.get(1).wait,.75,"Delay editor changes selected step");
+            timeline.move(-1);check(timeline.model.get(0).name.equals("Blue"),"Reorder steps");timeline.remove();check(timeline.model.size()==1,"Remove selected step");timeline.remove();check(timeline.model.size()==1,"Keep at least one step");
+        });
+    }
     static void physics() {
         for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values()) {
             ParticleEffect e=ParticleEffect.preset(pattern);ParticleSystem s=new ParticleSystem();s.quality(ParticleSystem.Quality.HIGH);
@@ -246,7 +266,7 @@ public class ParticleEditorCheck {
     }
     private static void run() throws Exception {
         Path directory=Files.createTempDirectory("particle-editor-check-");
-        try{files(directory);advanced(directory);meshes(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"),directory.resolve("shapes"));}
+        try{files(directory);advanced(directory);meshes(directory);timelines(directory);physics();ui(Paths.get(System.getProperty("java.io.tmpdir"),"camera-particle-editor.png"),directory.resolve("shapes"));}
         finally{try(java.util.stream.Stream<Path> files=Files.walk(directory)){
             for(Path path:(Iterable<Path>)files.sorted(Comparator.reverseOrder())::iterator)Files.delete(path);}}
         System.out.println("Passed: portable settings/image round trip, transparency, validation, event assignments, presets, direction, physics, limits, sliders, live color/hex/palette editing and editor rendering.");

@@ -23,6 +23,11 @@ final class ParticleSystem {
         boolean groundCollision=true;
         int bounces;
     }
+    private static final class Pending {
+        ParticleEffect effect;double wait,x,y,z,facing;
+        Pending(ParticleEffect e,double wait,double x,double y,double z,double facing){effect=e.copy();this.wait=wait;this.x=x;this.y=y;this.z=z;this.facing=facing;}
+    }
+    private final java.util.List<Pending> pending=new ArrayList<>();
     private static final class Track {
         double x, y, z, steps, aura, slow, trail, knock, multiplier;
         boolean initialized;
@@ -45,6 +50,7 @@ final class ParticleSystem {
 
     void emit(ParticleEffect e,double x,double y,double z,double facing) {
         if(quality==Quality.OFF) return;
+        if(e.sequence!=null){double delay=0;for(ParticleSequence.Step s:e.sequence){delay+=s.wait;if(delay<=0)emit(s.effect,x,y,z,facing);else{if(pending.size()>=256)pending.remove(0);pending.add(new Pending(s.effect,delay,x,y,z,facing));}}return;}
         x+=e.originX*Math.cos(facing)+e.originZ*Math.sin(facing);
         y+=e.originY;
         z+=-e.originX*Math.sin(facing)+e.originZ*Math.cos(facing);
@@ -99,9 +105,9 @@ final class ParticleSystem {
     void quality(Quality value) {
         quality = value;
         while (particles.size() > value.limit) particles.remove(0);
-        if (value == Quality.OFF) tracks.clear();
+        if (value == Quality.OFF) {tracks.clear();pending.clear();}
     }
-    void clear() { particles.clear(); tracks.clear(); }
+    void clear() { particles.clear(); tracks.clear();pending.clear(); }
     void retainActors(Set<Integer> ids) { tracks.keySet().retainAll(ids); }
     private double between(double low, double high) { return low + random.nextDouble() * (high - low); }
     private Particle add(Shape shape, Color color, double x, double y, double z, double size, double life) {
@@ -238,6 +244,20 @@ final class ParticleSystem {
 
     void update(double dt) {
         if(dt<=0 || !Double.isFinite(dt)) return;
+        double remaining=dt;
+        while(!pending.isEmpty()){
+            double next=Double.POSITIVE_INFINITY;for(Pending p:pending)next=Math.min(next,p.wait);
+            if(next>remaining)break;
+            advance(next);remaining-=next;for(Pending p:pending)p.wait-=next;
+            Iterator<Pending> events=pending.iterator();java.util.List<Pending> ready=new ArrayList<>();
+            while(events.hasNext()){Pending p=events.next();if(p.wait<=1e-9){ready.add(p);events.remove();}}
+            for(Pending p:ready)emit(p.effect,p.x,p.y,p.z,p.facing);
+        }
+        for(Pending p:pending)p.wait-=remaining;
+        advance(remaining);
+    }
+    private void advance(double dt){
+        if(dt<=0)return;
         Iterator<Particle> iterator=particles.iterator();
         while(iterator.hasNext()) {
             Particle p=iterator.next(); double step=dt;

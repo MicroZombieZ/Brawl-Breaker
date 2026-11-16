@@ -13,6 +13,7 @@ public class ParticleEditor extends JPanel {
     private final ParticleSystem system=new ParticleSystem();
     private final Preview preview=new Preview();
     private ParticleShapeEditor shapeEditor;
+    private ParticleTimeline timeline;
     private final JPanel sliders=new Controls();
     private final JLabel status=new JLabel("Create an effect, then save it or assign it to a game event.");
     private final JLabel imageLabel=new JLabel("Built-in shapes; PNG transparency supported");
@@ -53,17 +54,19 @@ public class ParticleEditor extends JPanel {
         JLabel title=new JLabel("PARTICLE STUDIO");title.setFont(new Font("SansSerif",Font.BOLD,24));
         header.add(title,BorderLayout.WEST);
         JPanel files=new JPanel(new FlowLayout(FlowLayout.RIGHT,6,0));
-        button(files,"New",()->{ if(discard()) { effect=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);currentFile=null;activeShapePreset=null;dirty=false;refresh();restart(); } });
+        button(files,"New",()->{ if(discard()) { effect=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);currentFile=null;activeShapePreset=null;dirty=false;if(timeline!=null)timeline.load(effect);refresh();restart(); } });
         button(files,"Open effect",this::open);button(files,"Save",()->save(false));button(files,"Save as",()->save(true));
         header.add(files,BorderLayout.EAST);add(header,BorderLayout.NORTH);
         JPanel workspace=new JPanel(new BorderLayout(0,8));workspace.add(preview,BorderLayout.CENTER);
         JPanel playback=new JPanel(new FlowLayout(FlowLayout.LEFT));
-        button(playback,"Emit burst",()->{system.emit(effect,0,1,0,0);elapsed=0;});
+        button(playback,"Play sequence",this::restart);
         button(playback,"Restart",this::restart);playback.add(loop);playback.add(paused);
         button(playback,"Reset view",()->{preview.yaw=.65;preview.pitch=.4;preview.distance=10;preview.repaint();});
         JPanel previewControls=new JPanel(new BorderLayout());previewControls.add(playback,BorderLayout.NORTH);
         JPanel reference=new JPanel(new FlowLayout(FlowLayout.LEFT));reference.add(showDummy);reference.add(new JLabel("Wireframe: 1 x 1.5 x 1 units"));
         showDummy.addActionListener(e->preview.repaint());previewControls.add(reference,BorderLayout.SOUTH);workspace.add(previewControls,BorderLayout.SOUTH);
+        timeline=new ParticleTimeline(()->effect,selected->{effect=selected;activeShapePreset=null;refresh();},()->{dirty=true;});
+        workspace.add(timeline,BorderLayout.NORTH);
         sliders.setLayout(new BoxLayout(sliders,BoxLayout.Y_AXIS));
         section("EMISSION");
         row("Preset",presets);presets.addActionListener(e->{ if(!refreshing) {
@@ -215,7 +218,8 @@ public class ParticleEditor extends JPanel {
     }
     private void previewColor(Color color){
         effect.color=color;refreshColor();
-        for(ParticleSystem.Particle p:system.particles)if(p.mesh!=null||p.image==null)p.color=color;
+        if(timeline!=null&&timeline.model.size()>1)restart();
+        else for(ParticleSystem.Particle p:system.particles)if(p.mesh!=null||p.image==null)p.color=color;
         preview.repaint();if(shapeEditor!=null)shapeEditor.view.repaint();
     }
     private void editColor(){
@@ -228,13 +232,15 @@ public class ParticleEditor extends JPanel {
             dirty=wasDirty||!effect.color.equals(original);status.setText("Particle color: "+ParticleColorEditor.format(effect.color)+". Images keep their original colors.");
         }else{previewColor(original);dirty=wasDirty;}
     }
-    private void restart() {system.clear();system.emit(effect,0,1,0,0);elapsed=0;preview.repaint();}
+    private void restart() {system.clear();system.emit(timeline==null?effect:timeline.document(),0,1,0,0);elapsed=0;preview.repaint();}
     private void tick() {
         long now=System.nanoTime();double dt=Math.min(.05,(now-previous)/1e9);previous=now;
         if(!paused.isSelected()) {
             system.update(dt);elapsed+=dt;
-            if(loop.isSelected()&&elapsed>=effect.interval){elapsed%=effect.interval;system.emit(effect,0,1,0,0);}
+            double cycle=timeline==null?effect.interval:timeline.cycle();
+            if(loop.isSelected()&&elapsed>=cycle){elapsed%=cycle;system.emit(timeline==null?effect:timeline.document(),0,1,0,0);}
         }
+        if(timeline!=null)timeline.playhead(elapsed);
         preview.repaint();
     }
     private JFileChooser chooser() {
@@ -248,7 +254,7 @@ public class ParticleEditor extends JPanel {
     }
     private void open() {
         if(!discard())return;JFileChooser c=chooser();if(c.showOpenDialog(this)!=JFileChooser.APPROVE_OPTION)return;
-        try{ParticleEffect loaded=ParticleEffect.load(c.getSelectedFile().toPath());effect=loaded;activeShapePreset=null;currentFile=c.getSelectedFile().toPath();
+        try{ParticleEffect loaded=ParticleEffect.load(c.getSelectedFile().toPath());timeline.load(loaded);effect=timeline.model.get(0).effect;activeShapePreset=null;currentFile=c.getSelectedFile().toPath();
             dirty=false;refresh();restart();status.setText("Opened "+currentFile.getFileName());}catch(Exception ex){error(ex);}
     }
     private boolean save(boolean saveAs) {
@@ -257,7 +263,7 @@ public class ParticleEditor extends JPanel {
             path=c.getSelectedFile().toPath();if(!path.toString().toLowerCase(Locale.ROOT).endsWith(".pfx"))path=Paths.get(path+".pfx");
             if(Files.exists(path)&&JOptionPane.showConfirmDialog(this,"Replace "+path.getFileName()+"?","Save effect",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return false;
         }
-        try{effect.save(path);currentFile=path;dirty=false;status.setText("Saved "+path.getFileName()+" with its image.");return true;}
+        try{timeline.document().save(path);currentFile=path;dirty=false;status.setText("Saved "+path.getFileName()+" with its image.");return true;}
         catch(Exception ex){error(ex);return false;}
     }
     private void importImage() {
@@ -268,7 +274,7 @@ public class ParticleEditor extends JPanel {
     }
     private Path assignment() {return Paths.get("particle-effects",((GameEffect.Kind)events.getSelectedItem()).name()+".pfx");}
     private void install() {
-        try{effect.save(assignment());status.setText("Assigned to "+events.getSelectedItem()+". Restart the game to load it.");}
+        try{timeline.document().save(assignment());status.setText("Assigned to "+events.getSelectedItem()+". Restart the game to load it.");}
         catch(Exception ex){error(ex);}
     }
     private void restore() {
