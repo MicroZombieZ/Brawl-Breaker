@@ -26,6 +26,7 @@ public class ParticleEditor extends JPanel {
     private boolean refreshingShapes;
     private final java.util.Map<String,Path> shapeFiles=new LinkedHashMap<>();
     private final JComboBox<GameEffect.Kind> events=new JComboBox<>(GameEffect.Kind.values());
+    private final JCheckBox showDummy=new JCheckBox("Reference dummy",true);
     private final JCheckBox loop=new JCheckBox("Loop emission",true),paused=new JCheckBox("Pause");
     private final java.util.List<Runnable> refreshers=new ArrayList<>();
     private boolean refreshing,dirty;
@@ -60,7 +61,9 @@ public class ParticleEditor extends JPanel {
         button(playback,"Emit burst",()->{system.emit(effect,0,1,0,0);elapsed=0;});
         button(playback,"Restart",this::restart);playback.add(loop);playback.add(paused);
         button(playback,"Reset view",()->{preview.yaw=.65;preview.pitch=.4;preview.distance=10;preview.repaint();});
-        workspace.add(playback,BorderLayout.SOUTH);
+        JPanel previewControls=new JPanel(new BorderLayout());previewControls.add(playback,BorderLayout.NORTH);
+        JPanel reference=new JPanel(new FlowLayout(FlowLayout.LEFT));reference.add(showDummy);reference.add(new JLabel("Wireframe: 1 x 1.5 x 1 units"));
+        showDummy.addActionListener(e->preview.repaint());previewControls.add(reference,BorderLayout.SOUTH);workspace.add(previewControls,BorderLayout.SOUTH);
         sliders.setLayout(new BoxLayout(sliders,BoxLayout.Y_AXIS));
         section("EMISSION");
         row("Preset",presets);presets.addActionListener(e->{ if(!refreshing) {
@@ -78,6 +81,11 @@ public class ParticleEditor extends JPanel {
         slider("Aggressiveness",10,300,100,"x",()->effect.aggression,v->effect.aggression=v);
         slider("Particles / burst",1,400,1,"",()->effect.count,v->effect.count=(int)v);
         slider("Repeat interval",10,500,100,"s",()->effect.interval,v->effect.interval=v);
+        section("POINT OF ORIGIN");
+        slider("Origin X (right)",-500,500,100,"u",()->effect.originX,v->effect.originX=v);
+        slider("Origin Y (up)",-500,500,100,"u",()->effect.originY,v->effect.originY=v);
+        slider("Origin Z (back)",-500,500,100,"u",()->effect.originZ,v->effect.originZ=v);
+        JPanel originButtons=new JPanel(new FlowLayout(FlowLayout.LEFT));button(originButtons,"Reset origin",()->{effect.originX=effect.originY=effect.originZ=0;dirty=true;refresh();restart();});sliders.add(originButtons);
         section("DIRECTION & MOTION");
         slider("Speed",0,200,10,"u/s",()->effect.speed,v->effect.speed=v);
         slider("Spawn range",0,500,100,"u",()->effect.range,v->effect.range=v);
@@ -298,9 +306,17 @@ public class ParticleEditor extends JPanel {
             g.setColor(new Color(181,89,101));line(g,0,0,0,2,0,0);
             g.setColor(new Color(98,180,146));line(g,0,0,0,0,2,0);
             g.setColor(new Color(85,157,220));line(g,0,0,0,0,0,-2);
+            if(showDummy.isSelected()){
+                g.setColor(new Color(220,155,137));g.setStroke(new BasicStroke(1.5f));
+                for(double x:new double[]{-.5,.5})for(double z:new double[]{-.5,.5})line(g,x,0,z,x,1.5,z);
+                for(double y:new double[]{0,1.5}){line(g,-.5,y,-.5,.5,y,-.5);line(g,-.5,y,.5,.5,y,.5);line(g,-.5,y,-.5,-.5,y,.5);line(g,.5,y,-.5,.5,y,.5);}
+                g.setStroke(new BasicStroke(1));double[] label=project(0,1.7,0);if(label[3]>.1)g.drawString("Reference dummy",(int)label[0]-45,(int)label[1]);
+            }
+            double ox=effect.originX,oy=effect.groundCollision?Math.max(.03,1+effect.originY):1+effect.originY,oz=effect.originZ;
             double heading=Math.toRadians(effect.heading),elevation=Math.toRadians(effect.elevation);
-            g.setColor(new Color(255,198,91));line(g,0,1,0,-Math.sin(heading)*Math.cos(elevation)*2,
-                    1+Math.sin(elevation)*2,-Math.cos(heading)*Math.cos(elevation)*2);
+            g.setColor(new Color(255,198,91));line(g,ox,oy,oz,ox-Math.sin(heading)*Math.cos(elevation)*2,
+                    oy+Math.sin(elevation)*2,oz-Math.cos(heading)*Math.cos(elevation)*2);
+            line(g,ox-.12,oy,oz,ox+.12,oy,oz);line(g,ox,oy-.12,oz,ox,oy+.12,oz);line(g,ox,oy,oz-.12,ox,oy,oz+.12);
             ArrayList<ParticleSystem.Particle> sorted=new ArrayList<>(system.particles);
             sorted.sort(Comparator.comparingDouble(p->-project(p.x,p.y,p.z)[3]));
             java.util.List<SceneDepthRenderer.Face> meshFaces=new ArrayList<>();
@@ -353,7 +369,7 @@ public class ParticleEditor extends JPanel {
             }
             g.setColor(new Color(162,182,203));g.setFont(new Font("SansSerif",Font.PLAIN,12));
             g.drawString("Drag to orbit  /  Scroll to zoom",18,26);
-            g.drawString(system.particles.size()+" / 800 particles  |  "+(paused.isSelected()?"Paused":effect.pattern)+"  |  emitter at Y = 1",18,getHeight()-18);
+            g.drawString(system.particles.size()+" / 800 particles  |  "+(paused.isSelected()?"Paused":effect.pattern)+String.format(Locale.ROOT,"  |  origin (%.2f, %.2f, %.2f)",ox,oy,oz),18,getHeight()-18);
             g.dispose();
         }
     }

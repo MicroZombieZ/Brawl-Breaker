@@ -20,11 +20,12 @@ final class ParticleEffect {
     double speedVariation=.3, sizeVariation=.25, lifetimeVariation=.25,
             drag=0, windX=0, windY=0, windZ=0, emissionDuration=0,
             fadeIn=0, fadeOut=1, bounce=.35;
+    double originX=0,originY=0,originZ=0;
     boolean groundCollision=true;
     int count=40;
-    private static final String[] EXTRA={"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce"};
-    double[] extraValues(){return new double[]{speedVariation,sizeVariation,lifetimeVariation,drag,windX,windY,windZ,emissionDuration,fadeIn,fadeOut,bounce};}
-    private void extraValues(double[] v){speedVariation=v[0];sizeVariation=v[1];lifetimeVariation=v[2];drag=v[3];windX=v[4];windY=v[5];windZ=v[6];emissionDuration=v[7];fadeIn=v[8];fadeOut=v[9];bounce=v[10];}
+    private static final String[] EXTRA={"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce","originX","originY","originZ"};
+    double[] extraValues(){return new double[]{speedVariation,sizeVariation,lifetimeVariation,drag,windX,windY,windZ,emissionDuration,fadeIn,fadeOut,bounce,originX,originY,originZ};}
+    private void extraValues(double[] v){speedVariation=v[0];sizeVariation=v[1];lifetimeVariation=v[2];drag=v[3];windX=v[4];windY=v[5];windZ=v[6];emissionDuration=v[7];fadeIn=v[8];fadeOut=v[9];bounce=v[10];originX=v[11];originY=v[12];originZ=v[13];}
 
     static ParticleEffect preset(Pattern pattern) {
         ParticleEffect e=new ParticleEffect();e.pattern=pattern;
@@ -50,8 +51,8 @@ final class ParticleEffect {
         bounded(opacity,0,1,"opacity");bounded(interval,.1,5,"repeat interval");
         bounded(count,1,400,"count");
         double[] extra=extraValues();
-        for(int i=0;i<extra.length;i++) bounded(extra[i],i>=4&&i<=6?-20:0,
-                i==3?10:i>=4&&i<=6?20:i==7?5:i==2?.95:1,EXTRA[i]);
+        for(int i=0;i<extra.length;i++) bounded(extra[i],i>=11?-5:i>=4&&i<=6?-20:0,
+                i>=11?5:i==3?10:i>=4&&i<=6?20:i==7?5:i==2?.95:1,EXTRA[i]);
         if(image!=null && (image.getWidth()>2048 || image.getHeight()>2048))
             throw new IOException("Images must be at most 2048 x 2048 pixels.");
     }

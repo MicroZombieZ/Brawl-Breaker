@@ -465,7 +465,16 @@ Image color / transparency:   Images keep original colors; Opacity remains separ
 Uploaded images:              PNG, JPEG, GIF first frame; at most 2048 x 2048,
                               under 16 MB; colors/aspect/transparency preserved
 Portable effect file:         .pfx archive containing settings and optional PNG
-Preview:                      Orbit/zoom, burst/restart, loop, pause; emitter Y=1
+Preview:                      Orbit/zoom, burst/restart, loop, pause; base origin (0,1,0)
+Origin offsets:               X/Y/Z sliders -5..5 units, defaults 0; saved in .pfx
+                              X local right, Y up, Z local back; X/Z rotate with
+                              emitter facing, independent of heading control
+                              Applies to new particles; marker/arrow show origin
+                              Reset origin zeros all offsets and restarts preview
+Spawn height:                 Ground enabled: clamp to >=0.03; disabled: allow negative Y
+Reference dummy:              Show/hide preview-only wireframe at (0,0,0), 1x1.5x1
+                              units like normal training dummy; shown by default
+                              No collisions, not emitted/saved as part of effect
 Preview quality:              HIGH; 800 live particles maximum
 
 Editor slider limits (world units and seconds):

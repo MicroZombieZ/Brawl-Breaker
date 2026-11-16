@@ -37,7 +37,7 @@ public class ParticleEditorCheck {
         ParticleEffect e=ParticleEffect.preset(ParticleEffect.Pattern.CONE);
         e.speedVariation=0;e.sizeVariation=0;e.lifetimeVariation=0;e.drag=2;
         e.windX=3;e.windY=1;e.windZ=-2;e.emissionDuration=.5;e.fadeIn=.2;e.fadeOut=.3;
-        e.bounce=.8;e.groundCollision=false;
+        e.bounce=.8;e.groundCollision=false;e.originX=1.2;e.originY=-.4;e.originZ=2.3;
         Path path=directory.resolve("advanced.pfx");e.save(path);ParticleEffect loaded=ParticleEffect.load(path);
         check(Arrays.equals(e.extraValues(),loaded.extraValues())&&!loaded.groundCollision,"Advanced settings round trip");
         e.emissionDuration=0;e.gravity=0;e.count=1;e.lifetime=4;e.spread=0;
@@ -60,7 +60,7 @@ public class ParticleEditorCheck {
         e=new ParticleEffect();e.save(path);
         java.util.Properties props=new java.util.Properties();
         try(java.util.zip.ZipFile zip=new java.util.zip.ZipFile(path.toFile())){props.load(zip.getInputStream(zip.getEntry("effect.properties")));}
-        for(String key:new String[]{"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce","groundCollision"})props.remove(key);
+        for(String key:new String[]{"speedVariation","sizeVariation","lifetimeVariation","drag","windX","windY","windZ","emissionDuration","fadeIn","fadeOut","bounce","groundCollision","originX","originY","originZ"})props.remove(key);
         try(java.util.zip.ZipOutputStream out=new java.util.zip.ZipOutputStream(Files.newOutputStream(path))){out.putNextEntry(new java.util.zip.ZipEntry("effect.properties"));props.store(out,"");out.closeEntry();}
         loaded=ParticleEffect.load(path);
         check(Arrays.equals(e.extraValues(),loaded.extraValues())&&loaded.groundCollision,"Legacy files preserve defaults");
@@ -139,6 +139,11 @@ public class ParticleEditorCheck {
         double x=p.x;s.update(.1);check(p.x<x,"Custom particles use shared physics");
         e.aggression=3;for(int i=0;i<100;i++)s.emit(e,0,3,0,0);check(s.particles.size()==800,"Aggressive emission respects game cap");
         s.quality(ParticleSystem.Quality.OFF);s.emit(e,0,3,0,0);check(s.particles.isEmpty(),"Off disables custom emission");
+        e.originX=2;e.originY=3;e.originZ=4;e.range=0;e.count=1;e.aggression=1;
+        s.quality(ParticleSystem.Quality.HIGH);s.emit(e,10,10,10,Math.PI/2);
+        p=s.particles.get(0);near(p.x,14,"Origin rotates with emitter X");near(p.y,13,"Origin vertical offset");near(p.z,8,"Origin rotates with emitter Z");
+        s.clear();e.originY=-5;e.groundCollision=false;s.emit(e,0,1,0,0);near(s.particles.get(0).y,-4,"Disabled ground permits negative origin");
+        s.clear();e.groundCollision=true;s.emit(e,0,1,0,0);near(s.particles.get(0).y,.03,"Ground collision clamps below-ground origin");s.clear();
         e=ParticleEffect.preset(ParticleEffect.Pattern.SPARKLE);s.quality(ParticleSystem.Quality.HIGH);s.emit(e,0,3,0,0);
         check(s.particles.stream().anyMatch(v->v.delay>0&&v.twinkle>0),"Sparkle emission staggers and twinkles");
     }
@@ -183,7 +188,7 @@ public class ParticleEditorCheck {
                 }catch(Exception ex){throw new RuntimeException(ex);}
                 editor.setSize(1220,820);layout(editor);
                 check(components(editor,JTabbedPane.class).stream().anyMatch(t->t.getTabCount()==2&&t.getTitleAt(1).equals("Custom shape")),"Shape workspace is a secondary particle editor tab");
-                check(components(editor,JSlider.class).size()==25,"All twenty-five parameter sliders exist");
+                check(components(editor,JSlider.class).size()==28,"All twenty-eight parameter sliders exist");
                 java.util.List<JComboBox> combos=components(editor,JComboBox.class);
                 for(ParticleEffect.Pattern pattern:ParticleEffect.Pattern.values())combos.get(0).setSelectedItem(pattern);
                 for(JSlider slider:components(editor,JSlider.class)) {slider.setValue(slider.getMinimum());slider.setValue(slider.getMaximum());}
@@ -194,6 +199,11 @@ public class ParticleEditorCheck {
                 } catch(ReflectiveOperationException ex){throw new RuntimeException(ex);}
                 BufferedImage image=new BufferedImage(1220,820,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();editor.paint(g);g.dispose();
                 check(image.getRGB(400,400)!=0,"Editor preview paints");
+                JCheckBox dummy=components(editor,JCheckBox.class).stream().filter(c->c.getText().equals("Reference dummy")).findFirst().get();
+                check(dummy.isSelected(),"Reference dummy defaults visible");dummy.doClick();
+                BufferedImage hidden=new BufferedImage(1220,820,BufferedImage.TYPE_INT_ARGB);Graphics2D hg=hidden.createGraphics();editor.paint(hg);hg.dispose();
+                int difference=0;for(int yy=120;yy<650;yy++)for(int xx=100;xx<700;xx++)if(image.getRGB(xx,yy)!=hidden.getRGB(xx,yy))difference++;
+                check(difference>20,"Dummy toggle changes reference viewport");dummy.doClick();
                 try{javax.imageio.ImageIO.write(image,"png",screenshot.toFile());}catch(java.io.IOException ex){throw new RuntimeException(ex);}
                 // Exercise uploaded sprites in the actual game's depth-sorted rendering path.
                 try {

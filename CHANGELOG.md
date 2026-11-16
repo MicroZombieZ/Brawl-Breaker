@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add saved X/Y/Z particle origin offsets with Reset origin and a moving emitter
+  marker. Apply offsets in emitter-facing coordinates in preview/gameplay.
+  Add a show/hide wireframe training dummy for scale reference in Particle Studio.
+
 - Add Practice and LAN host map pickers with saved .map files, built-in Practice,
   and Random. Refresh newly added maps, report invalid explicit selections, and
   preserve equal-chance random selection and host map transfer to guests.

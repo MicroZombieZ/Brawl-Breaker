@@ -45,6 +45,9 @@ final class ParticleSystem {
 
     void emit(ParticleEffect e,double x,double y,double z,double facing) {
         if(quality==Quality.OFF) return;
+        x+=e.originX*Math.cos(facing)+e.originZ*Math.sin(facing);
+        y+=e.originY;
+        z+=-e.originX*Math.sin(facing)+e.originZ*Math.cos(facing);
         int total=(int)Math.ceil(e.count*e.aggression*quality.density);
         double heading=facing+Math.toRadians(e.heading),elevation=Math.toRadians(e.elevation);
         double fx=-Math.sin(heading)*Math.cos(elevation),fy=Math.sin(elevation),fz=-Math.cos(heading)*Math.cos(elevation);
@@ -66,7 +69,7 @@ final class ParticleSystem {
                 dz=fz*cos+(rz*Math.cos(a)+uz*Math.sin(a))*sin;
             }
             double velocity=e.speed*Math.sqrt(e.aggression)*between(Math.max(0,1-e.speedVariation*4/3),1+e.speedVariation*2/3);
-            Particle p=add(e.shape,e.color,px,Math.max(.03,y),pz,e.size*between(1-e.sizeVariation,1+e.sizeVariation),e.lifetime*between(1-e.lifetimeVariation,1+e.lifetimeVariation));
+            Particle p=add(e.shape,e.color,px,e.groundCollision?Math.max(.03,y):y,pz,e.size*between(1-e.sizeVariation,1+e.sizeVariation),e.lifetime*between(1-e.lifetimeVariation,1+e.lifetimeVariation));
             p.vx=dx*velocity;p.vy=dy*velocity;p.vz=dz*velocity;
             p.gravity=e.gravity;p.growth=e.growth;p.spin=between(-e.spin,e.spin);
             p.image=e.image;p.mesh=e.mesh;p.opacity=e.opacity;

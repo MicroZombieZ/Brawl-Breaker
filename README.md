@@ -225,6 +225,18 @@ Solo particle motion freezes with pause and follows `timescale`. LAN particles c
 
 ## Particle Studio
 
+**Point of origin** provides X/Y/Z offset sliders (-5 to +5 units) and
+**Reset origin**. Offsets save with the effect and apply to new particles in
+preview and gameplay: X is local right, Y is up, Z is local back; X/Z turn with
+the emitting character, independently of the emission heading setting. The
+preview base origin is (0, 1, 0), and its yellow marker/arrow follow the offsets.
+Ground collision clamps spawn height to at least 0.03; disabling it allows
+below-ground origins. Restart previews offset changes immediately.
+
+Toggle **Reference dummy** below the preview to show/hide a wireframe matching
+the game's normal training dummy (1 x 1.5 x 1 units, standing at the world origin).
+It is a preview-only scale guide, with no collision or effect on saved assets.
+
 On the **Particle effects** tab, **Shape preset** selects reusable custom meshes
 without opening the shape editor. **Import preset** copies and normalizes a
 triangulated OBJ into `particle-effects/shapes`; **Save shape preset** saves the
