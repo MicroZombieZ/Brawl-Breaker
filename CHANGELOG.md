@@ -4,6 +4,10 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Update the planned Shield design: M1 Shield-Bash (23.5 damage / 0.45s),
+  Charge (25 damage / 40s, 1s windup), Swing (35 damage / 50s, 1.3s windup),
+  and Protect/Assault switching (25s). Keep unspecified design values TBD.
+
 - Make camera obstruction follow rendered map triangles and their edges rather
   than object bounding boxes, including passable visible objects. Preserve camera
   clearance while removing false obstruction around rotated/curved/sloped shapes;

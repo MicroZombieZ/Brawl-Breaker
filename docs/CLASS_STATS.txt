@@ -1,5 +1,5 @@
 CLASS STATS AND ABILITY REFERENCE
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
@@ -274,30 +274,46 @@ Active abilities / passives:   None implemented; design TBD
 
 SHIELD -- PLANNED, NOT IMPLEMENTED
 =================================
+Design updated:               2026-11-17 (supersedes earlier Shield design)
 Maximum HP / stamina:          TBD
 Speed / defense values:        TBD, including mode-specific values
-Inputs / ranges / timings:     TBD
+Defense directionality:        TBD (all directions or frontal shield blocking)
+Default mode:                  TBD
+
+SHIELD-BASH (BASIC ATTACK)
+  Input:                       M1 / left mouse button
+  Planned damage:              23.5
+  Planned cooldown:            0.45 seconds
+  Throw the shield forward.
+  Projectile versus short thrust, range, return behavior, speed, startup,
+  active time, recovery and targets per attack: TBD.
 
 CHARGE
   Planned damage:              25
-  Planned cooldown:            35 seconds
+  Planned cooldown:            40 seconds
+  Planned windup:              1 second
   Run forward behind a riot shield with limited turning.
   Hitting an enemy deals damage and knocks them back.
   Missing causes medium recovery; hitting a wall causes long recovery.
-  Launch speed, duration, knockback, and recovery seconds: TBD.
+  Input, launch speed, duration, knockback, turn rate, hit recovery,
+  and exact medium/long recovery seconds: TBD.
 
-SHIELD-BASH
+SWING
   Planned damage:              35
-  Planned cooldown:            25 seconds
+  Planned cooldown:            50 seconds
+  Planned windup:              1.3 seconds
   Swing the riot shield forward. Missing causes long recovery.
-  Range, startup, animation, knockback, and recovery seconds: TBD.
+  Input, range, active time, animation, hit recovery, miss recovery seconds,
+  knockback and targets per attack: TBD.
 
 MODE: PROTECT / ASSAULT
+  Planned cooldown:            25 seconds
   Protect: Lower speed and higher defense.
   Assault: Higher speed and lower defense.
-  Exact values, input, switching rules, and cooldown: TBD.
+  Exact values, input and switching rules: TBD.
 
-Passives / basic attack:       TBD
+Passives / airborne rules / movement during windups: TBD.
+Shield abilities are not yet implemented; this section records the design only.
 
 
 MEDIC -- PLANNED, NOT IMPLEMENTED
