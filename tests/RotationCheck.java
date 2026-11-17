@@ -25,7 +25,8 @@ public class RotationCheck {
                     double forwardX=(v[0][0]+v[1][0])/2;
                     double forwardZ=(v[0][2]+v[1][2])/2;
                     if(Math.abs(forwardX + .5*Math.sin(angle))>1e-9 ||
-                            Math.abs(forwardZ + .5*Math.cos(angle))>1e-9)
+                        
+                    Math.abs(forwardZ + .5*Math.cos(angle))>1e-9)
                         throw new AssertionError("Cube front does not match camera-relative forward");
                     x.setDouble(demo,(double)clamp.invoke(demo,10.0));
                     z.setDouble(demo,(double)clamp.invoke(demo,-10.0));

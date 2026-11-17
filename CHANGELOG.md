@@ -172,11 +172,7 @@ behavior below; these changes have not yet been assigned a new release version.
   Start particle Open/Save dialogs in `particle-effects` for new designs.
 - Extend automated coverage for maps, editing tools, camera navigation, depth
   rendering, UI/HUD assets, and particles alongside the gameplay and LAN checks.
-
-## 0.1.0 - 2026-10-23
-
-Initial Git checkpoint of the existing game, including:
-
+  
 - Camera-relative movement, sprint stamina, double jump, and ground pound.
 - Animated class selection and the playable Gauntlet moveset.
 - Punch at 23 base damage with a 1.7-second cooldown; damage streak gains of
