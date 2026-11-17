@@ -49,7 +49,7 @@ final class LobbyWorld {
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
             combat.cancelAttack();combat.protect=false; combat.health = combat.maxHealth();
-            combat.multiplier = 1; combat.streakTime = 0;
+            combat.multiplier = 1; combat.streakTime = combat.healingTime = 0;
             body.x = x; body.z = z; body.lift = y;
             body.health = combat.health; body.maxHealth = combat.maxHealth();
             body.vx = body.vz = body.slowTime = body.slowAmount = 0;
@@ -194,6 +194,8 @@ final class LobbyWorld {
                 player.combat.damagePlayer(player.combat.health);
                 player.respawnTime = 3;
             } else player.combat.health = player.body.health;
+            player.combat.regenerate(dt);
+            player.body.health=player.combat.health;
             drainEffects(player.combat);
         }
         drainEffects(arena);

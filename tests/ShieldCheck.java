@@ -8,7 +8,7 @@ public class ShieldCheck {
     static void tick(CombatSystem c,double duration){while(duration>1e-9){double dt=Math.min(.01,duration);c.update(dt,c.playerX,c.playerY,c.playerZ,c.facing);duration-=dt;}}
     static void combat(){
         CombatSystem c=shield();near(c.maxHealth(),100,"Shield HP");near(c.walkSpeed(),4.5,"Assault walk");near(c.sprintSpeed(),7.5,"Assault sprint");
-        CombatSystem.Dummy d=new CombatSystem.Dummy(0,-1.5);c.dummies.add(d);check(c.attack(CombatSystem.Move.PUNCH,0,0,0,0),"Bash starts");near(c.cooldowns[0],.45,"Bash cooldown");tick(c,.079);near(d.health,100,"Bash windup");tick(c,.002);near(d.health,76.5,"Bash damage");near(c.multiplier,1,"No Gauntlet streak on Shield");
+        CombatSystem.Dummy d=new CombatSystem.Dummy(0,-1.5);c.dummies.add(d);check(c.attack(CombatSystem.Move.PUNCH,0,0,0,0),"Bash starts");near(c.cooldowns[0],1.15,"Bash cooldown");tick(c,.079);near(d.health,100,"Bash windup");tick(c,.002);near(d.health,76.5,"Bash damage");near(c.multiplier,1,"No Gauntlet streak on Shield");check(c.endLag>.33&&c.endLag<=.35,"Bash extended recovery");
         c=shield();d=new CombatSystem.Dummy(0,-2);c.dummies.add(d);c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);near(c.cooldowns[2],50,"Swing cooldown");tick(c,1.29);near(d.health,100,"Swing windup");tick(c,.02);near(d.health,65,"Swing damage");check(c.endLag>0&&c.endLag<=.35,"Swing hit recovery");
         c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,2,0,0);tick(c,1.3);near(c.endLag,1.5,"Swing miss recovery airborne");
         c=shield();d=new CombatSystem.Dummy(0,-3);c.dummies.add(d);c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);near(c.cooldowns[1],40,"Charge cooldown");tick(c,.99);near(c.playerZ,0,"Charge windup has no automatic dash");tick(c,.4);near(d.health,75,"Charge damage");check(d.vz<0&&c.playerZ>-3,"Charge knocks back and stops on target");
@@ -35,5 +35,34 @@ public class ShieldCheck {
             end=System.currentTimeMillis()+5000;while(!host.snapshot.player(host.id).protect&&System.currentTimeMillis()<end)Thread.sleep(20);check(host.snapshot.player(host.id).protect,"Protect mode synchronized");
         }
     }
-    public static void main(String[] args){try{combat();integration();System.out.println("Passed: Shield damage/cooldowns, windups, charge walls/turning, mode speeds, frontal protection, solo/LAN parity and network mode state.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
+    static void regenerationAndCharge() throws Exception {
+        for(String name:new String[]{"Gauntlet","Shield","Mage","Ranger","Rogue"}){
+            CombatSystem c=new CombatSystem();c.equipClass(name);c.clearDummies();c.damagePlayer(10);double damaged=c.health;
+            tick(c,1.29);near(c.health,damaged,"Healing waits for interval "+name);
+            tick(c,.01);near(c.health,damaged+3,"Healing tick "+name);
+            tick(c,.7);c.damagePlayer(1);double hit=c.health;tick(c,.6);near(c.health,hit,"Damage restarts healing timer");
+            tick(c,10);near(c.health,c.maxHealth(),"Healing capped");c.damagePlayer(1000);tick(c,10);near(c.health,0,"No healing while defeated");
+        }
+        LobbyWorld world=new LobbyWorld();world.mapChoice=MapStorage::practice;LobbyWorld.Player p=world.add("Host",true);
+        world.action(p.id,3,"Shield");world.action(p.id,4,"");world.arena.clearDummies();p.combat.health=p.body.health=90;
+        for(int i=0;i<65;i++)world.tick(.02);near(p.combat.health,93,"LAN regeneration");near(p.body.health,93,"LAN body health synchronized");
+        for(int input=0;input<=1;input++){
+            p.combat.cancelAttack();Arrays.fill(p.combat.cooldowns,0);p.x=p.body.x=0;p.z=p.body.z=0;
+            world.input(p.id,0,input,0,false);world.action(p.id,0,"PUMMEL");
+            for(int i=0;i<50;i++)world.tick(.02);double start=p.z;
+            for(int i=0;i<10;i++)world.tick(.02);near(p.z,start-2,"LAN charge forces forward with input "+input);
+        }
+        SwingUtilities.invokeAndWait(()->{try{
+            CubeMovement game=new CubeMovement();MovementCheck.field("paused").setBoolean(game,false);CombatSystem c=(CombatSystem)MovementCheck.field("combat").get(game);c.equipClass("Shield");c.clearDummies();
+            java.lang.reflect.Method move=CubeMovement.class.getDeclaredMethod("move",double.class);move.setAccessible(true);
+            for(int input=0;input<=1;input++){
+                c.cancelAttack();Arrays.fill(c.cooldowns,0);MovementCheck.field("x").setDouble(game,0);MovementCheck.field("z").setDouble(game,0);
+                if(input==1)MovementCheck.key(game,java.awt.event.KeyEvent.VK_S,false,false);
+                c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);for(int i=0;i<100;i++)move.invoke(game,.01);
+                double start=MovementCheck.field("z").getDouble(game);for(int i=0;i<20;i++)move.invoke(game,.01);
+                near(MovementCheck.field("z").getDouble(game),start-2,"Solo forced charge input "+input);
+            }
+        }catch(Exception e){throw new RuntimeException(e);}});
+    }
+    public static void main(String[] args){try{combat();integration();regenerationAndCharge();System.out.println("Passed: Shield damage/cooldowns, windups, charge walls/turning, mode speeds, frontal protection, solo/LAN parity and network mode state.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
 }

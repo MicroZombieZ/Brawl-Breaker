@@ -214,13 +214,17 @@ Kill-Streak increases damage for subsequent attacks by 0.05x per damaging hit, f
 
 The HUD shows HP, speed in world units per second, maximum speed, defense, damage multiplier and its timer, recovery time, and cooldowns. Gauntlet has 0% base defense; its durability passive increases HP. Visuals use colored cubes, animated gauntlets, damage flashes, floating damage numbers, shockwave rings, and world-space particles. Training dummies do not attack. LAN matches support combat between players; Shield Protect applies 30% frontal damage reduction.
 
+All classes regenerate **3 HP every 1.3 seconds** while alive, capped at their maximum HP. Damage restarts that interval, with no additional delay. Solo pause stops healing; LAN healing runs on the host.
+
 ## Shield class
+
+Charge automatically moves forward after its one-second windup, even without movement input or while holding backward.
 
 Equip **Shield** through R. It has 100 HP and starts in **Assault** mode.
 
 | Input | Ability | Damage | Cooldown | Behavior |
 | --- | --- | --- | --- | --- |
-| M1 | Shield-Bash | 23.5 | 0.45s | Short melee thrust; 0.08s startup |
+| M1 | Shield-Bash | 23.5 | 1.15s | Short melee thrust; 0.08s startup, 0.35s recovery |
 | Q | Charge | 25 | 40s | 1s windup, then run at 10 units/s for up to 1.5s; limited turning |
 | E | Swing | 35 | 50s | 1.3s windup; 1.5s recovery on a miss |
 | F | Protect / Assault | - | 25s | Toggle speed and frontal defense |

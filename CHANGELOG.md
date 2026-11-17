@@ -4,6 +4,8 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Add all-class regeneration: 3 HP every 1.3 seconds, reset by damage and capped at maximum HP, shared between solo and LAN. Increase Shield-Bash cooldown to 1.15 seconds and recovery to 0.35 seconds; verify forced Charge movement with neutral/backward input in both modes.
+
 - Reduce LAN client map-processing overhead by caching validated map documents, retaining rendered map objects between snapshots, and avoiding unchanged lobby roster updates. Host-authoritative combat and movement remain unchanged.
 
 - Replace empty lobby connection errors with readable details and persistent diagnostic logs; report server failures, reject occupied host ports, and clean up failed hosting attempts.

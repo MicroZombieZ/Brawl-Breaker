@@ -46,7 +46,7 @@ public class LobbyCheck {
         world.action(a.id, 0, "PUMMEL"); tick(world, .3);
         world.input(b.id, 1, 0, 0, true); tick(world, .1);
         near(b.x, 0, "Grab prevents target escaping by input");
-        tick(world, .85); near(b.combat.health, 62, "PvP Pummel three-hit total");
+        tick(world, .85); near(b.combat.health, 65, "PvP Pummel three-hit total after one regeneration tick");
         near(a.combat.multiplier, 1.15, "PvP Pummel stacks every hit");
         world.input(b.id, 0, 0, 0, false);
         tick(world, .5);

@@ -1,5 +1,15 @@
 CLASS STATS AND ABILITY REFERENCE
 Last updated: 2026-11-17
+
+PLAYER REGENERATION (all classes, including placeholders)
+  Heal 3 HP every 1.3 seconds while alive and below maximum HP.
+  Taking damage resets the 1.3-second timer; no additional delay.
+  Healing is capped at class maximum HP and cannot revive defeated players.
+  Solo pauses stop regeneration; LAN regeneration is authoritative on the host.
+  ShieldCheck covers timing, damage reset, cap, death and LAN health parity.
+  Charge forces forward travel after its windup without requiring W; backward
+  input cannot cancel travel. Verified in solo and LAN.
+
 ================================
 
 Opening menu: Cube Movement title with Host, Join, disabled Quick Match, Practice.
@@ -297,8 +307,8 @@ Initial balance:               Unspecified values below are initial implementati
 
 M1 / LEFT MOUSE: SHIELD-BASH
   Type:                        Short forward thrust while holding shield (not thrown)
-  Damage / cooldown:           23.5 / 0.45 seconds, cooldown starts on activation
-  Windup / recovery:           0.08 / 0.12 seconds on hit or miss
+  Damage / cooldown:           23.5 / 1.15 seconds, cooldown starts on activation
+  Windup / recovery:           0.08 / 0.35 seconds on hit or miss
   Hit volume:                  1.4 wide x 1.6 high x 1.7 reach, centered at foot Y+0.5
   Targets / knockback:         Nearest overlapping enemy once; 1.5 initial push speed
 

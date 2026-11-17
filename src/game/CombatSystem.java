@@ -88,7 +88,7 @@ final class CombatSystem {
     final List<GameEffect> effects = new ArrayList<>();
     final double[] cooldowns = new double[Move.values().length];
     boolean equipped,shield,protect;
-    static final double[] SHIELD_COOLDOWNS={.45,40,50,25};
+    static final double[] SHIELD_COOLDOWNS={1.15,40,50,25};
     static final String[] SHIELD_LABELS={"LMB  Shield-Bash","Q  Charge","E  Swing","F  Mode"};
     double walkSpeed(){return shield?(protect?3:4.5):4;}
     double sprintSpeed(){return shield?(protect?5:7.5):7;}
@@ -101,6 +101,8 @@ final class CombatSystem {
     boolean externalTargetUpdates;
     double dummyMaxHealth = 100;
     double health = BASE_HP, multiplier = 1, streakTime;
+    double healingTime;
+    static final double HEAL_INTERVAL=1.3, HEAL_AMOUNT=3;
     double playerX, playerY, playerZ, speed;
     Move active;
     double attackTime, endLag, facing, attackMultiplier;
@@ -147,7 +149,7 @@ final class CombatSystem {
         finish(0);
         equipped = shield = protect = godMode = false;
         cooldownsEnabled = true;
-        health = BASE_HP; multiplier = 1; streakTime = 0;
+        health = BASE_HP; multiplier = 1; streakTime = healingTime = 0;
         attackTime = waveTime = waveY = playerX = playerY = playerZ = speed = 0;
         java.util.Arrays.fill(cooldowns, 0);
         dummyMaxHealth = 100;
@@ -193,6 +195,7 @@ final class CombatSystem {
         double delta=Math.IEEEremainder(currentFacing-facing,Math.PI*2);
         facing = Math.IEEEremainder(charging()?facing+Math.max(-Math.PI/4*dt,Math.min(Math.PI/4*dt,delta)):currentFacing, Math.PI * 2);
         playerX = x; playerY = y; playerZ = z;
+        if(!externalTargetUpdates)regenerate(dt);
         for (int i = 0; i < cooldowns.length; i++) cooldowns[i] = Math.max(0, cooldowns[i] - dt);
         endLag = Math.max(0, endLag - dt);
         streakTime = Math.max(0, streakTime - dt);
@@ -278,7 +281,7 @@ final class CombatSystem {
     private void updateShield(double before){
         if(active==Move.PUNCH||active==Move.SHOCKWAVE){
             boolean swing=active==Move.SHOCKWAVE;double windup=swing?1.3:.08;
-            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);finish(swing?.35:.12);}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");finish(swing?1.5:.12);}}return;
+            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);finish(.35);}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");finish(swing?1.5:.35);}}return;
         }
         if(active==Move.PUMMEL){
             double travel=Math.max(0,Math.min(attackTime,2.5)-Math.max(before,1))*10;if(travel<=0)return;
@@ -366,6 +369,7 @@ final class CombatSystem {
     private void hit(Dummy dummy, double baseDamage, double push) {
         double damage = baseDamage * attackMultiplier * frontalDamageFactor(dummy,playerX,playerZ);
         dummy.health = Math.max(0, dummy.health - damage);
+        if(dummy.defender!=null)dummy.defender.healingTime=0;
         dummy.lastDamage = damage; dummy.damageTime = 1; dummy.flash = .18;
         dummy.vx = -Math.sin(facing) * push;
         dummy.vz = -Math.cos(facing) * push;
@@ -388,8 +392,16 @@ final class CombatSystem {
 
     Dummy grabbedTarget() { return grabbed; }
 
+    void regenerate(double dt) {
+        if(health<=0||health>=maxHealth()){healingTime=0;return;}
+        healingTime+=dt;
+        int ticks=(int)Math.floor((healingTime+1e-9)/HEAL_INTERVAL);
+        if(ticks>0){health=Math.min(maxHealth(),health+ticks*HEAL_AMOUNT);healingTime=Math.max(0,healingTime-ticks*HEAL_INTERVAL);}
+    }
+
     void damagePlayer(double damage) {
         if (godMode || health <= 0 || !Double.isFinite(damage) || damage <= 0) return;
+        healingTime=0;
         health = Math.max(0, health - damage);
         if (health == 0) {
             effect(GameEffect.Kind.DEFEAT, playerX, playerY, playerZ, 1, 1);
