@@ -88,7 +88,7 @@ final class CombatSystem {
     final List<GameEffect> effects = new ArrayList<>();
     final double[] cooldowns = new double[Move.values().length];
     boolean equipped,shield,protect;
-    static final double[] SHIELD_COOLDOWNS={1.15,40,50,25};
+    static final double[] SHIELD_COOLDOWNS={1.15,40,50,7};
     static final String[] SHIELD_LABELS={"LMB  Shield-Bash","Q  Charge","E  Swing","F  Mode"};
     double walkSpeed(){return shield?(protect?3:4.5):4;}
     double sprintSpeed(){return shield?(protect?5:7.5):7;}
@@ -101,7 +101,7 @@ final class CombatSystem {
     boolean externalTargetUpdates;
     double dummyMaxHealth = 100;
     double health = BASE_HP, multiplier = 1, streakTime;
-    double healingTime;
+    double healingTime, pendingKillHealing;
     static final double HEAL_INTERVAL=1.3, HEAL_AMOUNT=3;
     double playerX, playerY, playerZ, speed;
     Move active;
@@ -149,7 +149,7 @@ final class CombatSystem {
         finish(0);
         equipped = shield = protect = godMode = false;
         cooldownsEnabled = true;
-        health = BASE_HP; multiplier = 1; streakTime = healingTime = 0;
+        health = BASE_HP; multiplier = 1; streakTime = healingTime = pendingKillHealing = 0;
         attackTime = waveTime = waveY = playerX = playerY = playerZ = speed = 0;
         java.util.Arrays.fill(cooldowns, 0);
         dummyMaxHealth = 100;
@@ -173,7 +173,7 @@ final class CombatSystem {
 
     boolean attack(Move move, double x, double y, double z, double yaw) {
         if (!equipped || locked() || (cooldownsEnabled && cooldowns[move.ordinal()] > 0) || health <= 0) return false;
-        if(shield&&move==Move.HAYMAKER){protect=!protect;cooldowns[3]=cooldownsEnabled?25:0;tell(protect?"Protect: 30% frontal defense":"Assault: increased movement speed");return true;}
+        if(shield&&move==Move.HAYMAKER){protect=!protect;cooldowns[3]=cooldownsEnabled?7:0;tell(protect?"Protect: 60% frontal defense":"Assault: increased movement speed");return true;}
         active = move;
         attackTime = 0;
         facing = yaw;
@@ -248,7 +248,7 @@ final class CombatSystem {
                     int affected = 0;
                     for (Dummy dummy : dummies) {
                         double distance = Math.hypot(dummy.x - playerX, dummy.z - playerZ);
-                        if (!dummy.alive() || distance > OUTER_RADIUS
+                        if (!dummy.alive() || !targetVisible(dummy) || distance > OUTER_RADIUS
                                 || !hitbox(Move.SHOCKWAVE,playerX,playerY,playerZ,facing).verticalOverlap(dummy)) continue;
                         affected++;
                         dummy.slowTime = 3;
@@ -281,7 +281,10 @@ final class CombatSystem {
     private void updateShield(double before){
         if(active==Move.PUNCH||active==Move.SHOCKWAVE){
             boolean swing=active==Move.SHOCKWAVE;double windup=swing?1.3:.08;
-            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);finish(.35);}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");finish(swing?1.5:.35);}}return;
+            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);endLag=.35;}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");endLag=swing?1.5:.35;}if(!swing)finish(endLag);}
+            // Keep Swing's impact visible briefly, inside its existing recovery period.
+            if(swing&&resolved&&attackTime>=1.4-1e-9)finish(endLag);
+            return;
         }
         if(active==Move.PUMMEL){
             double travel=Math.max(0,Math.min(attackTime,2.5)-Math.max(before,1))*10;if(travel<=0)return;
@@ -289,7 +292,7 @@ final class CombatSystem {
             double radius=.5*(Math.abs(Math.cos(facing))+Math.abs(Math.sin(facing)));
             double[] next=MapPhysics.move(map,ax,ay,az,ax+dx,ay,az+dz,radius,1);
             Dummy target=null;double first=Double.POSITIVE_INFINITY;Hitbox box=activeHitbox();
-            for(Dummy d:dummies)if(d.alive()&&shieldVisible(d)){double t=box.sweep(d,next[0]-ax,next[1]-ay,next[2]-az);if(t<first){first=t;target=d;}}
+            for(Dummy d:dummies)if(d.alive()&&targetVisible(d)){double t=box.sweep(d,next[0]-ax,next[1]-ay,next[2]-az);if(t<first){first=t;target=d;}}
             boolean wall=Math.hypot(next[0]-ax-dx,next[2]-az-dz)>1e-5&&Math.abs(next[1]-ay)<1e-5;
             double fraction=target==null?1:first;playerX=ax+(next[0]-ax)*fraction;playerY=ay+(next[1]-ay)*fraction;playerZ=az+(next[2]-az)*fraction;
             if(target!=null){hit(target,25,8);tell("Charge connected");finish(.35);}
@@ -297,15 +300,20 @@ final class CombatSystem {
             else if(attackTime>=2.5-1e-9){tell("Charge missed - recovering");finish(.8);}
         }
     }
-    private boolean shieldVisible(Dummy target){
+    private boolean targetVisible(Dummy target){
         double tx=target.x,ty=target.lift+target.height()/2,tz=target.z;
         double[] reached=MapPhysics.move(map,playerX,playerY+.5,playerZ,tx,ty,tz,.001,.002);
         return Math.abs(reached[0]-tx)+Math.abs(reached[1]-ty)+Math.abs(reached[2]-tz)<1e-6;
     }
-    static double frontalDamageFactor(Dummy target,double sourceX,double sourceZ){
+    static final double PROTECT_RADIUS=.75, PROTECT_HEIGHT=1;
+    static double frontalDamageFactor(Dummy target,double sourceX,double sourceY,double sourceZ){
         if(target.defender==null||!target.defender.shield||!target.defender.protect)return 1;
         double dx=sourceX-target.x,dz=sourceZ-target.z,length=Math.hypot(dx,dz);
-        return length>1e-8&&(-Math.sin(target.yaw)*dx-Math.cos(target.yaw)*dz)/length>=.5?.7:1;
+        if(length<1e-8||-Math.sin(target.yaw)*dx-Math.cos(target.yaw)*dz < -1e-9)return 1;
+        // Intersect the incoming segment with the front half-cylinder surrounding the body.
+        double t=Math.min(1,PROTECT_RADIUS/length);
+        double contactY=target.lift+target.height()/2+(sourceY-target.lift-target.height()/2)*t;
+        return contactY>=target.lift&&contactY<=target.lift+PROTECT_HEIGHT?.4:1;
     }
 
     void updateDummy(Dummy dummy, double dt) {
@@ -342,7 +350,7 @@ final class CombatSystem {
         double best = Double.POSITIVE_INFINITY;
         Hitbox box=activeHitbox();
         for (Dummy dummy : dummies) {
-            if (!dummy.alive() || !box.overlaps(dummy) || shield&&!shieldVisible(dummy)) continue;
+            if (!dummy.alive() || !box.overlaps(dummy) || !targetVisible(dummy)) continue;
             double dx = dummy.x - playerX, dz = dummy.z - playerZ;
             double distance = dx*dx+dz*dz+(dummy.lift-playerY)*(dummy.lift-playerY);
             if (distance < best) {
@@ -357,7 +365,7 @@ final class CombatSystem {
         double best = Double.POSITIVE_INFINITY;
         Hitbox box=hitbox(Move.HAYMAKER,ax,playerY,az,facing);
         for (Dummy dummy : dummies) {
-            if (!dummy.alive()) continue;
+            if (!dummy.alive() || !targetVisible(dummy)) continue;
             double t=box.sweep(dummy,bx-ax,0,bz-az);
             if (Double.isFinite(t) && t < best) {
                 nearest = dummy; best = t;
@@ -367,7 +375,8 @@ final class CombatSystem {
     }
 
     private void hit(Dummy dummy, double baseDamage, double push) {
-        double damage = baseDamage * attackMultiplier * frontalDamageFactor(dummy,playerX,playerZ);
+        if(!dummy.alive()||!targetVisible(dummy))return;
+        double damage = baseDamage * attackMultiplier * frontalDamageFactor(dummy,playerX,playerY+.5,playerZ);
         dummy.health = Math.max(0, dummy.health - damage);
         if(dummy.defender!=null)dummy.defender.healingTime=0;
         dummy.lastDamage = damage; dummy.damageTime = 1; dummy.flash = .18;
@@ -375,6 +384,7 @@ final class CombatSystem {
         dummy.vz = -Math.cos(facing) * push;
         effect(GameEffect.Kind.HIT, dummy.x, dummy.lift + .6, dummy.z, damage, active.ordinal());
         if (!dummy.alive()) {
+            if(dummy.playerBody){if(externalTargetUpdates)pendingKillHealing+=15;else if(health>0)health=Math.min(maxHealth(),health+15);}
             dummy.respawnTime = 4;
             if (!dummy.playerBody) effect(GameEffect.Kind.DEFEAT, dummy.x, dummy.lift, dummy.z, 1, 0);
         }
@@ -393,10 +403,10 @@ final class CombatSystem {
     Dummy grabbedTarget() { return grabbed; }
 
     void regenerate(double dt) {
-        if(health<=0||health>=maxHealth()){healingTime=0;return;}
+        if(health<=0||health>=maxHealth()*.45){healingTime=0;return;}
         healingTime+=dt;
         int ticks=(int)Math.floor((healingTime+1e-9)/HEAL_INTERVAL);
-        if(ticks>0){health=Math.min(maxHealth(),health+ticks*HEAL_AMOUNT);healingTime=Math.max(0,healingTime-ticks*HEAL_INTERVAL);}
+        if(ticks>0){health=Math.min(maxHealth()*.45,health+ticks*HEAL_AMOUNT);healingTime=Math.max(0,healingTime-ticks*HEAL_INTERVAL);}
     }
 
     void damagePlayer(double damage) {

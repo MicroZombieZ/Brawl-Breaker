@@ -3,6 +3,7 @@ import javax.swing.*;
 
 /** LAN connection and waiting-room controls; the game owns session lifecycle. */
 final class LobbyPanel extends JPanel {
+    final JComboBox<String> classes=new JComboBox<>(new String[]{"Gauntlet","Shield","Mage","Ranger","Rogue"});
     final MapPicker mapPicker=new MapPicker();
     final JTextField name = new JTextField("Player", 16);
     final JTextField address = new JTextField("", 16);
@@ -21,7 +22,8 @@ final class LobbyPanel extends JPanel {
         heading.add(title); heading.add(new JLabel("Up to 8 players on the same Wi-Fi / local network"));
         heading.add(status); add(heading, BorderLayout.NORTH);
         JPanel center = new JPanel(new BorderLayout(0, 14)); center.setOpaque(false);
-        JPanel fields = new JPanel(new GridLayout(3, 2, 12, 8)); fields.setOpaque(false);
+        JPanel fields = new JPanel(new GridLayout(4, 2, 12, 8)); fields.setOpaque(false);
+        fields.add(new JLabel("Class (locked when match starts)"));fields.add(classes);
         fields.add(new JLabel("Your name")); fields.add(name);
         fields.add(new JLabel("Host IP (for joining)")); fields.add(address);
         port.setEditor(new JSpinner.NumberEditor(port, "0"));

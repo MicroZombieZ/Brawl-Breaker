@@ -2,9 +2,11 @@ CLASS STATS AND ABILITY REFERENCE
 Last updated: 2026-11-17
 
 PLAYER REGENERATION (all classes, including placeholders)
-  Heal 3 HP every 1.3 seconds while alive and below maximum HP.
+  Heal 3 HP every 1.3 seconds while alive and below 45% of maximum HP.
   Taking damage resets the 1.3-second timer; no additional delay.
-  Healing is capped at class maximum HP and cannot revive defeated players.
+  Passive healing is capped at 45% of class maximum HP (45 base / 51.75 Gauntlet).
+  Health above this cap is not reduced. A player kill grants 15 HP, capped at full
+  class maximum HP; dummies do not grant this reward. Neither healing revives.
   Solo pauses stop regeneration; LAN regeneration is authoritative on the host.
   ShieldCheck covers timing, damage reset, cap, death and LAN health parity.
   Charge forces forward travel after its windup without requiring W; backward
@@ -120,7 +122,7 @@ Values below assume default settings, without developer-console overrides.
 SHARED PLAYER STATS AND RULES
 ============================
 Base maximum HP:               100
-Base defense:                  0%; Shield Protect reduces frontal damage by 30%
+Base defense:                  0%; Shield Protect reduces frontal damage by 60%
 Walking speed:                 4 world units/second
 Sprinting speed:               7 world units/second
 Maximum stamina:               100
@@ -288,11 +290,11 @@ Maximum HP / stamina:          100 / 100
 Default mode:                  Assault; respawning returns to Assault
 Assault movement:              Walk 4.5, sprint 7.5 units/second; 0% defense
 Protect movement:              Walk 3, sprint 5 units/second
-Protect defense:               30% damage reduction in a 120-degree horizontal
-                              front arc (60 degrees either side of defender yaw).
-                              Side/rear hits deal full damage. No full block,
+Protect defense:               60% damage reduction through a front 180-degree half-cylinder,
+                              radius 0.75 and height 1 from the feet, rotating with yaw.
+                              Rear and above/below-volume hits deal full damage. No full block,
                               knockback reduction, or Gauntlet damage streak.
-Defense calculation:           Incoming damage x 0.70 for frontal Protect hits;
+Defense calculation:           Incoming damage x 0.40 for frontal Protect hits;
                               attacker position determines direction, including AOE.
                               Directionless console damage bypasses defense.
 General behavior:              All abilities can start airborne; gravity continues.
@@ -329,10 +331,11 @@ E: SWING
   Hit volume:                  2.6 wide x 1.6 high x 2.5 reach, foot Y+0.5 center
   Targets / knockback:         Nearest overlapping enemy once; initial push speed 4
   Hit / miss recovery:         0.35 / 1.5 seconds
-  Melee targeting:             Bash, Swing and Charge reject targets across solid walls
+  Melee targeting:             All attacks/grabs and Shockwave slow reject targets across solid walls.
+  Debug Swing volume:          Only during impact (1.3-1.4s), not during windup
 
 F: MODE: PROTECT / ASSAULT
-  Cooldown:                    25 seconds, starts when switching
+  Cooldown:                    7 seconds, starts when switching
   Switch:                      Instant; unavailable during an ability or recovery
   HUD / model:                 Current mode in class badge; mode-colored riot shield,
                               Shield ability labels/cooldowns and frontal defense stat
@@ -738,3 +741,9 @@ Outside editor scope:        Menus, world-space labels, developer overlays
 Gameplay values:             Unchanged in solo and LAN; no protocol changes
 Testing:                     scripts\Check.bat; or scripts\Build.bat tests then
                               java -cp "build/test-classes;build/classes" HUDCheck
+
+LAN CLASS SELECTION
+  Choose a class in the lobby dropdown before Start Match. The host rejects
+  subsequent class changes once the match starts. Late joiners get one initial
+  selection on connection. Practice keeps the R class menu and switching.
+  ShieldCheck covers wall rejection, half-cylinder defense, kill rewards and lock.

@@ -34,7 +34,7 @@ final class LobbyWorld {
         String className = "";
         double x, y, z, verticalSpeed, yaw, cubeYaw, stamina = 100, respawnTime;
         double dx, dz;
-        boolean sprint, exhausted, pounding;
+        boolean sprint, exhausted, pounding, classLocked;
         int jumps;
         Player(int id, String name, boolean host) {
             this.id = id; this.name = name; this.host = host;
@@ -49,7 +49,7 @@ final class LobbyWorld {
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
             combat.cancelAttack();combat.protect=false; combat.health = combat.maxHealth();
-            combat.multiplier = 1; combat.streakTime = combat.healingTime = 0;
+            combat.multiplier = 1; combat.streakTime = combat.healingTime = combat.pendingKillHealing = 0;
             body.x = x; body.z = z; body.lift = y;
             body.health = combat.health; body.maxHealth = combat.maxHealth();
             body.vx = body.vz = body.slowTime = body.slowAmount = 0;
@@ -123,15 +123,17 @@ final class LobbyWorld {
                 map=mapChoice.get();
                 try{mapBytes=map.encode();}catch(java.io.IOException error){throw new IllegalStateException(error);}
                 new MapStorage.MapData("session",map).populate(arena);
-                for(Player p:players.values()){p.combat.map=map;p.spawn();}
+                for(Player p:players.values()){p.classLocked=true;p.combat.map=map;p.spawn();}
                 started=true;
             }
             return;
         }
         if (action == 3) {
+            if(player.classLocked)return;
             if (player.combat.locked() || player.combat.health <= 0 || held(player)) return;
             if (!Arrays.asList("", "Gauntlet", "Shield", "Mage", "Ranger", "Rogue").contains(argument)) return;
             player.className = argument; player.combat.equipClass(argument);
+            if(started)player.classLocked=true;
             player.body.health = player.combat.health; player.body.maxHealth = player.combat.maxHealth();
             return;
         }
@@ -194,6 +196,8 @@ final class LobbyWorld {
                 player.combat.damagePlayer(player.combat.health);
                 player.respawnTime = 3;
             } else player.combat.health = player.body.health;
+            if(player.combat.health>0)player.combat.health=Math.min(player.combat.maxHealth(),player.combat.health+player.combat.pendingKillHealing);
+            player.combat.pendingKillHealing=0;
             player.combat.regenerate(dt);
             player.body.health=player.combat.health;
             drainEffects(player.combat);

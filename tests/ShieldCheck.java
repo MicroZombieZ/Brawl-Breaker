@@ -15,8 +15,8 @@ public class ShieldCheck {
         c=shield();c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);tick(c,2.5);near(c.playerZ,-15,"Charge range");near(c.endLag,.8,"Charge miss recovery");
         c=shield();MapDefinition.Part wall=new MapDefinition.Part();wall.z=-2;wall.w=5;wall.h=3;wall.d=.1;c.map.objects.add(wall);c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);tick(c,1.2);check(c.playerZ>=-1.45-1e-6&&c.endLag>1.4,"Charge wall collision and long recovery");
         c=shield();c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);tick(c,1);c.update(.1,0,0,0,Math.PI);near(Math.abs(c.facing),Math.PI/40,"Charge limited turning");
-        c=shield();check(c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0)&&c.protect,"Mode toggles Protect");near(c.cooldowns[3],25,"Mode cooldown");near(c.walkSpeed(),3,"Protect walk");near(c.sprintSpeed(),5,"Protect sprint");check(!c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0),"Mode respects cooldown");tick(c,25);check(c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0)&&!c.protect,"Mode returns Assault");
-        for(int side=0;side<3;side++){c=shield();d=new CombatSystem.Dummy(0,0);d.defender=shield();d.defender.protect=true;d.playerBody=true;c.dummies.add(d);double x=side==2?1.5:0,z=side==0?-1.5:side==1?1.5:0,yaw=side==0?Math.PI:side==1?0:Math.PI/2;c.attack(CombatSystem.Move.PUNCH,x,0,z,yaw);tick(c,.08);near(d.health,100-23.5*(side==0?.7:1),"Directional protection side "+side);}
+        c=shield();check(c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0)&&c.protect,"Mode toggles Protect");near(c.cooldowns[3],7,"Mode cooldown");near(c.walkSpeed(),3,"Protect walk");near(c.sprintSpeed(),5,"Protect sprint");check(!c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0),"Mode respects cooldown");tick(c,7.01);check(c.attack(CombatSystem.Move.HAYMAKER,0,0,0,0)&&!c.protect,"Mode returns Assault");
+        for(int side=0;side<3;side++){c=shield();d=new CombatSystem.Dummy(0,0);d.defender=shield();d.defender.protect=true;d.playerBody=true;c.dummies.add(d);double x=side==2?1.5:0,z=side==0?-1.5:side==1?1.5:0,yaw=side==0?Math.PI:side==1?0:Math.PI/2;c.attack(CombatSystem.Move.PUNCH,x,0,z,yaw);tick(c,.08);near(d.health,100-23.5*(side!=1?.4:1),"Directional protection side "+side);}
         c=shield();d=new CombatSystem.Dummy(0,-1.5);c.dummies.add(d);wall=new MapDefinition.Part();wall.z=-.8;wall.d=.1;wall.h=3;wall.w=4;c.map.objects.add(wall);c.attack(CombatSystem.Move.PUNCH,0,0,0,0);tick(c,.08);near(d.health,100,"Bash cannot reach through wall");
     }
     static void integration()throws Exception{
@@ -26,7 +26,7 @@ public class ShieldCheck {
         duel.action(attacker.id,3,"Gauntlet");duel.action(defender.id,3,"Shield");duel.action(attacker.id,4,"");duel.arena.clearDummies();
         attacker.x=attacker.body.x=0;attacker.z=attacker.body.z=-1.5;attacker.yaw=attacker.cubeYaw=Math.PI;
         defender.x=defender.body.x=0;defender.z=defender.body.z=0;duel.action(defender.id,0,"HAYMAKER");duel.action(attacker.id,0,"PUNCH");
-        for(int i=0;i<20;i++)duel.tick(.01);near(defender.combat.health,100-23*.7,"Host applies frontal Protect to incoming Gauntlet damage");
+        for(int i=0;i<20;i++)duel.tick(.01);near(defender.combat.health,100-23*.4,"Host applies frontal Protect to incoming Gauntlet damage");
         try(LobbyNetwork.Server server=new LobbyNetwork.Server(0);LobbyNetwork.Client host=new LobbyNetwork.Client("127.0.0.1",server.port(),"Shield",server.hostKey)){
             host.action(3,"Shield");host.action(0,"HAYMAKER");host.action(4,"");host.action(0,"HAYMAKER");
             long end=System.currentTimeMillis()+5000;while((host.snapshot==null||!host.snapshot.started||!host.snapshot.player(host.id).className.equals("Shield"))&&System.currentTimeMillis()<end)Thread.sleep(20);
@@ -37,15 +37,15 @@ public class ShieldCheck {
     }
     static void regenerationAndCharge() throws Exception {
         for(String name:new String[]{"Gauntlet","Shield","Mage","Ranger","Rogue"}){
-            CombatSystem c=new CombatSystem();c.equipClass(name);c.clearDummies();c.damagePlayer(10);double damaged=c.health;
+            CombatSystem c=new CombatSystem();c.equipClass(name);c.clearDummies();c.damagePlayer(c.maxHealth()*.7);double damaged=c.health;
             tick(c,1.29);near(c.health,damaged,"Healing waits for interval "+name);
             tick(c,.01);near(c.health,damaged+3,"Healing tick "+name);
             tick(c,.7);c.damagePlayer(1);double hit=c.health;tick(c,.6);near(c.health,hit,"Damage restarts healing timer");
-            tick(c,10);near(c.health,c.maxHealth(),"Healing capped");c.damagePlayer(1000);tick(c,10);near(c.health,0,"No healing while defeated");
+            tick(c,10);near(c.health,c.maxHealth()*.45,"Healing capped");c.damagePlayer(1000);tick(c,10);near(c.health,0,"No healing while defeated");
         }
         LobbyWorld world=new LobbyWorld();world.mapChoice=MapStorage::practice;LobbyWorld.Player p=world.add("Host",true);
-        world.action(p.id,3,"Shield");world.action(p.id,4,"");world.arena.clearDummies();p.combat.health=p.body.health=90;
-        for(int i=0;i<65;i++)world.tick(.02);near(p.combat.health,93,"LAN regeneration");near(p.body.health,93,"LAN body health synchronized");
+        world.action(p.id,3,"Shield");world.action(p.id,4,"");world.arena.clearDummies();p.combat.health=p.body.health=30;
+        for(int i=0;i<65;i++)world.tick(.02);near(p.combat.health,33,"LAN regeneration");near(p.body.health,33,"LAN body health synchronized");
         for(int input=0;input<=1;input++){
             p.combat.cancelAttack();Arrays.fill(p.combat.cooldowns,0);p.x=p.body.x=0;p.z=p.body.z=0;
             world.input(p.id,0,input,0,false);world.action(p.id,0,"PUMMEL");
@@ -64,5 +64,26 @@ public class ShieldCheck {
             }
         }catch(Exception e){throw new RuntimeException(e);}});
     }
-    public static void main(String[] args){try{combat();integration();regenerationAndCharge();System.out.println("Passed: Shield damage/cooldowns, windups, charge walls/turning, mode speeds, frontal protection, solo/LAN parity and network mode state.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
+    static void wallsProtectionAndKills() throws Exception {
+        for(String name:new String[]{"Gauntlet","Shield"})for(CombatSystem.Move move:CombatSystem.Move.values()){
+            if(name.equals("Shield")&&move==CombatSystem.Move.HAYMAKER)continue;
+            CombatSystem c=new CombatSystem();c.equipClass(name);c.clearDummies();
+            CombatSystem.Dummy target=new CombatSystem.Dummy(0,-1.5);c.dummies.add(target);
+            MapDefinition.Part wall=new MapDefinition.Part();wall.z=-.8;wall.w=5;wall.d=.1;wall.h=3;c.map.objects.add(wall);
+            c.attack(move,0,0,0,0);tick(c,1.6);near(target.health,100,"Wall blocks "+name+" "+move);near(target.slowTime,0,"Wall blocks slow");
+        }
+        CombatSystem.Dummy target=new CombatSystem.Dummy(0,0);target.playerBody=true;target.defender=shield();target.defender.protect=true;
+        near(CombatSystem.frontalDamageFactor(target,2,.5,-.1),.4,"Wide front protection");
+        near(CombatSystem.frontalDamageFactor(target,0,.5,2),1,"Rear bypasses protection");
+        near(CombatSystem.frontalDamageFactor(target,0,5,-1),1,"Above half-cylinder bypasses protection");
+        CombatSystem c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);tick(c,1.29);check(c.active==CombatSystem.Move.SHOCKWAVE&&c.attackTime<1.3,"Swing windup before debug volume");tick(c,.02);check(c.active==CombatSystem.Move.SHOCKWAVE&&c.attackTime>=1.3,"Swing impact visible");tick(c,.1);check(c.active==null,"Swing impact expires");
+        LobbyWorld world=new LobbyWorld();world.mapChoice=MapStorage::practice;LobbyWorld.Player a=world.add("A",true),b=world.add("B",false);
+        world.action(a.id,3,"Shield");world.action(b.id,3,"Gauntlet");world.action(a.id,4,"");world.arena.clearDummies();
+        world.action(a.id,3,"Gauntlet");check(a.className.equals("Shield"),"Host rejects in-match class switching");
+        a.x=a.body.x=0;a.z=a.body.z=0;b.x=b.body.x=0;b.z=b.body.z=-1.5;a.combat.health=a.body.health=30;b.combat.health=b.body.health=1;
+        world.action(a.id,0,"PUNCH");for(int i=0;i<10;i++)world.tick(.01);
+        near(a.combat.health,45,"Kill heals attacker once");near(a.body.health,45,"Kill healing persists in host body");near(b.combat.health,0,"Kill confirmed");
+        for(int i=0;i<10;i++)world.tick(.01);near(a.combat.health,45,"No duplicate kill reward");
+    }
+    public static void main(String[] args){try{combat();integration();regenerationAndCharge();wallsProtectionAndKills();System.out.println("Passed: Shield damage/cooldowns, windups, charge walls/turning, mode speeds, frontal protection, solo/LAN parity and network mode state.");System.exit(0);}catch(Throwable e){e.printStackTrace();System.exit(1);}}
 }

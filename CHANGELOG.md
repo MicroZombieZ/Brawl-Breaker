@@ -4,6 +4,8 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Block attacks, grabs and Shockwave effects through solid walls; show Swing debug volume at impact. Increase Protect to 60% reduction with front half-cylinder coverage and a 7-second mode cooldown. Add lobby class selection with host-enforced match locks while preserving practice swapping. Cap regeneration at 45% max HP and award 15 HP per player kill, capped at full HP.
+
 - Add all-class regeneration: 3 HP every 1.3 seconds, reset by damage and capped at maximum HP, shared between solo and LAN. Increase Shield-Bash cooldown to 1.15 seconds and recovery to 0.35 seconds; verify forced Charge movement with neutral/backward input in both modes.
 
 - Reduce LAN client map-processing overhead by caching validated map documents, retaining rendered map objects between snapshots, and avoiding unchanged lobby roster updates. Host-authoritative combat and movement remain unchanged.

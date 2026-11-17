@@ -65,7 +65,7 @@ public class HitboxCheck {
     }
     static void lan() {
         LobbyWorld world=new LobbyWorld();LobbyWorld.Player a=world.add("Air",true),b=world.add("Target",false);
-        world.action(a.id,4,"");world.action(a.id,3,"Gauntlet");
+        world.action(a.id,3,"Gauntlet");world.action(a.id,4,"");
         LobbyCheck.position(a,0,0);LobbyCheck.position(b,0,-1.4);
         a.y=a.body.lift=3;b.y=b.body.lift=3.6;
         world.action(a.id,0,"PUNCH");LobbyCheck.tick(world,.13);

@@ -245,6 +245,7 @@ public class CubeMovement extends JPanel {
     }
 
     private void buildClassMenu() {
+        lobby.classes.addActionListener(e->{if(lobbyClient!=null&&(lobbyClient.snapshot==null||!lobbyClient.snapshot.started))lobbyClient.action(3,(String)lobby.classes.getSelectedItem());});
         classMenu.setOpaque(false);
         classChoices.setOpaque(false);
         for (String name : new String[]{"Gauntlet", "Mage", "Ranger", "Rogue", "Shield"}) {
@@ -298,7 +299,7 @@ public class CubeMovement extends JPanel {
         equip.setEnabled(false);
         equip.setVisible(false);
         equip.addActionListener(e -> {
-            if (selectedClass == null) return;
+            if (selectedClass == null || lobbyClient!=null) return;
             if (combat.locked() && !Objects.equals(equippedClass, selectedClass)) return;
             equippedClass = selectedClass;
             if (lobbyClient != null) lobbyClient.action(3, equippedClass);
@@ -362,6 +363,7 @@ public class CubeMovement extends JPanel {
     }
 
     private void openClassMenu() {
+        if(lobbyClient!=null)return;
         setPaused(true);
         classMenuTime = classPreviewTime = 0;
         classMenuOpen = true;
@@ -599,6 +601,7 @@ public class CubeMovement extends JPanel {
                         return;
                     }
                     lobbyServer = (LobbyNetwork.Server) result[0]; lobbyClient = (LobbyNetwork.Client) result[1];
+                    lobbyClient.action(3,(String)lobby.classes.getSelectedItem());
                     mapLoaded=false;openingMenuOpen=true;combat.clearDummies();
                     appliedSnapshot = null; timeScale = speedMultiplier = 1;
                     particles.clear(); combat.effects.clear(); lastParticleEvent = 0;
@@ -629,6 +632,7 @@ public class CubeMovement extends JPanel {
         if (lobbyClient != null) lobbyClient.close();
         if (lobbyServer != null) lobbyServer.close();
         lobbyClient = null; lobbyServer = null; appliedSnapshot = null; connecting = false;
+        lobby.classes.setEnabled(true);
         executeCommand("reset");
         combat.clearDummies();
         lobby.session(false, false, false);
@@ -650,6 +654,7 @@ public class CubeMovement extends JPanel {
         if (local == null) return;
         boolean first = appliedSnapshot == null;
         if (snapshot != appliedSnapshot) {
+            lobby.classes.setEnabled(!snapshot.started);
             boolean startNow = snapshot.started && (first || !appliedSnapshot.started);
             appliedSnapshot = snapshot;
             if(snapshot.started&&snapshot.map!=null){
@@ -1327,10 +1332,18 @@ public class CubeMovement extends JPanel {
                     g.draw(polygon(ring));
                 }
             }
-            if(combat.shield){for(CombatSystem.Move slot:new CombatSystem.Move[]{CombatSystem.Move.PUNCH,CombatSystem.Move.PUMMEL,CombatSystem.Move.SHOCKWAVE})drawBoxOutline(g,CombatSystem.shieldHitbox(slot,x,y,z,direction),new Color(120,210,255));}else{
+            if(combat.shield){for(CombatSystem.Move slot:new CombatSystem.Move[]{CombatSystem.Move.PUNCH,CombatSystem.Move.PUMMEL,CombatSystem.Move.SHOCKWAVE})if(slot!=CombatSystem.Move.SHOCKWAVE||(combat.active==slot&&combat.attackTime>=1.3))drawBoxOutline(g,CombatSystem.shieldHitbox(slot,x,y,z,direction),new Color(120,210,255));}else{
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUNCH,x,y,z,direction),new Color(255,220,100));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUMMEL,x,y,z,direction),new Color(243,145,110));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));}
+            if(combat.shield&&combat.protect){
+                g.setColor(new Color(90,170,255));
+                for(double height:new double[]{y,y+CombatSystem.PROTECT_HEIGHT}){
+                    double[][] arc=new double[25][3];
+                    for(int i=0;i<arc.length;i++){double angle=direction-Math.PI/2+Math.PI*i/(arc.length-1);arc[i]=new double[]{x-Math.sin(angle)*CombatSystem.PROTECT_RADIUS,height,z-Math.cos(angle)*CombatSystem.PROTECT_RADIUS};}
+                    g.draw(polygon(arc));
+                }
+            }
             Color hurtColor=new Color(136,245,154,150);
             for(CombatSystem.Dummy dummy:combat.dummies) if(dummy.alive())
                 drawBoxOutline(g,new CombatSystem.Hitbox(dummy.x,dummy.lift+dummy.height()/2,dummy.z,1,dummy.height(),1,dummy.yaw),hurtColor);

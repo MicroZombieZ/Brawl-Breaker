@@ -43,7 +43,7 @@ final class HUDRenderer {
                     layer(g,UISkins.Slot.LAN_STATUS,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(160,230,192));copy.drawString("LAN match: "+data.players+"/8 players  |  F2: roster / leave",0,15);}});break;
                 case DEBUG:
                     layer(g,UISkins.Slot.DEBUG_INFO,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(230,236,242));
-                        copy.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense %s",data.speed,data.maxSpeed,data.shield&&data.protect?"30% front":"0%"),0,16);
+                        copy.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense %s",data.speed,data.maxSpeed,data.shield&&data.protect?"60% front":"0%"),0,16);
                         copy.drawString(String.format(Locale.ROOT,"Damage modifier %.2fx%s",data.multiplier,data.streak>0?String.format(Locale.ROOT,"  (%.1fs)",data.streak):""),0,40);}});break;
             }g.dispose();
         }

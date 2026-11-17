@@ -31,9 +31,9 @@ public class LobbyCheck {
         world.action(b.id, 4, ""); check(!world.started, "Only host can start");
         world.input(a.id, 1, 0, 0, false); tick(world, .1);
         near(a.x, -6, "Waiting room freezes movement");
-        world.action(a.id, 4, ""); tick(world, .1); near(a.x, -5.6, "Server movement speed");
         world.action(a.id, 3, "Gauntlet"); near(a.combat.health, 115, "Server equips Gauntlet");
         world.action(b.id, 3, "Gauntlet");
+        world.action(a.id, 4, ""); tick(world, .1); near(a.x, -5.6, "Server movement speed");
         world.input(a.id, 0, 0, 0, false);
         position(a, 0, 0); position(b, 0, -1.4);
         world.action(a.id, 0, "PUNCH"); tick(world, .13);
@@ -46,7 +46,7 @@ public class LobbyCheck {
         world.action(a.id, 0, "PUMMEL"); tick(world, .3);
         world.input(b.id, 1, 0, 0, true); tick(world, .1);
         near(b.x, 0, "Grab prevents target escaping by input");
-        tick(world, .85); near(b.combat.health, 65, "PvP Pummel three-hit total after one regeneration tick");
+        tick(world, .85); near(b.combat.health, 62, "PvP Pummel three-hit total above regeneration cap");
         near(a.combat.multiplier, 1.15, "PvP Pummel stacks every hit");
         world.input(b.id, 0, 0, 0, false);
         tick(world, .5);
@@ -72,7 +72,7 @@ public class LobbyCheck {
         catch (IllegalArgumentException expected) { }
         LobbyWorld turning = new LobbyWorld();
         LobbyWorld.Player attacker = turning.add("Turn", true), target = turning.add("Target", false);
-        turning.action(attacker.id, 4, ""); turning.action(attacker.id, 3, "Gauntlet");
+        turning.action(attacker.id, 3, "Gauntlet"); turning.action(attacker.id, 4, "");
         position(attacker, 0, 0); position(target, -1.4, 0);
         turning.action(attacker.id, 0, "PUNCH");
         turning.input(attacker.id, 0, 0, Math.PI / 2, false);
@@ -87,6 +87,8 @@ public class LobbyCheck {
              LobbyNetwork.Client guest = new LobbyNetwork.Client("127.0.0.1",server.port(),"Guest", "")) {
             waitFor(() -> guest.snapshot != null && guest.snapshot.players.size() == 2, "roster synchronization");
             check(host.host && !guest.host, "Host role handshake");
+            host.action(3, "Gauntlet"); guest.action(3, "Gauntlet");
+            waitFor(() -> guest.snapshot.player(guest.id).className.equals("Gauntlet"), "guest selects before match");
             host.action(4, "");
             waitFor(() -> host.snapshot != null && host.snapshot.started && guest.snapshot.started, "shared match start");
             double before = guest.snapshot.player(host.id).x; host.dx = 1;
