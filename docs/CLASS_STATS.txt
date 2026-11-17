@@ -23,7 +23,7 @@ Match entry: 0.3s fade to black, load map/player state, 0.4s fade in; input bloc
              Startup/waiting rooms show an opaque soft blue background, no map.
              LAN host creates arena targets on Start Match; disconnect unloads
              the client map. Host transmits selected map and moving objects to
-             all clients and late joiners (LAN protocol 5; update every device).
+             all clients and late joiners (LAN protocol 6; update every device).
 Map Studio: MapEditor.bat; middle/right-drag orbit around current focus;
             Shift + middle/right-drag screen-relative pan; cursor-centered zoom;
             F/6 frames selected group, Home frames map. Perspective/Top/Front/
@@ -102,7 +102,7 @@ TBD = not decided; do not treat as a working game value.
 Implemented values come from src/game/CombatSystem.java,
 src/game/CubeMovement.java, src/network/LobbyWorld.java, and
 src/particles/ParticleSystem.java.
-Planned Shield and Medic details come from the supplied Class Details document.
+Shield follows the revised 2026-11-17 moveset; Medic remains a planned design.
 This is a reference, not a configuration file: editing it does not change gameplay.
 Values below assume default settings, without developer-console overrides.
 
@@ -110,7 +110,7 @@ Values below assume default settings, without developer-console overrides.
 SHARED PLAYER STATS AND RULES
 ============================
 Base maximum HP:               100
-Base defense:                  0% displayed; damage reduction is not implemented
+Base defense:                  0%; Shield Protect reduces frontal damage by 30%
 Walking speed:                 4 world units/second
 Sprinting speed:               7 world units/second
 Maximum stamina:               100
@@ -272,48 +272,67 @@ Movement / stamina:            Shared base values
 Active abilities / passives:   None implemented; design TBD
 
 
-SHIELD -- PLANNED, NOT IMPLEMENTED
-=================================
-Design updated:               2026-11-17 (supersedes earlier Shield design)
-Maximum HP / stamina:          TBD
-Speed / defense values:        TBD, including mode-specific values
-Defense directionality:        TBD (all directions or frontal shield blocking)
-Default mode:                  TBD
+SHIELD -- IMPLEMENTED
+=====================
+Maximum HP / stamina:          100 / 100
+Default mode:                  Assault; respawning returns to Assault
+Assault movement:              Walk 4.5, sprint 7.5 units/second; 0% defense
+Protect movement:              Walk 3, sprint 5 units/second
+Protect defense:               30% damage reduction in a 120-degree horizontal
+                              front arc (60 degrees either side of defender yaw).
+                              Side/rear hits deal full damage. No full block,
+                              knockback reduction, or Gauntlet damage streak.
+Defense calculation:           Incoming damage x 0.70 for frontal Protect hits;
+                              attacker position determines direction, including AOE.
+                              Directionless console damage bypasses defense.
+General behavior:              All abilities can start airborne; gravity continues.
+                              Move during windups/recovery; during Charge's run,
+                              WASD/sprint displacement is replaced by forward dash.
+                              Abilities do not spend stamina; sprint rules unchanged.
+                              Switching classes preserves cooldown slots/recovery;
+                              changing modes never heals or clears cooldowns.
+Initial balance:               Unspecified values below are initial implementation
+                              tuning, separate from the user-specified damage,
+                              cooldowns, Charge/Swing windups and frontal defense.
 
-SHIELD-BASH (BASIC ATTACK)
-  Input:                       M1 / left mouse button
-  Planned damage:              23.5
-  Planned cooldown:            0.45 seconds
-  Throw the shield forward.
-  Projectile versus short thrust, range, return behavior, speed, startup,
-  active time, recovery and targets per attack: TBD.
+M1 / LEFT MOUSE: SHIELD-BASH
+  Type:                        Short forward thrust while holding shield (not thrown)
+  Damage / cooldown:           23.5 / 0.45 seconds, cooldown starts on activation
+  Windup / recovery:           0.08 / 0.12 seconds on hit or miss
+  Hit volume:                  1.4 wide x 1.6 high x 1.7 reach, centered at foot Y+0.5
+  Targets / knockback:         Nearest overlapping enemy once; 1.5 initial push speed
 
-CHARGE
-  Planned damage:              25
-  Planned cooldown:            40 seconds
-  Planned windup:              1 second
-  Run forward behind a riot shield with limited turning.
-  Hitting an enemy deals damage and knocks them back.
-  Missing causes medium recovery; hitting a wall causes long recovery.
-  Input, launch speed, duration, knockback, turn rate, hit recovery,
-  and exact medium/long recovery seconds: TBD.
+Q: CHARGE
+  Damage / cooldown:           25 / 40 seconds
+  Windup:                      1 second
+  Forward run:                 10 units/second, up to 1.5 seconds (15-unit maximum)
+  Turning:                     Up to 45 degrees/second while running
+  Hit volume:                  1.4 wide x 1.6 high x 1.2 reach; swept across movement
+  On enemy hit:                Stop at first enemy, deal damage, initial push speed 8;
+                              0.35 seconds recovery
+  On miss / wall:              0.8 / 1.5 seconds recovery, respectively
+  Walls / map edge:            Stop movement; same shared map collision as player
 
-SWING
-  Planned damage:              35
-  Planned cooldown:            50 seconds
-  Planned windup:              1.3 seconds
-  Swing the riot shield forward. Missing causes long recovery.
-  Input, range, active time, animation, hit recovery, miss recovery seconds,
-  knockback and targets per attack: TBD.
+E: SWING
+  Damage / cooldown:           35 / 50 seconds
+  Windup:                      1.3 seconds
+  Hit volume:                  2.6 wide x 1.6 high x 2.5 reach, foot Y+0.5 center
+  Targets / knockback:         Nearest overlapping enemy once; initial push speed 4
+  Hit / miss recovery:         0.35 / 1.5 seconds
+  Melee targeting:             Bash, Swing and Charge reject targets across solid walls
 
-MODE: PROTECT / ASSAULT
-  Planned cooldown:            25 seconds
-  Protect: Lower speed and higher defense.
-  Assault: Higher speed and lower defense.
-  Exact values, input and switching rules: TBD.
+F: MODE: PROTECT / ASSAULT
+  Cooldown:                    25 seconds, starts when switching
+  Switch:                      Instant; unavailable during an ability or recovery
+  HUD / model:                 Current mode in class badge; mode-colored riot shield,
+                              Shield ability labels/cooldowns and frontal defense stat
 
-Passives / airborne rules / movement during windups: TBD.
-Shield abilities are not yet implemented; this section records the design only.
+Networking:                    Host-authoritative abilities, movement and defense;
+                              Shield class/mode synchronized in LAN protocol 6.
+                              All devices must use the updated build.
+Testing:                       ShieldCheck: damage/timing/cooldowns, charge miss/wall/
+                              turn limits, frontal/side/rear defense, mode speeds,
+                              solo/LAN parity, network class/mode synchronization.
 
 
 MEDIC -- PLANNED, NOT IMPLEMENTED

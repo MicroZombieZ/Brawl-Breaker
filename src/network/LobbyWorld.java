@@ -38,7 +38,7 @@ final class LobbyWorld {
         int jumps;
         Player(int id, String name, boolean host) {
             this.id = id; this.name = name; this.host = host;
-            body.playerBody = true;
+            body.playerBody = true;body.defender=combat;
             combat.externalTargetUpdates = true;
             combat.dummies.clear();
             spawn();
@@ -48,7 +48,7 @@ final class LobbyWorld {
             x=spawn.x;z=spawn.z;y=spawn.y;verticalSpeed=0;
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
-            combat.cancelAttack(); combat.health = combat.maxHealth();
+            combat.cancelAttack();combat.protect=false; combat.health = combat.maxHealth();
             combat.multiplier = 1; combat.streakTime = 0;
             body.x = x; body.z = z; body.lift = y;
             body.health = combat.health; body.maxHealth = combat.maxHealth();
@@ -56,7 +56,7 @@ final class LobbyWorld {
         }
         void move(double dt, boolean held) {
             double turn = Math.IEEEremainder(yaw - cubeYaw, Math.PI * 2);
-            cubeYaw = Math.IEEEremainder(cubeYaw + turn * (1 - Math.exp(-10 * dt)), Math.PI * 2);
+            cubeYaw = Math.IEEEremainder(cubeYaw + combat.turnStep(turn,dt), Math.PI * 2);
             if (held) {
                 verticalSpeed = 0; combat.speed = 0;
                 stamina = Math.min(100, stamina + 15 * dt);
@@ -73,9 +73,9 @@ final class LobbyWorld {
             double length = Math.hypot(dx, dz);
             double oldX = x, oldZ = z;
             boolean sprinting = false;
-            if (length > 0) {
+            if (length > 0 && !combat.charging()) {
                 double sprintTime = sprint && !exhausted ? Math.min(dt, stamina / 20) : 0;
-                double speed = (4 + 3 * sprintTime / dt) * (1 - body.slowAmount);
+                double speed = (combat.walkSpeed() + (combat.sprintSpeed()-combat.walkSpeed()) * sprintTime / dt) * (1 - body.slowAmount);
                 x += (Math.cos(yaw) * dx + Math.sin(yaw) * dz) / length * speed * dt;
                 z += (-Math.sin(yaw) * dx + Math.cos(yaw) * dz) / length * speed * dt;
                 sprinting = sprintTime > 0 && Math.hypot(x - oldX, z - oldZ) > 1e-9;
@@ -130,8 +130,8 @@ final class LobbyWorld {
         }
         if (action == 3) {
             if (player.combat.locked() || player.combat.health <= 0 || held(player)) return;
-            if (!Arrays.asList("", "Gauntlet", "Mage", "Ranger", "Rogue").contains(argument)) return;
-            player.className = argument; player.combat.equip(argument.equals("Gauntlet"));
+            if (!Arrays.asList("", "Gauntlet", "Shield", "Mage", "Ranger", "Rogue").contains(argument)) return;
+            player.className = argument; player.combat.equipClass(argument);
             player.body.health = player.combat.health; player.body.maxHealth = player.combat.maxHealth();
             return;
         }
@@ -182,7 +182,8 @@ final class LobbyWorld {
             double startX=player.body.x,startY=player.body.lift,startZ=player.body.z;
             player.combat.update(dt, startX, startY, startZ, player.cubeYaw);
             double radius=.5*(Math.abs(Math.cos(player.cubeYaw))+Math.abs(Math.sin(player.cubeYaw)));
-            double[] resolved=MapPhysics.move(map,startX,startY,startZ,player.combat.playerX,player.body.lift,player.combat.playerZ,radius,1);
+            double[] resolved=MapPhysics.move(map,startX,startY,startZ,player.combat.playerX,player.combat.playerY,player.combat.playerZ,radius,1);
+            if(player.combat.shield&&dt>0)player.combat.speed=Math.max(player.combat.speed,Math.hypot(resolved[0]-startX,resolved[2]-startZ)/dt);
             player.x=player.body.x=player.combat.playerX=resolved[0];
             player.y=player.body.lift=player.combat.playerY=resolved[1];
             player.z=player.body.z=player.combat.playerZ=resolved[2];

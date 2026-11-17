@@ -37,7 +37,7 @@ missing or invalid explicit selections show an error without starting a match.
 The lobby map picker is controlled by the host. This is local game data, not
 cloud storage. The host sends the selected map and loose-object positions to
 guests, including late joiners; guests don't need matching custom map files.
-All devices need this updated game build (LAN protocol 5).
+All devices need this updated game build (LAN protocol 6).
 
 ## Map Studio
 
@@ -175,9 +175,9 @@ folders. Java classes retain their existing names and default package.
 - The menu also includes Quit. Switching to another window automatically pauses and releases the mouse.
 - Movement follows the camera direction, so W / Up always moves away from you.
 - The cube smoothly turns left and right around its upright Y axis, trailing the camera rotation slightly even while standing still.
-- Press R to open the class menu and unlock the mouse. Choose Gauntlet, Mage, Ranger, or Rogue to preview its name, then click Equip to apply it and return to play.
+- Press R to open the class menu and unlock the mouse. Choose Gauntlet, Shield, Mage, Ranger, or Rogue to preview its name, then click Equip to apply it and return to play.
 - The slanted class sidebar slides diagonally down and left along its edges. Selecting a class slides its title up on the right, with the Equip button following shortly afterward.
-- The equipped class appears in the top-right corner. Gauntlet is playable; the other classes remain placeholders.
+- The equipped class appears in the top-right corner. Gauntlet and Shield are playable; Mage, Ranger, and Rogue remain placeholders.
 - Press R or Esc, or click Close, to leave the class menu without equipping a new class.
 - Close the window to exit.
 
@@ -212,7 +212,28 @@ Hay-maker sweeps a 1.9-wide, 2-high, 0.95-deep box along its launch, traveling u
 
 Kill-Streak increases damage for subsequent attacks by 0.05x per damaging hit, from 1x up to 1.35x (seven hits to reach the cap). Each damaging hit also refreshes a 6.5-second timer. Individual Pummel hits and each damaged Shockwave target grant their own stacks; damage is calculated using the multiplier at the start of the attack. After 6.5 seconds without a hit, the multiplier returns to 1x. Death and leaving Gauntlet also clear the streak. Pausing and the class menu freeze combat timers. Switching classes cannot bypass attack recovery or cooldowns.
 
-The HUD shows HP, speed in world units per second, maximum speed, defense, damage multiplier and its timer, recovery time, and cooldowns. Gauntlet has 0% base defense; its durability passive increases HP. Visuals use colored cubes, animated gauntlets, damage flashes, floating damage numbers, shockwave rings, and world-space particles. Training dummies do not attack. LAN matches support combat between players; damage reduction remains unimplemented.
+The HUD shows HP, speed in world units per second, maximum speed, defense, damage multiplier and its timer, recovery time, and cooldowns. Gauntlet has 0% base defense; its durability passive increases HP. Visuals use colored cubes, animated gauntlets, damage flashes, floating damage numbers, shockwave rings, and world-space particles. Training dummies do not attack. LAN matches support combat between players; Shield Protect applies 30% frontal damage reduction.
+
+## Shield class
+
+Equip **Shield** through R. It has 100 HP and starts in **Assault** mode.
+
+| Input | Ability | Damage | Cooldown | Behavior |
+| --- | --- | --- | --- | --- |
+| M1 | Shield-Bash | 23.5 | 0.45s | Short melee thrust; 0.08s startup |
+| Q | Charge | 25 | 40s | 1s windup, then run at 10 units/s for up to 1.5s; limited turning |
+| E | Swing | 35 | 50s | 1.3s windup; 1.5s recovery on a miss |
+| F | Protect / Assault | - | 25s | Toggle speed and frontal defense |
+
+Assault walks/sprints at 4.5/7.5 units/s with no defense bonus. Protect uses
+3/5 units/s and reduces incoming damage by 30% within a 120-degree frontal arc;
+side/rear attacks deal full damage. The HUD and riot-shield color show the mode.
+Charge stops on its first enemy or wall: recovery is 0.35s after a hit, 0.8s
+on a miss, or 1.5s after a wall hit. Steering is capped at 45 degrees/s during
+the run. Move normally during windups and recovery; Charge's run replaces WASD
+movement. Abilities work airborne with gravity. Shield does not gain Gauntlet's
+damage streak. These unspecified balance values are initial tuning; exact ranges
+and rules are in `docs/CLASS_STATS.txt`. LAN clients need the updated protocol-6 build.
 
 ## Particle effects
 
@@ -492,7 +513,7 @@ Up to eight players can share an arena on the same Wi-Fi or wired local network.
 3. Share the local IP shown in the lobby with your friends. If several addresses appear, use the one on the shared Wi-Fi/wired network.
 4. On each other device, open the lobby, enter a name, the host IP, and the same port, then click **Join Lobby**. For testing two copies on one computer, use `127.0.0.1` as the host IP.
 5. The roster shows everyone connected. The host clicks **Start Match**. Players can also join after a match has started.
-6. Press **R** and equip **Gauntlet** to use its moves. Other players appear as colored cubes with names and HP. Attacks can hit other players or the shared training dummies.
+6. Press **R** and equip **Gauntlet** or **Shield** to use its moves. Other players appear as colored cubes with names and HP. Attacks can hit other players or the shared training dummies.
 7. Press **F2** to view the roster or **Leave Lobby**. Leaving restores a fresh solo arena. If the host leaves or closes the game, all guests disconnect and return to the lobby screen.
 
 The host runs movement, stamina, jumping, combat, cooldowns, damage, grabs, knockback, slows, and respawns. Knocked-out players respawn after three seconds at full class HP with their damage streak cleared. Dummies respawn after four seconds. Shockwave slows reduce other players' movement speed. Menus, window switching, and the console stop your movement inputs but do not pause the match or make you invulnerable. A paused player can still be hit or pushed. Gameplay-changing dev commands are unavailable during a lobby session; `help`, `clear`, `hitboxes`, `stats`, and `particles` remain available.

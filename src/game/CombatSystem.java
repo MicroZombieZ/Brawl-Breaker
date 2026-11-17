@@ -77,6 +77,7 @@ final class CombatSystem {
         double x, z, health = 100, maxHealth = 100, vx, vz, slowTime, slowAmount, flash, damageTime, lastDamage;
         double respawnTime, lift, verticalSpeed, yaw;
         boolean playerBody;
+        CombatSystem defender;
         Dummy(double x, double z) { this.x = spawnX = x; this.z = spawnZ = z; }
         boolean alive() { return health > 0; }
         double height() { return playerBody?1:1.5; }
@@ -86,7 +87,16 @@ final class CombatSystem {
     MapDefinition map=MapStorage.practice();
     final List<GameEffect> effects = new ArrayList<>();
     final double[] cooldowns = new double[Move.values().length];
-    boolean equipped;
+    boolean equipped,shield,protect;
+    static final double[] SHIELD_COOLDOWNS={.45,40,50,25};
+    static final String[] SHIELD_LABELS={"LMB  Shield-Bash","Q  Charge","E  Swing","F  Mode"};
+    double walkSpeed(){return shield?(protect?3:4.5):4;}
+    double sprintSpeed(){return shield?(protect?5:7.5):7;}
+    boolean charging(){return shield&&active==Move.PUMMEL&&attackTime>=1-1e-9;}
+    double turnStep(double delta,double dt){return charging()?Math.max(-Math.PI/4*dt,Math.min(Math.PI/4*dt,delta)):delta*(1-Math.exp(-10*dt));}
+    static Hitbox shieldHitbox(Move move,double x,double y,double z,double facing){double reach=move==Move.SHOCKWAVE?2.5:move==Move.PUNCH?1.7:1.2;return new Hitbox(x-Math.sin(facing)*reach/2,y+.5,z-Math.cos(facing)*reach/2,move==Move.SHOCKWAVE?2.6:1.4,1.6,reach,facing);}
+    Hitbox activeHitbox(){return shield?shieldHitbox(active,playerX,playerY,playerZ,facing):hitbox(active,playerX,playerY,playerZ,facing);}
+
     boolean godMode, cooldownsEnabled = true;
     boolean externalTargetUpdates;
     double dummyMaxHealth = 100;
@@ -95,7 +105,7 @@ final class CombatSystem {
     Move active;
     double attackTime, endLag, facing, attackMultiplier;
     double waveTime, waveX, waveY, waveZ;
-    String message = "Equip Gauntlet with R to start training";
+    String message = "Equip Gauntlet or Shield with R to start training";
     double messageTime = 5;
     private Dummy grabbed;
     private boolean resolved;
@@ -135,7 +145,7 @@ final class CombatSystem {
 
     void reset() {
         finish(0);
-        equipped = godMode = false;
+        equipped = shield = protect = godMode = false;
         cooldownsEnabled = true;
         health = BASE_HP; multiplier = 1; streakTime = 0;
         attackTime = waveTime = waveY = playerX = playerY = playerZ = speed = 0;
@@ -143,34 +153,34 @@ final class CombatSystem {
         dummyMaxHealth = 100;
         resetDummies();
         effects.clear();
-        tell("Arena reset - equip Gauntlet with R");
+        tell("Arena reset - equip Gauntlet or Shield with R");
     }
 
-    double maxHealth() { return equipped ? GAUNTLET_HP : BASE_HP; }
+    double maxHealth() { return equipped&&!shield ? GAUNTLET_HP : BASE_HP; }
     boolean locked() { return active != null || endLag > 0; }
 
-    void equip(boolean value) {
-        if (equipped == value) return;
-        // Switching classes cannot heal or clear cooldowns and recovery.
-        health = Math.max(1, Math.min(value ? GAUNTLET_HP : BASE_HP,
-                health + (value ? 15 : -15)));
-        equipped = value;
-        multiplier = 1;
-        streakTime = 0;
-        tell(value ? "Gauntlet equipped - LMB / Q / E / F" : "Gauntlet unequipped");
+    void equip(boolean value){equipClass(value?"Gauntlet":"");}
+    void equipClass(String name){
+        boolean nextShield="Shield".equals(name),nextEquipped=nextShield||"Gauntlet".equals(name);
+        if(equipped==nextEquipped&&shield==nextShield)return;
+        double oldMax=maxHealth();equipped=nextEquipped;shield=nextShield;protect=false;
+        health=Math.max(1,Math.min(maxHealth(),health+maxHealth()-oldMax));
+        multiplier=1;streakTime=0;
+        tell(equipped?name+" equipped - LMB / Q / E / F":"Combat class unequipped");
     }
 
     boolean attack(Move move, double x, double y, double z, double yaw) {
         if (!equipped || locked() || (cooldownsEnabled && cooldowns[move.ordinal()] > 0) || health <= 0) return false;
+        if(shield&&move==Move.HAYMAKER){protect=!protect;cooldowns[3]=cooldownsEnabled?25:0;tell(protect?"Protect: 30% frontal defense":"Assault: increased movement speed");return true;}
         active = move;
         attackTime = 0;
         facing = yaw;
         playerX = x; playerY = y; playerZ = z;
-        attackMultiplier = multiplier;
+        attackMultiplier = shield?1:multiplier;
         resolved = false;
         grabbed = null;
         pummelHits = 0;
-        cooldowns[move.ordinal()] = cooldownsEnabled ? move.cooldown : 0;
+        cooldowns[move.ordinal()] = cooldownsEnabled ? (shield?SHIELD_COOLDOWNS[move.ordinal()]:move.cooldown) : 0;
         effect(GameEffect.Kind.SWING, x, y, z, 1, move.ordinal());
         return true;
     }
@@ -180,7 +190,8 @@ final class CombatSystem {
     }
 
     void update(double dt, double x, double y, double z, double currentFacing) {
-        facing = Math.IEEEremainder(currentFacing, Math.PI * 2);
+        double delta=Math.IEEEremainder(currentFacing-facing,Math.PI*2);
+        facing = Math.IEEEremainder(charging()?facing+Math.max(-Math.PI/4*dt,Math.min(Math.PI/4*dt,delta)):currentFacing, Math.PI * 2);
         playerX = x; playerY = y; playerZ = z;
         for (int i = 0; i < cooldowns.length; i++) cooldowns[i] = Math.max(0, cooldowns[i] - dt);
         endLag = Math.max(0, endLag - dt);
@@ -192,6 +203,7 @@ final class CombatSystem {
         if (active == null) return;
         double before = attackTime;
         attackTime += dt;
+        if(shield){updateShield(before);return;}
         switch (active) {
             case PUNCH:
                 if (!resolved && attackTime >= .12) {
@@ -263,6 +275,36 @@ final class CombatSystem {
         }
     }
 
+    private void updateShield(double before){
+        if(active==Move.PUNCH||active==Move.SHOCKWAVE){
+            boolean swing=active==Move.SHOCKWAVE;double windup=swing?1.3:.08;
+            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);finish(swing?.35:.12);}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");finish(swing?1.5:.12);}}return;
+        }
+        if(active==Move.PUMMEL){
+            double travel=Math.max(0,Math.min(attackTime,2.5)-Math.max(before,1))*10;if(travel<=0)return;
+            double ax=playerX,az=playerZ,ay=playerY,dx=-Math.sin(facing)*travel,dz=-Math.cos(facing)*travel;
+            double radius=.5*(Math.abs(Math.cos(facing))+Math.abs(Math.sin(facing)));
+            double[] next=MapPhysics.move(map,ax,ay,az,ax+dx,ay,az+dz,radius,1);
+            Dummy target=null;double first=Double.POSITIVE_INFINITY;Hitbox box=activeHitbox();
+            for(Dummy d:dummies)if(d.alive()&&shieldVisible(d)){double t=box.sweep(d,next[0]-ax,next[1]-ay,next[2]-az);if(t<first){first=t;target=d;}}
+            boolean wall=Math.hypot(next[0]-ax-dx,next[2]-az-dz)>1e-5&&Math.abs(next[1]-ay)<1e-5;
+            double fraction=target==null?1:first;playerX=ax+(next[0]-ax)*fraction;playerY=ay+(next[1]-ay)*fraction;playerZ=az+(next[2]-az)*fraction;
+            if(target!=null){hit(target,25,8);tell("Charge connected");finish(.35);}
+            else if(wall){tell("Charge hit a wall - recovering");finish(1.5);}
+            else if(attackTime>=2.5-1e-9){tell("Charge missed - recovering");finish(.8);}
+        }
+    }
+    private boolean shieldVisible(Dummy target){
+        double tx=target.x,ty=target.lift+target.height()/2,tz=target.z;
+        double[] reached=MapPhysics.move(map,playerX,playerY+.5,playerZ,tx,ty,tz,.001,.002);
+        return Math.abs(reached[0]-tx)+Math.abs(reached[1]-ty)+Math.abs(reached[2]-tz)<1e-6;
+    }
+    static double frontalDamageFactor(Dummy target,double sourceX,double sourceZ){
+        if(target.defender==null||!target.defender.shield||!target.defender.protect)return 1;
+        double dx=sourceX-target.x,dz=sourceZ-target.z,length=Math.hypot(dx,dz);
+        return length>1e-8&&(-Math.sin(target.yaw)*dx-Math.cos(target.yaw)*dz)/length>=.5?.7:1;
+    }
+
     void updateDummy(Dummy dummy, double dt) {
         dummy.flash = Math.max(0, dummy.flash - dt);
         dummy.damageTime = Math.max(0, dummy.damageTime - dt);
@@ -295,9 +337,9 @@ final class CombatSystem {
     private Dummy inFront() {
         Dummy nearest = null;
         double best = Double.POSITIVE_INFINITY;
-        Hitbox box=hitbox(active,playerX,playerY,playerZ,facing);
+        Hitbox box=activeHitbox();
         for (Dummy dummy : dummies) {
-            if (!dummy.alive() || !box.overlaps(dummy)) continue;
+            if (!dummy.alive() || !box.overlaps(dummy) || shield&&!shieldVisible(dummy)) continue;
             double dx = dummy.x - playerX, dz = dummy.z - playerZ;
             double distance = dx*dx+dz*dz+(dummy.lift-playerY)*(dummy.lift-playerY);
             if (distance < best) {
@@ -322,7 +364,7 @@ final class CombatSystem {
     }
 
     private void hit(Dummy dummy, double baseDamage, double push) {
-        double damage = baseDamage * attackMultiplier;
+        double damage = baseDamage * attackMultiplier * frontalDamageFactor(dummy,playerX,playerZ);
         dummy.health = Math.max(0, dummy.health - damage);
         dummy.lastDamage = damage; dummy.damageTime = 1; dummy.flash = .18;
         dummy.vx = -Math.sin(facing) * push;
@@ -333,8 +375,8 @@ final class CombatSystem {
             if (!dummy.playerBody) effect(GameEffect.Kind.DEFEAT, dummy.x, dummy.lift, dummy.z, 1, 0);
         }
         // Every damaging hit grants a stack, including each individual Pummel hit.
-        multiplier = Math.min(MAX_MULTIPLIER, Math.round((multiplier + MULTIPLIER_STEP) * 100) / 100.0);
-        streakTime = STREAK_DURATION;
+        if(!shield){multiplier = Math.min(MAX_MULTIPLIER, Math.round((multiplier + MULTIPLIER_STEP) * 100) / 100.0);
+        streakTime = STREAK_DURATION;}
     }
 
     private void finish(double recovery) {

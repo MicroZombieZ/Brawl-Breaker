@@ -4,6 +4,12 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Implement Shield in solo and LAN: short M1 Shield-Bash, limited-turn Charge,
+  windup Swing, and Protect/Assault modes. Add frontal-only Protect damage
+  reduction, mode-specific movement, riot-shield visuals, HUD/debug support,
+  and Shield regression checks. LAN protocol 6 synchronizes mode state;
+  document exact initial tuning while preserving Gauntlet stats.
+
 - Update the planned Shield design: M1 Shield-Bash (23.5 damage / 0.45s),
   Charge (25 damage / 40s, 1s windup), Swing (35 damage / 50s, 1.3s windup),
   and Protect/Assault switching (25s). Keep unspecified design values TBD.

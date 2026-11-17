@@ -247,7 +247,7 @@ public class CubeMovement extends JPanel {
     private void buildClassMenu() {
         classMenu.setOpaque(false);
         classChoices.setOpaque(false);
-        for (String name : new String[]{"Gauntlet", "Mage", "Ranger", "Rogue"}) {
+        for (String name : new String[]{"Gauntlet", "Mage", "Ranger", "Rogue", "Shield"}) {
             JToggleButton choice = new JToggleButton(name) {
                 private Polygon shape() {
                     int slant = Math.min(26, getWidth() / 6);
@@ -302,7 +302,7 @@ public class CubeMovement extends JPanel {
             if (combat.locked() && !Objects.equals(equippedClass, selectedClass)) return;
             equippedClass = selectedClass;
             if (lobbyClient != null) lobbyClient.action(3, equippedClass);
-            else combat.equip("Gauntlet".equals(equippedClass));
+            else combat.equipClass(equippedClass);
             setPaused(false);
         });
         classMenu.add(equip);
@@ -346,7 +346,7 @@ public class CubeMovement extends JPanel {
         int buttonWidth = Math.max(90, width * 23 / 100);
         int buttonHeight = Math.max(32, Math.min(72, height / 9));
         for (int i = 0; i < classChoices.getComponentCount(); i++) {
-            double row = .14 + i * .21;
+            double row = .12 + i * .16;
             int buttonX = (int) (width * (.28 - row * .25 + .02));
             classChoices.getComponent(i).setBounds(buttonX, (int) (height * row), buttonWidth, buttonHeight);
         }
@@ -654,7 +654,7 @@ public class CubeMovement extends JPanel {
                 lastParticleEvent = snapshot.lastEffectId;
             }
             combat.dummies.clear(); combat.dummies.addAll(snapshot.dummies);
-            combat.equipped = local.className.equals("Gauntlet");
+            combat.shield=local.className.equals("Shield");combat.protect=local.protect;combat.equipped = combat.shield||local.className.equals("Gauntlet");
             equippedClass = local.className.isEmpty() ? null : local.className;
             combat.health = local.health; combat.multiplier = local.multiplier; combat.streakTime = local.streak;
             if(first)healthFillGhost.reset(combat.health,combat.maxHealth());
@@ -879,7 +879,7 @@ public class CubeMovement extends JPanel {
                     classTitle.setText("Select a class"); classTitle.setVisible(false); equip.setEnabled(false);
                     classMenuOpen = false; classMenu.setVisible(false); menu.setVisible(paused && !consoleOpen);
                     keys.clear();
-                    return "Arena, player, camera and dev settings reset. Equip Gauntlet with R.";
+                    return "Arena, player, camera and dev settings reset. Equip Gauntlet or Shield with R.";
                 default: return "Unknown command: " + words[0] + ". Type help for commands.";
             }
         } catch (IllegalArgumentException error) { return "Error: " + error.getMessage(); }
@@ -896,7 +896,7 @@ public class CubeMovement extends JPanel {
         double startX = x, startZ = z, startY=y;
         MapPhysics.tick(activeMap,dt);
         double turn = Math.IEEEremainder(yaw - cubeYaw, Math.PI * 2);
-        cubeYaw = Math.IEEEremainder(cubeYaw + turn * (1 - Math.exp(-TURN_RESPONSE * dt)), Math.PI * 2);
+        cubeYaw = Math.IEEEremainder(cubeYaw + combat.turnStep(turn,dt), Math.PI * 2);
         x = clamp(x);
         z = clamp(z);
         y += verticalSpeed * dt - 0.5 * GRAVITY * dt * dt;
@@ -914,7 +914,7 @@ public class CubeMovement extends JPanel {
         double dz = (held(KeyEvent.VK_S, KeyEvent.VK_DOWN) ? 1 : 0)
                   - (held(KeyEvent.VK_W, KeyEvent.VK_UP) ? 1 : 0);
         double length = Math.hypot(dx, dz);
-        if (combat.health <= 0) length = 0;
+        if (combat.health <= 0||combat.charging()) length = 0;
         boolean sprinting = false;
         if (length > 0) {
             // Normalize so diagonal movement has the same speed.
@@ -923,7 +923,7 @@ public class CubeMovement extends JPanel {
             boolean wantsSprint = keys.contains(KeyEvent.VK_SHIFT) && !exhausted && stamina > 0;
             // Use only the sprint time that the remaining stamina can pay for.
             double sprintTime = wantsSprint ? Math.min(dt, stamina / STAMINA_DRAIN) : 0;
-            double speed = (dt > 0 ? SPEED + (SPRINT_SPEED - SPEED) * sprintTime / dt : SPEED) * speedMultiplier;
+            double speed = (dt > 0 ? combat.walkSpeed() + (combat.sprintSpeed() - combat.walkSpeed()) * sprintTime / dt : combat.walkSpeed()) * speedMultiplier;
             double beforeX = x, beforeZ = z;
             x = clamp(x + worldX / length * speed * dt);
             z = clamp(z + worldZ / length * speed * dt);
@@ -939,7 +939,7 @@ public class CubeMovement extends JPanel {
             if (stamina >= 25) exhausted = false;
         }
         combat.update(dt, x, y, z, cubeYaw);
-        double[] position=MapPhysics.move(activeMap,startX,startY,startZ,combat.playerX,y,combat.playerZ,.5*(Math.abs(Math.cos(cubeYaw))+Math.abs(Math.sin(cubeYaw))),1);
+        double[] position=MapPhysics.move(activeMap,startX,startY,startZ,combat.playerX,combat.shield?combat.playerY:y,combat.playerZ,.5*(Math.abs(Math.cos(cubeYaw))+Math.abs(Math.sin(cubeYaw))),1);
         if(position[1]!=y){if(verticalSpeed<0){jumpsUsed=0;groundPounding=false;}verticalSpeed=0;}
         x=position[0];y=position[1];z=position[2];combat.playerX=x;combat.playerY=y;combat.playerZ=z;
         combat.speed = dt > 0 ? Math.hypot(x - startX, z - startZ) / dt : 0;
@@ -1083,6 +1083,16 @@ public class CubeMovement extends JPanel {
         }
     }
 
+    private void addShield(java.util.List<RenderFace> scene,double px,double py,double pz,double facing,boolean protect,int active,double time,int alpha){
+        double thrust=active==CombatSystem.Move.PUNCH.ordinal()?.45*Math.sin(Math.min(1,time/.16)*Math.PI):0;
+        double turn=active==CombatSystem.Move.SHOCKWAVE.ordinal()?-.65*Math.sin(Math.min(1,time/1.3)*Math.PI):0;
+        double angle=facing+turn,forward=.67+thrust;
+        double sx=px-Math.sin(angle)*forward,sz=pz-Math.cos(angle)*forward;
+        addBox(scene,sx,py-.1,sz,1.15,1.4,.16,angle,new Color(protect?72:95,protect?159:110,protect?198:128,alpha));
+        addBox(scene,sx-Math.sin(angle)*.09,py+.77,sz-Math.cos(angle)*.09,.72,.25,.03,angle,new Color(162,218,232,alpha));
+        addBox(scene,sx-Math.sin(angle)*.09,py+.17,sz-Math.cos(angle)*.09,.85,.12,.03,angle,new Color(42,54,67,alpha));
+    }
+
     private void addParticleFaces(java.util.List<RenderFace> scene) {
         double[] right={Math.cos(yaw),0,-Math.sin(yaw)};
         double[] up={-Math.sin(yaw)*Math.sin(actualCameraPitch),Math.cos(actualCameraPitch),
@@ -1187,7 +1197,7 @@ public class CubeMovement extends JPanel {
             if (!dummy.alive()) continue;
             Color color = dummy.flash > 0 ? new Color(255, 230, 180)
                     : dummy.slowTime > 0 ? new Color(108, 177, 213) : new Color(220, 122, 103);
-            double height = combat.active == CombatSystem.Move.PUMMEL && dummy.damageTime > .8 ? .7 : 1.5;
+            double height = !combat.shield&&combat.active == CombatSystem.Move.PUMMEL && dummy.damageTime > .8 ? .7 : 1.5;
             addBox(scene, dummy.x, dummy.lift, dummy.z, 1, height, 1, 0, color);
         }
         if (lobbyClient != null && appliedSnapshot != null) for (LobbyNetwork.State player : appliedSnapshot.players) {
@@ -1195,6 +1205,7 @@ public class CubeMovement extends JPanel {
             Color color = player.flash > 0 ? new Color(255, 232, 172)
                     : Color.getHSBColor((player.id * .21f) % 1, .55f, .95f);
             addBox(scene, player.x, player.y, player.z, 1, 1, 1, player.yaw, color);
+            if(player.className.equals("Shield"))addShield(scene,player.x,player.y,player.z,player.yaw,player.protect,player.active,player.attackTime,255);
             if (player.className.equals("Gauntlet")) {
                 double extension = player.active < 0 ? 0 : .6 * Math.sin(Math.min(1, player.attackTime / .36) * Math.PI);
                 for (int side : new int[]{-1, 1}) {
@@ -1208,7 +1219,8 @@ public class CubeMovement extends JPanel {
         if (thirdPerson && (lobbyClient == null || combat.health > 0)) {
             int alpha = (int) Math.round(255 * Math.min(1, actualCameraDistance / 4));
             addBox(scene, x, y, z, 1, 1, 1, cubeYaw, new Color(97, 206, 246, alpha));
-            if (combat.equipped) {
+            if(combat.shield)addShield(scene,x,y,z,cubeYaw,combat.protect,combat.active==null?-1:combat.active.ordinal(),combat.attackTime,alpha);
+            if (combat.equipped&&!combat.shield) {
                 double extension = combat.active == null ? 0 : .6 * Math.sin(Math.min(1, combat.attackTime / .36) * Math.PI);
                 for (int side : new int[]{-1, 1}) {
                     double localX = side * .65, localZ = -.2 - extension;
@@ -1265,8 +1277,8 @@ public class CubeMovement extends JPanel {
         HUDRenderer.Data data=new HUDRenderer.Data();
         data.health=combat.health;data.maxHealth=combat.maxHealth();data.stamina=stamina;data.exhausted=exhausted;
         data.healthGhost=healthFillGhost.fraction();
-        data.equipped=combat.equipped;data.className=equippedClass==null?"None":equippedClass;data.playing=!paused;
-        data.speed=combat.speed;data.maxSpeed=SPRINT_SPEED*speedMultiplier+(combat.active==CombatSystem.Move.HAYMAKER?12:0);
+        data.shield=combat.shield;data.protect=combat.protect;data.equipped=combat.equipped;data.className=equippedClass==null?"None":equippedClass;data.playing=!paused;
+        data.speed=combat.speed;data.maxSpeed=combat.charging()?10:combat.sprintSpeed()*speedMultiplier+(!combat.shield&&combat.active==CombatSystem.Move.HAYMAKER?12:0);
         data.multiplier=combat.multiplier;data.streak=combat.streakTime;data.debug=showDebugHud;
         data.lan=lobbyClient!=null&&appliedSnapshot!=null;if(data.lan)data.players=appliedSnapshot.players.size();
         System.arraycopy(combat.cooldowns,0,data.cooldowns,0,4);
@@ -1292,7 +1304,7 @@ public class CubeMovement extends JPanel {
         if (showHitboxes) {
             double direction = combat.active != null ? combat.facing : cubeYaw;
             g.setStroke(new BasicStroke(2));
-            for (double radius : new double[]{CombatSystem.INNER_RADIUS, CombatSystem.OUTER_RADIUS}) {
+            if(!combat.shield)for (double radius : new double[]{CombatSystem.INNER_RADIUS, CombatSystem.OUTER_RADIUS}) {
                 g.setColor(new Color(100, 215, 255, 180));
                 for(double height:new double[]{y+.5-CombatSystem.ATTACK_HEIGHT/2,y+.5+CombatSystem.ATTACK_HEIGHT/2}) {
                     double[][] ring = new double[80][3];
@@ -1303,9 +1315,10 @@ public class CubeMovement extends JPanel {
                     g.draw(polygon(ring));
                 }
             }
+            if(combat.shield){for(CombatSystem.Move slot:new CombatSystem.Move[]{CombatSystem.Move.PUNCH,CombatSystem.Move.PUMMEL,CombatSystem.Move.SHOCKWAVE})drawBoxOutline(g,CombatSystem.shieldHitbox(slot,x,y,z,direction),new Color(120,210,255));}else{
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUNCH,x,y,z,direction),new Color(255,220,100));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUMMEL,x,y,z,direction),new Color(243,145,110));
-            drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));
+            drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));}
             Color hurtColor=new Color(136,245,154,150);
             for(CombatSystem.Dummy dummy:combat.dummies) if(dummy.alive())
                 drawBoxOutline(g,new CombatSystem.Hitbox(dummy.x,dummy.lift+dummy.height()/2,dummy.z,1,dummy.height(),1,dummy.yaw),hurtColor);
@@ -1315,7 +1328,7 @@ public class CubeMovement extends JPanel {
             g.setStroke(new BasicStroke(1));
             g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
             g.setColor(Color.WHITE);
-            g.drawString("3D hitboxes: yellow Punch | orange Pummel | blue Shockwave | purple Hay-maker | green hurtboxes",22,106);
+            g.drawString(combat.shield?"Shield: cyan Bash / Charge / Swing boxes | green hurtboxes":"3D hitboxes: yellow Punch | orange Pummel | blue Shockwave | purple Hay-maker | green hurtboxes",22,106);
         }
         if (showStats) {
             int sx = Math.max(22, getWidth() - 322);

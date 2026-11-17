@@ -7,6 +7,7 @@ final class HUDRenderer {
     static final class Data {
         double health=75,maxHealth=115,stamina=60,speed,maxSpeed=7,multiplier=1,streak;
         double healthGhost=Double.NaN;
+        boolean shield,protect;
         boolean exhausted,equipped=true,playing=true,debug,lan;
         int players=2;String className="Gauntlet";
         final double[] cooldowns=new double[4];
@@ -31,18 +32,18 @@ final class HUDRenderer {
                 case STAMINA:resource(g,false,data.stamina,100,data.exhausted?"RECOVERING":null,p,Double.NaN);break;
                 case CLASS:
                     art(g,UISkins.Slot.CLASS_BADGE,p);layer(g,UISkins.Slot.CLASS_LABEL,p,null,(copy,style)->{
-                        if(style.text){text(copy,style,20,new Color(230,236,242));String name="Class: "+data.className;copy.drawString(name,Math.max(0,240-copy.getFontMetrics().stringWidth(name)),26);}});break;
+                        if(style.text){text(copy,style,20,new Color(230,236,242));String name="Class: "+data.className+(data.shield?(data.protect?" [Protect]":" [Assault]"):"");copy.drawString(name,Math.max(0,240-copy.getFontMetrics().stringWidth(name)),26);}});break;
                 case ABILITIES:
                     layer(g,UISkins.Slot.ABILITY_PANEL,p,null,(copy,style)->{if(!skins.images.containsKey(UISkins.Slot.ABILITY_PANEL)&&style.defaults){copy.setColor(new Color(15,20,28,215));copy.fillRoundRect(0,0,240,142,12,12);}});
                     layer(g,UISkins.Slot.ABILITY_LABELS,p,null,(copy,style)->{if(style.text){for(int i=0;i<4;i++){double remaining=data.cooldowns[i];text(copy,style,16,!data.equipped?new Color(140,149,160):remaining>0?new Color(244,193,108):new Color(125,231,182));
-                        copy.drawString(CombatSystem.Move.values()[i].label+(!data.equipped?"  --":remaining>0?String.format(Locale.ROOT,"  %.1fs",remaining):"  Ready"),10,25+i*29);}}});break;
+                        copy.drawString((data.shield?CombatSystem.SHIELD_LABELS[i]:CombatSystem.Move.values()[i].label)+(!data.equipped?"  --":remaining>0?String.format(Locale.ROOT,"  %.1fs",remaining):"  Ready"),10,25+i*29);}}});break;
                 case CROSSHAIR:
                     layer(g,UISkins.Slot.CROSSHAIR,p,null,(copy,style)->{if(!skins.images.containsKey(UISkins.Slot.CROSSHAIR)&&style.defaults){copy.setColor(style.color==null?new Color(245,245,245,190):style.color);copy.drawLine(7,12,17,12);copy.drawLine(12,7,12,17);}});break;
                 case LAN:
                     layer(g,UISkins.Slot.LAN_STATUS,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(160,230,192));copy.drawString("LAN match: "+data.players+"/8 players  |  F2: roster / leave",0,15);}});break;
                 case DEBUG:
                     layer(g,UISkins.Slot.DEBUG_INFO,p,null,(copy,style)->{if(style.text){text(copy,style,16,new Color(230,236,242));
-                        copy.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense 0%%",data.speed,data.maxSpeed),0,16);
+                        copy.drawString(String.format(Locale.ROOT,"Speed %.1f u/s  |  Max %.1f  |  Defense %s",data.speed,data.maxSpeed,data.shield&&data.protect?"30% front":"0%"),0,16);
                         copy.drawString(String.format(Locale.ROOT,"Damage modifier %.2fx%s",data.multiplier,data.streak>0?String.format(Locale.ROOT,"  (%.1fs)",data.streak):""),0,40);}});break;
             }g.dispose();
         }
