@@ -452,7 +452,7 @@ public class CubeMovement extends JPanel {
                         else if (key == KeyEvent.VK_CONTROL) lobbyClient.action(2, "");
                         return;
                     }
-                    if (combat.health <= 0) return;
+                    if (combat.health <= 0 || combat.movementLocked()) return;
                     if (key == KeyEvent.VK_SPACE) {
                         // One jump from the ground and one additional jump in the air.
                         if (y == 0) {
@@ -931,7 +931,7 @@ public class CubeMovement extends JPanel {
         double dz = (held(KeyEvent.VK_S, KeyEvent.VK_DOWN) ? 1 : 0)
                   - (held(KeyEvent.VK_W, KeyEvent.VK_UP) ? 1 : 0);
         double length = Math.hypot(dx, dz);
-        if (combat.health <= 0||combat.charging()) length = 0;
+        if (combat.health <= 0||combat.charging()||combat.movementLocked()) length = 0;
         boolean sprinting = false;
         if (length > 0) {
             // Normalize so diagonal movement has the same speed.
@@ -1336,7 +1336,7 @@ public class CubeMovement extends JPanel {
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUNCH,x,y,z,direction),new Color(255,220,100));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUMMEL,x,y,z,direction),new Color(243,145,110));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));}
-            if(combat.shield&&combat.protect){
+            if(combat.shield){
                 g.setColor(new Color(90,170,255));
                 for(double height:new double[]{y,y+CombatSystem.PROTECT_HEIGHT}){
                     double[][] arc=new double[25][3];

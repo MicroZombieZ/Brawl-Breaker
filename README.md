@@ -212,7 +212,7 @@ Hay-maker sweeps a 1.9-wide, 2-high, 0.95-deep box along its launch, traveling u
 
 Kill-Streak increases damage for subsequent attacks by 0.05x per damaging hit, from 1x up to 1.35x (seven hits to reach the cap). Each damaging hit also refreshes a 6.5-second timer. Individual Pummel hits and each damaged Shockwave target grant their own stacks; damage is calculated using the multiplier at the start of the attack. After 6.5 seconds without a hit, the multiplier returns to 1x. Death and leaving Gauntlet also clear the streak. Pausing and the class menu freeze combat timers. Switching classes cannot bypass attack recovery or cooldowns.
 
-The HUD shows HP, speed in world units per second, maximum speed, defense, damage multiplier and its timer, recovery time, and cooldowns. Gauntlet has 0% base defense; its durability passive increases HP. Visuals use colored cubes, animated gauntlets, damage flashes, floating damage numbers, shockwave rings, and world-space particles. Training dummies do not attack. LAN matches support combat between players; Shield Protect applies 60% frontal damage reduction.
+The HUD shows HP, speed in world units per second, maximum speed, defense, damage multiplier and its timer, recovery time, and cooldowns. Gauntlet has 0% base defense; its durability passive increases HP. Visuals use colored cubes, animated gauntlets, damage flashes, floating damage numbers, shockwave rings, and world-space particles. Training dummies do not attack. LAN matches support combat between players; Shield Protect applies 75% frontal damage reduction; Assault applies 55%.
 
 All classes regenerate **3 HP every 1.3 seconds** while alive, capped at **45% of maximum HP**. Higher existing health is not reduced. Defeating another player restores **15 HP**, capped at full maximum HP; training dummies do not count. Damage restarts that interval, with no additional delay. Solo pause stops healing; LAN healing runs on the host.
 
@@ -229,9 +229,9 @@ Equip **Shield** through R in practice, or the class dropdown in the LAN lobby. 
 | E | Swing | 35 | 50s | 1.3s windup; 1.5s recovery on a miss |
 | F | Protect / Assault | - | 7s | Toggle speed and frontal defense |
 
-Assault walks/sprints at 4.5/7.5 units/s with no defense bonus. Protect uses
-3/5 units/s and reduces incoming damage by 60% through a front-half cylinder
-(radius 0.75, height 1, rotating with the player). Rear and above/below-volume attacks deal full damage. The HUD and riot-shield color show the mode.
+Assault walks/sprints at normal 4/7 units/s with 55% frontal damage reduction. Protect uses
+3/5 units/s and reduces incoming damage by 75% through a front-half cylinder
+(radius 0.75, height 1, rotating with the player). Rear and above/below-volume attacks deal full damage. The HUD and riot-shield color show the mode. Swapping locks voluntary movement (walking, sprinting, jumping, ground pound and starting Charge) for 1.5 seconds; gravity and knockback continue. Neither mode changes attack damage or cooldowns.
 Charge stops on its first enemy or wall: recovery is 0.35s after a hit, 0.8s
 on a miss, or 1.5s after a wall hit. Steering is capped at 45 degrees/s during
 the run. Move normally during windups and recovery; Charge's run replaces WASD

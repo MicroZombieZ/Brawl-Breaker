@@ -90,8 +90,8 @@ final class CombatSystem {
     boolean equipped,shield,protect;
     static final double[] SHIELD_COOLDOWNS={1.15,40,50,7};
     static final String[] SHIELD_LABELS={"LMB  Shield-Bash","Q  Charge","E  Swing","F  Mode"};
-    double walkSpeed(){return shield?(protect?3:4.5):4;}
-    double sprintSpeed(){return shield?(protect?5:7.5):7;}
+    double walkSpeed(){return shield&&protect?3:4;}
+    double sprintSpeed(){return shield&&protect?5:7;}
     boolean charging(){return shield&&active==Move.PUMMEL&&attackTime>=1-1e-9;}
     double turnStep(double delta,double dt){return charging()?Math.max(-Math.PI/4*dt,Math.min(Math.PI/4*dt,delta)):delta*(1-Math.exp(-10*dt));}
     static Hitbox shieldHitbox(Move move,double x,double y,double z,double facing){double reach=move==Move.SHOCKWAVE?2.5:move==Move.PUNCH?1.7:1.2;return new Hitbox(x-Math.sin(facing)*reach/2,y+.5,z-Math.cos(facing)*reach/2,move==Move.SHOCKWAVE?2.6:1.4,1.6,reach,facing);}
@@ -101,7 +101,8 @@ final class CombatSystem {
     boolean externalTargetUpdates;
     double dummyMaxHealth = 100;
     double health = BASE_HP, multiplier = 1, streakTime;
-    double healingTime, pendingKillHealing;
+    double healingTime, pendingKillHealing, modeMoveLock;
+    boolean movementLocked(){return modeMoveLock>1e-9;}
     static final double HEAL_INTERVAL=1.3, HEAL_AMOUNT=3;
     double playerX, playerY, playerZ, speed;
     Move active;
@@ -149,7 +150,7 @@ final class CombatSystem {
         finish(0);
         equipped = shield = protect = godMode = false;
         cooldownsEnabled = true;
-        health = BASE_HP; multiplier = 1; streakTime = healingTime = pendingKillHealing = 0;
+        health = BASE_HP; multiplier = 1; streakTime = healingTime = pendingKillHealing = modeMoveLock = 0;
         attackTime = waveTime = waveY = playerX = playerY = playerZ = speed = 0;
         java.util.Arrays.fill(cooldowns, 0);
         dummyMaxHealth = 100;
@@ -173,7 +174,8 @@ final class CombatSystem {
 
     boolean attack(Move move, double x, double y, double z, double yaw) {
         if (!equipped || locked() || (cooldownsEnabled && cooldowns[move.ordinal()] > 0) || health <= 0) return false;
-        if(shield&&move==Move.HAYMAKER){protect=!protect;cooldowns[3]=cooldownsEnabled?7:0;tell(protect?"Protect: 60% frontal defense":"Assault: increased movement speed");return true;}
+        if(shield&&move==Move.PUMMEL&&movementLocked())return false;
+        if(shield&&move==Move.HAYMAKER){protect=!protect;modeMoveLock=1.5;cooldowns[3]=cooldownsEnabled?7:0;tell(protect?"Protect: 75% frontal defense":"Assault: 55% frontal defense, normal speed");return true;}
         active = move;
         attackTime = 0;
         facing = yaw;
@@ -198,6 +200,7 @@ final class CombatSystem {
         if(!externalTargetUpdates)regenerate(dt);
         for (int i = 0; i < cooldowns.length; i++) cooldowns[i] = Math.max(0, cooldowns[i] - dt);
         endLag = Math.max(0, endLag - dt);
+        modeMoveLock=Math.max(0,modeMoveLock-dt);
         streakTime = Math.max(0, streakTime - dt);
         if (streakTime == 0) multiplier = 1;
         waveTime = Math.max(0, waveTime - dt);
@@ -307,13 +310,13 @@ final class CombatSystem {
     }
     static final double PROTECT_RADIUS=.75, PROTECT_HEIGHT=1;
     static double frontalDamageFactor(Dummy target,double sourceX,double sourceY,double sourceZ){
-        if(target.defender==null||!target.defender.shield||!target.defender.protect)return 1;
+        if(target.defender==null||!target.defender.shield)return 1;
         double dx=sourceX-target.x,dz=sourceZ-target.z,length=Math.hypot(dx,dz);
         if(length<1e-8||-Math.sin(target.yaw)*dx-Math.cos(target.yaw)*dz < -1e-9)return 1;
         // Intersect the incoming segment with the front half-cylinder surrounding the body.
         double t=Math.min(1,PROTECT_RADIUS/length);
         double contactY=target.lift+target.height()/2+(sourceY-target.lift-target.height()/2)*t;
-        return contactY>=target.lift&&contactY<=target.lift+PROTECT_HEIGHT?.4:1;
+        return contactY>=target.lift&&contactY<=target.lift+PROTECT_HEIGHT?(target.defender.protect?.25:.45):1;
     }
 
     void updateDummy(Dummy dummy, double dt) {

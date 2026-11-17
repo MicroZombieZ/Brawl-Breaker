@@ -122,7 +122,7 @@ Values below assume default settings, without developer-console overrides.
 SHARED PLAYER STATS AND RULES
 ============================
 Base maximum HP:               100
-Base defense:                  0%; Shield Protect reduces frontal damage by 60%
+Base defense:                  0%; Shield Protect reduces frontal damage by 75%, Assault by 55%
 Walking speed:                 4 world units/second
 Sprinting speed:               7 world units/second
 Maximum stamina:               100
@@ -288,13 +288,13 @@ SHIELD -- IMPLEMENTED
 =====================
 Maximum HP / stamina:          100 / 100
 Default mode:                  Assault; respawning returns to Assault
-Assault movement:              Walk 4.5, sprint 7.5 units/second; 0% defense
+Assault movement:              Normal walk 4, sprint 7 units/second; 55% frontal reduction
 Protect movement:              Walk 3, sprint 5 units/second
-Protect defense:               60% damage reduction through a front 180-degree half-cylinder,
+Protect defense:               75% damage reduction through a front 180-degree half-cylinder,
                               radius 0.75 and height 1 from the feet, rotating with yaw.
                               Rear and above/below-volume hits deal full damage. No full block,
                               knockback reduction, or Gauntlet damage streak.
-Defense calculation:           Incoming damage x 0.40 for frontal Protect hits;
+Defense calculation:           Incoming damage x 0.25 Protect / x 0.45 Assault for frontal hits;
                               attacker position determines direction, including AOE.
                               Directionless console damage bypasses defense.
 General behavior:              All abilities can start airborne; gravity continues.
@@ -336,7 +336,11 @@ E: SWING
 
 F: MODE: PROTECT / ASSAULT
   Cooldown:                    7 seconds, starts when switching
-  Switch:                      Instant; unavailable during an ability or recovery
+  Switch:                      Instant mode change; locks voluntary movement for 1.5s.
+                              Walking/sprinting/jump/ground pound/starting Charge blocked;
+                              gravity and incoming knockback continue. Bash/Swing allowed.
+                              Cannot swap during an ability or recovery.
+  Mode attack bonuses:         None: both modes use identical damage and cooldowns.
   HUD / model:                 Current mode in class badge; mode-colored riot shield,
                               Shield ability labels/cooldowns and frontal defense stat
 

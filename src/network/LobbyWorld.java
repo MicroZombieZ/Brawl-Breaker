@@ -49,7 +49,7 @@ final class LobbyWorld {
             jumps = 0; pounding = exhausted = false;
             stamina = 100;
             combat.cancelAttack();combat.protect=false; combat.health = combat.maxHealth();
-            combat.multiplier = 1; combat.streakTime = combat.healingTime = combat.pendingKillHealing = 0;
+            combat.multiplier = 1; combat.streakTime = combat.healingTime = combat.pendingKillHealing = combat.modeMoveLock = 0;
             body.x = x; body.z = z; body.lift = y;
             body.health = combat.health; body.maxHealth = combat.maxHealth();
             body.vx = body.vz = body.slowTime = body.slowAmount = 0;
@@ -73,7 +73,7 @@ final class LobbyWorld {
             double length = Math.hypot(dx, dz);
             double oldX = x, oldZ = z;
             boolean sprinting = false;
-            if (length > 0 && !combat.charging()) {
+            if (length > 0 && !combat.charging() && !combat.movementLocked()) {
                 double sprintTime = sprint && !exhausted ? Math.min(dt, stamina / 20) : 0;
                 double speed = (combat.walkSpeed() + (combat.sprintSpeed()-combat.walkSpeed()) * sprintTime / dt) * (1 - body.slowAmount);
                 x += (Math.cos(yaw) * dx + Math.sin(yaw) * dz) / length * speed * dt;
@@ -138,6 +138,7 @@ final class LobbyWorld {
             return;
         }
         if (!started || player.combat.health <= 0 || held(player)) return;
+        if((action==1||action==2)&&player.combat.movementLocked())return;
         if (action == 0) {
             try { player.combat.attack(CombatSystem.Move.valueOf(argument), player.x, player.y, player.z, player.cubeYaw); }
             catch (IllegalArgumentException ignored) { }

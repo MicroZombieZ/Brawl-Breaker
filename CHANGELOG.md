@@ -4,6 +4,8 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Retune Shield modes: Protect reduces frontal damage by 75%; Assault reduces it by 55% at normal 4/7 walk/sprint speed. Add a 1.5-second voluntary movement lock on mode swaps in solo and LAN. Both modes retain identical attack damage/cooldowns.
+
 - Block attacks, grabs and Shockwave effects through solid walls; show Swing debug volume at impact. Increase Protect to 60% reduction with front half-cylinder coverage and a 7-second mode cooldown. Add lobby class selection with host-enforced match locks while preserving practice swapping. Cap regeneration at 45% max HP and award 15 HP per player kill, capped at full HP.
 
 - Add all-class regeneration: 3 HP every 1.3 seconds, reset by damage and capped at maximum HP, shared between solo and LAN. Increase Shield-Bash cooldown to 1.15 seconds and recovery to 0.35 seconds; verify forced Charge movement with neutral/backward input in both modes.
