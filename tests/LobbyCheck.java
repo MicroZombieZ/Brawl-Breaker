@@ -238,8 +238,22 @@ public class LobbyCheck {
         }
         System.out.println("Passed: message-less handshake failures, occupied port rejection, original host survival and same-port rehosting.");
     }
+    static void mapCache() throws Exception {
+        MapDefinition map=MapStorage.practice();
+        MapDefinition.Part part=new MapDefinition.Part();part.x=8;part.z=8;map.objects.add(part);
+        byte[] bytes=map.encode();LobbyNetwork.MapCache cache=new LobbyNetwork.MapCache();
+        MapDefinition first=cache.read(bytes);first.objects.get(first.objects.size()-1).x=42;
+        MapDefinition second=cache.read(bytes);
+        check(cache.decodes==1,"Unchanged map decoded once");
+        check(second.objects.get(second.objects.size()-1).x==8,"Snapshots do not share mutable map positions");
+        map.name="Changed map";check(cache.read(map.encode()).name.equals("Changed map")&&cache.decodes==2,"Changed map invalidates cache");
+        for(int i=0;i<100;i++){MapDefinition.decode(bytes);cache.read(bytes);}
+        long start=System.nanoTime();for(int i=0;i<1000;i++)MapDefinition.decode(bytes);long parsing=System.nanoTime()-start;
+        start=System.nanoTime();for(int i=0;i<1000;i++)cache.read(bytes);long cached=System.nanoTime()-start;
+        System.out.println("Passed: map cache isolation/invalidation; 1000 map loads: parse="+parsing/1000000.0+"ms cached="+cached/1000000.0+"ms");
+    }
     public static void main(String[] args) {
-        try { failureHandling();simulation(); networking(); ui(); System.exit(0); }
+        try { mapCache();failureHandling();simulation(); networking(); ui(); System.exit(0); }
         catch (Throwable error) { error.printStackTrace(); System.exit(1); }
     }
 }

@@ -79,9 +79,23 @@ final class LobbyNetwork {
             });
         }
     }
-    private static Snapshot decodeSnapshot(DataInputStream in) throws IOException {
+    static final class MapCache {
+        byte[] bytes;
+        MapDefinition template;
+        int decodes;
+        MapDefinition read(byte[] data) throws IOException {
+            if (!Arrays.equals(bytes,data)) { template=MapDefinition.decode(data);bytes=data;decodes++; }
+            MapDefinition copy=new MapDefinition();
+            copy.name=template.name;copy.width=template.width;copy.depth=template.depth;copy.plane=template.plane;copy.color=template.color;
+            for(MapDefinition.Part part:template.objects)copy.objects.add(part.copy());
+            for(MapDefinition.Spawn point:template.spawns)copy.spawns.add(new MapDefinition.Spawn(point.x,point.y,point.z,point.team));
+            for(MapDefinition.Spawn point:template.targets)copy.targets.add(new MapDefinition.Spawn(point.x,point.y,point.z,point.team));
+            return copy;
+        }
+    }
+    private static Snapshot decodeSnapshot(DataInputStream in, MapCache maps) throws IOException {
         Snapshot result = new Snapshot(); result.started = in.readBoolean();
-        if(result.started){int length=in.readInt();if(length<1||length>180000)throw new IOException("Invalid map size.");byte[] data=new byte[length];in.readFully(data);result.map=MapDefinition.decode(data);int objects=in.readInt();if(objects!=result.map.objects.size())throw new IOException("Invalid map objects.");for(MapDefinition.Part p:result.map.objects){p.x=in.readDouble();p.y=in.readDouble();p.z=in.readDouble();if(!Double.isFinite(p.x)||!Double.isFinite(p.y)||!Double.isFinite(p.z)||Math.abs(p.x)>300||Math.abs(p.y)>300||Math.abs(p.z)>300)throw new IOException("Invalid object position.");}}
+        if(result.started){int length=in.readInt();if(length<1||length>180000)throw new IOException("Invalid map size.");byte[] data=new byte[length];in.readFully(data);result.map=maps.read(data);int objects=in.readInt();if(objects!=result.map.objects.size())throw new IOException("Invalid map objects.");for(MapDefinition.Part p:result.map.objects){p.x=in.readDouble();p.y=in.readDouble();p.z=in.readDouble();if(!Double.isFinite(p.x)||!Double.isFinite(p.y)||!Double.isFinite(p.z)||Math.abs(p.x)>300||Math.abs(p.y)>300||Math.abs(p.z)>300)throw new IOException("Invalid object position.");}}
         int count = in.readInt(); if (count < 0 || count > LobbyWorld.MAX_PLAYERS) throw new IOException("Invalid player count.");
         for (int i = 0; i < count; i++) {
             State p = new State(); p.id = in.readInt(); p.host = in.readBoolean(); p.name = in.readUTF(); p.className = in.readUTF();
@@ -213,6 +227,7 @@ final class LobbyNetwork {
         private final DataOutputStream output;
         private final ArrayBlockingQueue<byte[]> actions = new ArrayBlockingQueue<>(64);
         volatile Snapshot snapshot;
+        final MapCache maps=new MapCache();
         volatile String error;
         volatile boolean closed;
         volatile double dx, dz, yaw;
@@ -236,7 +251,7 @@ final class LobbyNetwork {
                         while (!closed) {
                             DataInputStream state = read(input);
                             if (state.readUnsignedByte() != SNAPSHOT) throw new IOException("Invalid lobby state.");
-                            snapshot = decodeSnapshot(state);
+                            snapshot = decodeSnapshot(state, maps);
                         }
                     } catch (IOException|RuntimeException|LinkageError failure) {if(!closed){LobbyDiagnostics.log("Lobby client snapshot/read failed",failure);fail("Disconnected from host: " + LobbyDiagnostics.describe(failure));}}
                 });

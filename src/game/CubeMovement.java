@@ -652,7 +652,14 @@ public class CubeMovement extends JPanel {
         if (snapshot != appliedSnapshot) {
             boolean startNow = snapshot.started && (first || !appliedSnapshot.started);
             appliedSnapshot = snapshot;
-            if(snapshot.started&&snapshot.map!=null){activeMap=snapshot.map;combat.map=activeMap;EDGE=Math.max(activeMap.width,activeMap.depth)/2;}
+            if(snapshot.started&&snapshot.map!=null){
+                if(startNow)activeMap=snapshot.map;
+                else for(int i=0;i<activeMap.objects.size();i++){
+                    MapDefinition.Part target=activeMap.objects.get(i),source=snapshot.map.objects.get(i);
+                    target.x=source.x;target.y=source.y;target.z=source.z;
+                }
+                combat.map=activeMap;EDGE=Math.max(activeMap.width,activeMap.depth)/2;
+            }
             if (first) lastParticleEvent = snapshot.lastEffectId;
             else {
                 for (GameEffect effect : snapshot.effects) if (effect.id > lastParticleEvent) particles.emit(effect);
@@ -676,7 +683,7 @@ public class CubeMovement extends JPanel {
             for (LobbyNetwork.State p : snapshot.players) roster.append(p.id == client.id ? "> " : "  ")
                     .append(p.name).append(p.host ? " (host)" : "").append("  -  ")
                     .append(p.className.isEmpty() ? "No class" : p.className).append('\n');
-            lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);lobby.mapPicker.available(client.host&&!snapshot.started);
+            if(!lobby.roster.getText().equals(roster.toString()))lobby.roster.setText(roster.toString()); lobby.start.setEnabled(client.host && !snapshot.started);lobby.mapPicker.available(client.host&&!snapshot.started);
             if(snapshot.started)lobby.mapPicker.message.setText("Map: "+snapshot.map.name);
             if (startNow) beginEntry(true);
         }

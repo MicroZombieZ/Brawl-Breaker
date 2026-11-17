@@ -4,6 +4,8 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Reduce LAN client map-processing overhead by caching validated map documents, retaining rendered map objects between snapshots, and avoiding unchanged lobby roster updates. Host-authoritative combat and movement remain unchanged.
+
 - Replace empty lobby connection errors with readable details and persistent diagnostic logs; report server failures, reject occupied host ports, and clean up failed hosting attempts.
 
 - Implement Shield in solo and LAN: short M1 Shield-Bash, limited-turn Charge,
