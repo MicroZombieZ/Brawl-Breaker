@@ -327,12 +327,13 @@ Q: CHARGE
 
 E: SWING
   Damage / cooldown:           35 / 50 seconds
-  Windup:                      1.3 seconds
+  Active window:               Starts immediately; lasts 0.9 seconds, follows player aim.
   Hit volume:                  2.6 wide x 1.6 high x 2.5 reach, foot Y+0.5 center
-  Targets / knockback:         Nearest overlapping enemy once; initial push speed 4
-  Hit / miss recovery:         0.35 / 1.5 seconds
+  Targets / knockback:         Every overlapping enemy, once per activation; push speed 4.
+                              Targets entering later in the active window can be hit.
+  Hit / miss recovery:         0.35 / 1.5 seconds, starts after the 0.9-second window.
   Melee targeting:             All attacks/grabs and Shockwave slow reject targets across solid walls.
-  Debug Swing volume:          Only during impact (1.3-1.4s), not during windup
+  Debug Swing volume:          Throughout the 0-0.9s active window; absent during recovery
 
 F: MODE: PROTECT / ASSAULT
   Cooldown:                    7 seconds, starts when switching

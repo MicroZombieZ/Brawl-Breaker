@@ -226,7 +226,7 @@ Equip **Shield** through R in practice, or the class dropdown in the LAN lobby. 
 | --- | --- | --- | --- | --- |
 | M1 | Shield-Bash | 23.5 | 1.15s | Short melee thrust; 0.08s startup, 0.35s recovery |
 | Q | Charge | 25 | 40s | 1s windup, then run at 10 units/s for up to 1.5s; limited turning |
-| E | Swing | 35 | 50s | 1.3s windup; 1.5s recovery on a miss |
+| E | Swing | 35 per target | 50s | Immediately active for 0.9s; hits each target once, then 0.35s hit / 1.5s miss recovery |
 | F | Protect / Assault | - | 7s | Toggle speed and frontal defense |
 
 Assault walks/sprints at normal 4/7 units/s with 55% frontal damage reduction. Protect uses
@@ -588,4 +588,4 @@ Milestone releases get version tags, such as `v0.2.0` for a feature release and
 `v0.2.1` for a fix. Local commits work without a GitHub account or internet access.
 No remote repository is configured by this setup.
 
-All melee attacks, grabs, and Shockwave damage/slow check solid map obstruction. Swing's debug hitbox appears at impact after its 1.3-second windup, rather than at startup.
+All melee attacks, grabs, and Shockwave damage/slow check solid map obstruction. Swing's hitbox and debug outline are active immediately for 0.9 seconds, following movement and aim. Each target can be hit once per Swing, including targets entering the box later; recovery begins when the window ends.

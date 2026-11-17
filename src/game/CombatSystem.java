@@ -112,6 +112,8 @@ final class CombatSystem {
     double messageTime = 5;
     private Dummy grabbed;
     private boolean resolved;
+    static final double SWING_DURATION=.9;
+    private final java.util.Set<Dummy> swingTargets=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Dummy,Boolean>());
     private int pummelHits;
 
     CombatSystem() {
@@ -182,10 +184,12 @@ final class CombatSystem {
         playerX = x; playerY = y; playerZ = z;
         attackMultiplier = shield?1:multiplier;
         resolved = false;
+        swingTargets.clear();
         grabbed = null;
         pummelHits = 0;
         cooldowns[move.ordinal()] = cooldownsEnabled ? (shield?SHIELD_COOLDOWNS[move.ordinal()]:move.cooldown) : 0;
         effect(GameEffect.Kind.SWING, x, y, z, 1, move.ordinal());
+        if(shield&&move==Move.SHOCKWAVE)hitSwingTargets();
         return true;
     }
 
@@ -282,11 +286,13 @@ final class CombatSystem {
     }
 
     private void updateShield(double before){
-        if(active==Move.PUNCH||active==Move.SHOCKWAVE){
-            boolean swing=active==Move.SHOCKWAVE;double windup=swing?1.3:.08;
-            if(!resolved&&attackTime>=windup-1e-9){resolved=true;Dummy target=inFront();if(target!=null){hit(target,swing?35:23.5,swing?4:1.5);endLag=.35;}else{tell(swing?"Swing missed - recovering":"Shield-Bash missed");endLag=swing?1.5:.35;}if(!swing)finish(endLag);}
-            // Keep Swing's impact visible briefly, inside its existing recovery period.
-            if(swing&&resolved&&attackTime>=1.4-1e-9)finish(endLag);
+        if(active==Move.SHOCKWAVE){
+            if(attackTime<SWING_DURATION-1e-9)hitSwingTargets();
+            else {boolean missed=swingTargets.isEmpty();if(missed)tell("Swing missed - recovering");finish(missed?1.5:.35);}
+            return;
+        }
+        if(active==Move.PUNCH){
+            if(!resolved&&attackTime>=.08-1e-9){resolved=true;Dummy target=inFront();if(target!=null)hit(target,23.5,1.5);else tell("Shield-Bash missed");finish(.35);}
             return;
         }
         if(active==Move.PUMMEL){
@@ -301,6 +307,12 @@ final class CombatSystem {
             if(target!=null){hit(target,25,8);tell("Charge connected");finish(.35);}
             else if(wall){tell("Charge hit a wall - recovering");finish(1.5);}
             else if(attackTime>=2.5-1e-9){tell("Charge missed - recovering");finish(.8);}
+        }
+    }
+    private void hitSwingTargets(){
+        Hitbox box=activeHitbox();
+        for(Dummy target:dummies)if(target.alive()&&!swingTargets.contains(target)&&box.overlaps(target)&&targetVisible(target)){
+            hit(target,35,4);swingTargets.add(target);
         }
     }
     private boolean targetVisible(Dummy target){
@@ -397,6 +409,7 @@ final class CombatSystem {
     }
 
     private void finish(double recovery) {
+        swingTargets.clear();
         if (grabbed != null) grabbed.verticalSpeed = 0;
         grabbed = null;
         active = null;

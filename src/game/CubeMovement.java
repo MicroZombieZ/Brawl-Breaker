@@ -1102,7 +1102,7 @@ public class CubeMovement extends JPanel {
 
     private void addShield(java.util.List<RenderFace> scene,double px,double py,double pz,double facing,boolean protect,int active,double time,int alpha){
         double thrust=active==CombatSystem.Move.PUNCH.ordinal()?.45*Math.sin(Math.min(1,time/.16)*Math.PI):0;
-        double turn=active==CombatSystem.Move.SHOCKWAVE.ordinal()?-.65*Math.sin(Math.min(1,time/1.3)*Math.PI):0;
+        double turn=active==CombatSystem.Move.SHOCKWAVE.ordinal()?-.65*Math.sin(Math.min(1,time/CombatSystem.SWING_DURATION)*Math.PI):0;
         double angle=facing+turn,forward=.67+thrust;
         double sx=px-Math.sin(angle)*forward,sz=pz-Math.cos(angle)*forward;
         addBox(scene,sx,py-.1,sz,1.15,1.4,.16,angle,new Color(protect?72:95,protect?159:110,protect?198:128,alpha));
@@ -1332,7 +1332,7 @@ public class CubeMovement extends JPanel {
                     g.draw(polygon(ring));
                 }
             }
-            if(combat.shield){for(CombatSystem.Move slot:new CombatSystem.Move[]{CombatSystem.Move.PUNCH,CombatSystem.Move.PUMMEL,CombatSystem.Move.SHOCKWAVE})if(slot!=CombatSystem.Move.SHOCKWAVE||(combat.active==slot&&combat.attackTime>=1.3))drawBoxOutline(g,CombatSystem.shieldHitbox(slot,x,y,z,direction),new Color(120,210,255));}else{
+            if(combat.shield){for(CombatSystem.Move slot:new CombatSystem.Move[]{CombatSystem.Move.PUNCH,CombatSystem.Move.PUMMEL,CombatSystem.Move.SHOCKWAVE})if(slot!=CombatSystem.Move.SHOCKWAVE||(combat.active==slot&&combat.attackTime<CombatSystem.SWING_DURATION))drawBoxOutline(g,CombatSystem.shieldHitbox(slot,x,y,z,direction),new Color(120,210,255));}else{
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUNCH,x,y,z,direction),new Color(255,220,100));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.PUMMEL,x,y,z,direction),new Color(243,145,110));
             drawBoxOutline(g,CombatSystem.hitbox(CombatSystem.Move.HAYMAKER,x,y,z,direction),new Color(197,159,251));}

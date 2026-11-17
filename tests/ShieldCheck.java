@@ -9,8 +9,8 @@ public class ShieldCheck {
     static void combat(){
         CombatSystem c=shield();near(c.maxHealth(),100,"Shield HP");near(c.walkSpeed(),4,"Assault walk");near(c.sprintSpeed(),7,"Assault sprint");
         CombatSystem.Dummy d=new CombatSystem.Dummy(0,-1.5);c.dummies.add(d);check(c.attack(CombatSystem.Move.PUNCH,0,0,0,0),"Bash starts");near(c.cooldowns[0],1.15,"Bash cooldown");tick(c,.079);near(d.health,100,"Bash windup");tick(c,.002);near(d.health,76.5,"Bash damage");near(c.multiplier,1,"No Gauntlet streak on Shield");check(c.endLag>.33&&c.endLag<=.35,"Bash extended recovery");
-        c=shield();d=new CombatSystem.Dummy(0,-2);c.dummies.add(d);c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);near(c.cooldowns[2],50,"Swing cooldown");tick(c,1.29);near(d.health,100,"Swing windup");tick(c,.02);near(d.health,65,"Swing damage");check(c.endLag>0&&c.endLag<=.35,"Swing hit recovery");
-        c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,2,0,0);tick(c,1.3);near(c.endLag,1.5,"Swing miss recovery airborne");
+        c=shield();d=new CombatSystem.Dummy(0,-2);c.dummies.add(d);c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);near(c.cooldowns[2],50,"Swing cooldown");near(d.health,65,"Swing immediate damage");tick(c,.89);near(d.health,65,"Swing hits once per target");check(c.active!=null&&c.endLag==0,"Swing remains active");tick(c,.01);near(c.endLag,.35,"Swing hit recovery");
+        c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,2,0,0);tick(c,.9);near(c.endLag,1.5,"Swing miss recovery airborne");
         c=shield();d=new CombatSystem.Dummy(0,-3);c.dummies.add(d);c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);near(c.cooldowns[1],40,"Charge cooldown");tick(c,.99);near(c.playerZ,0,"Charge windup has no automatic dash");tick(c,.4);near(d.health,75,"Charge damage");check(d.vz<0&&c.playerZ>-3,"Charge knocks back and stops on target");
         c=shield();c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);tick(c,2.5);near(c.playerZ,-15,"Charge range");near(c.endLag,.8,"Charge miss recovery");
         c=shield();MapDefinition.Part wall=new MapDefinition.Part();wall.z=-2;wall.w=5;wall.h=3;wall.d=.1;c.map.objects.add(wall);c.attack(CombatSystem.Move.PUMMEL,0,0,0,0);tick(c,1.2);check(c.playerZ>=-1.45-1e-6&&c.endLag>1.4,"Charge wall collision and long recovery");
@@ -76,7 +76,12 @@ public class ShieldCheck {
         near(CombatSystem.frontalDamageFactor(target,2,.5,-.1),.25,"Wide front protection");
         near(CombatSystem.frontalDamageFactor(target,0,.5,2),1,"Rear bypasses protection");target.defender.protect=false;near(CombatSystem.frontalDamageFactor(target,0,.5,-2),.45,"Assault 55% frontal reduction");near(CombatSystem.frontalDamageFactor(target,0,.5,2),1,"Assault rear remains exposed");target.defender.protect=true;
         near(CombatSystem.frontalDamageFactor(target,0,5,-1),1,"Above half-cylinder bypasses protection");
-        CombatSystem c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);tick(c,1.29);check(c.active==CombatSystem.Move.SHOCKWAVE&&c.attackTime<1.3,"Swing windup before debug volume");tick(c,.02);check(c.active==CombatSystem.Move.SHOCKWAVE&&c.attackTime>=1.3,"Swing impact visible");tick(c,.1);check(c.active==null,"Swing impact expires");
+        CombatSystem c=shield();c.attack(CombatSystem.Move.SHOCKWAVE,0,0,0,0);tick(c,.45);
+        CombatSystem.Dummy late=new CombatSystem.Dummy(0,-1.5),second=new CombatSystem.Dummy(.2,-1.5);c.dummies.add(late);c.dummies.add(second);
+        tick(c,.01);near(late.health,65,"Swing catches late entrant");near(second.health,65,"Swing hits each overlapping target");
+        late.x=0;late.z=-1.5;late.vx=late.vz=0;tick(c,.43);near(late.health,65,"Swing does not rehit");
+        tick(c,.01);check(c.active==null,"Swing disappears at .9 seconds");near(c.endLag,.35,"Recovery begins after active window");
+        CombatSystem.Dummy after=new CombatSystem.Dummy(0,-1.5);c.dummies.add(after);tick(c,.1);near(after.health,100,"No hits during recovery");
         LobbyWorld world=new LobbyWorld();world.mapChoice=MapStorage::practice;LobbyWorld.Player a=world.add("A",true),b=world.add("B",false);
         world.action(a.id,3,"Shield");world.action(b.id,3,"Gauntlet");world.action(a.id,4,"");world.arena.clearDummies();
         world.action(a.id,3,"Gauntlet");check(a.className.equals("Shield"),"Host rejects in-match class switching");
