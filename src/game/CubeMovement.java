@@ -606,8 +606,13 @@ public class CubeMovement extends JPanel {
                     lobby.status.setText(host ? "Your local IP: " + result[2] + "   Port: " + port
                             : "Connected to " + address + ":" + port + ". Waiting for host.");
                 } catch (Exception failure) {
-                    Throwable cause = failure.getCause() == null ? failure : failure.getCause();
-                    lobby.status.setText("Connection failed: " + cause.getMessage());
+                    Throwable cause=LobbyDiagnostics.cause(failure);
+                    LobbyDiagnostics.log((host?"Host":"Join")+" lobby failed at "+(host?"127.0.0.1":address)+":"+port,cause);
+                    if(generation!=connectionGeneration)return;
+                    String details=LobbyDiagnostics.describe(cause);
+                    lobby.status.setText((host?"Hosting":"Joining")+" failed. See details below.");
+                    lobby.status.setToolTipText(details);
+                    lobby.roster.setText(details+"\n\nDiagnostic log: build/logs/lobby.log\nAfter correcting the problem, try Host Lobby or Join Lobby again.");
                 } finally {
                     if (generation == connectionGeneration) {
                         connecting = false;

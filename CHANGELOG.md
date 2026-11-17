@@ -4,6 +4,8 @@ Versioned releases are Git tags in this project, with no separate folder per ver
 
 ## Unreleased
 
+- Replace empty lobby connection errors with readable details and persistent diagnostic logs; report server failures, reject occupied host ports, and clean up failed hosting attempts.
+
 - Implement Shield in solo and LAN: short M1 Shield-Bash, limited-turn Charge,
   windup Swing, and Protect/Assault modes. Add frontal-only Protect damage
   reduction, mode-specific movement, riot-shield visuals, HUD/debug support,

@@ -140,23 +140,23 @@ final class LobbyNetwork {
             }
         }
         Server(int port) throws IOException {
-            listener = new ServerSocket(); listener.setReuseAddress(true);
-            listener.bind(new InetSocketAddress(port));
+            listener = new ServerSocket();
+            try{listener.setReuseAddress(false);listener.bind(new InetSocketAddress(port));}
+            catch(IOException|RuntimeException failure){try{listener.close();}catch(IOException ignored){}timer.shutdownNow();throw failure;}
             daemon("lobby-accept", () -> {
                 while (!closed) {
                     try {
                         Socket socket = listener.accept(); socket.setSoTimeout(6000); socket.setTcpNoDelay(true);
                         daemon("lobby-handshake", () -> serve(socket));
-                    } catch (IOException error) { if (!closed) close(); }
+                    } catch (IOException error) { if (!closed){LobbyDiagnostics.log("Lobby accept failed",error);close();} }
                 }
             });
             timer.scheduleAtFixedRate(() -> {
                 if (closed) return;
-                world.tick(.02);
-                if (++ticks % 2 == 0) {
-                    try { byte[] state = snapshot(world); for (Peer peer : peers.values()) peer.offer(state); }
-                    catch (IOException error) { close(); }
-                }
+                try{
+                    world.tick(.02);
+                    if (++ticks % 2 == 0){byte[] state=snapshot(world);for(Peer peer:peers.values())peer.offer(state);}
+                }catch(IOException|RuntimeException|LinkageError error){LobbyDiagnostics.log("Lobby simulation/snapshot failed",error);close();}
             }, 20, 20, TimeUnit.MILLISECONDS);
         }
         int port() { return listener.getLocalPort(); }
@@ -190,10 +190,12 @@ final class LobbyNetwork {
                     else if (type == ACTION) world.action(player.id,message.readUnsignedByte(),message.readUTF());
                     else throw new IOException("Unexpected message.");
                 }
-            } catch (IllegalArgumentException error) {
-                try { send(new DataOutputStream(socket.getOutputStream()),packet(ERROR,out -> out.writeUTF(error.getMessage()))); }
+            } catch (RuntimeException|LinkageError error) {
+                LobbyDiagnostics.log("Lobby handshake/action failed",error);
+                // Only the handshake thread writes before WELCOME; afterwards the writer owns output.
+                if(peer==null)try { send(new DataOutputStream(socket.getOutputStream()),packet(ERROR,out -> out.writeUTF(LobbyDiagnostics.describe(error)))); }
                 catch (IOException ignored) { }
-            } catch (IOException ignored) { }
+            } catch (IOException error) {if(peer==null&&!closed)LobbyDiagnostics.log("Lobby handshake interrupted",error);}
             finally {
                 if (peer != null) peer.close();
                 else try { socket.close(); } catch (IOException ignored) { }
@@ -236,7 +238,7 @@ final class LobbyNetwork {
                             if (state.readUnsignedByte() != SNAPSHOT) throw new IOException("Invalid lobby state.");
                             snapshot = decodeSnapshot(state);
                         }
-                    } catch (IOException failure) { fail("Disconnected from host: " + failure.getMessage()); }
+                    } catch (IOException|RuntimeException|LinkageError failure) {if(!closed){LobbyDiagnostics.log("Lobby client snapshot/read failed",failure);fail("Disconnected from host: " + LobbyDiagnostics.describe(failure));}}
                 });
                 daemon("lobby-client-write", () -> {
                     try {

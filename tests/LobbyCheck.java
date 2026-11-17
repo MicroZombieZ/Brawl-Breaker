@@ -217,8 +217,29 @@ public class LobbyCheck {
         });
         System.out.println("Passed: lobby UI host worker, start/leave controls, typing guard, multiplayer dev restrictions, rendering, offline restoration.");
     }
+    static void failureHandling()throws Exception{
+        check(!LobbyDiagnostics.describe(new EOFException()).contains("null"),"EOF has actionable message");
+        check(LobbyDiagnostics.describe(new NullPointerException()).contains("NullPointerException"),"Message-less exceptions retain type");
+        check(LobbyDiagnostics.describe(new java.util.concurrent.ExecutionException(new BindException())).contains("port"),"Worker errors are unwrapped");
+        int port;
+        try(LobbyNetwork.Server server=new LobbyNetwork.Server(0)){
+            port=server.port();try{LobbyNetwork.Server duplicate=new LobbyNetwork.Server(port);duplicate.close();throw new AssertionError("Duplicate host accepted");}catch(BindException expected){}
+            try(LobbyNetwork.Client host=new LobbyNetwork.Client("127.0.0.1",port,"Host",server.hostKey)){
+                waitFor(()->host.snapshot!=null,"Original host still usable after bind failure");
+            }
+        }
+        try(LobbyNetwork.Server restarted=new LobbyNetwork.Server(port);LobbyNetwork.Client host=new LobbyNetwork.Client("127.0.0.1",port,"Restart",restarted.hostKey)){
+            waitFor(()->host.snapshot!=null,"Same-port rehost succeeds");
+        }
+        try(ServerSocket abrupt=new ServerSocket(0)){
+            Thread peer=new Thread(()->{try(Socket socket=abrupt.accept()){socket.getInputStream().read(new byte[4096]);}catch(IOException ignored){}});peer.setDaemon(true);peer.start();
+            try(LobbyNetwork.Client client=new LobbyNetwork.Client("127.0.0.1",abrupt.getLocalPort(),"Handshake","")){throw new AssertionError("Abrupt peer accepted");}
+            catch(IOException expected){check(!LobbyDiagnostics.describe(expected).contains("null"),"Abrupt handshake reports meaningful failure");}peer.join(2000);
+        }
+        System.out.println("Passed: message-less handshake failures, occupied port rejection, original host survival and same-port rehosting.");
+    }
     public static void main(String[] args) {
-        try { simulation(); networking(); ui(); System.exit(0); }
+        try { failureHandling();simulation(); networking(); ui(); System.exit(0); }
         catch (Throwable error) { error.printStackTrace(); System.exit(1); }
     }
 }

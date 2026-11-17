@@ -26,7 +26,7 @@ final class LobbyPanel extends JPanel {
         fields.add(new JLabel("Host IP (for joining)")); fields.add(address);
         port.setEditor(new JSpinner.NumberEditor(port, "0"));
         fields.add(new JLabel("Port")); fields.add(port); center.add(fields, BorderLayout.NORTH);
-        roster.setEditable(false); roster.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+        roster.setEditable(false);roster.setLineWrap(true);roster.setWrapStyleWord(true); roster.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
         roster.setText("No lobby connected.\n\nHost: share your local IP address with friends.\nJoin: enter that address and use the same port.");
         center.add(new JScrollPane(roster), BorderLayout.CENTER);center.add(mapPicker,BorderLayout.SOUTH); add(center, BorderLayout.CENTER);
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0)); buttons.setOpaque(false);
